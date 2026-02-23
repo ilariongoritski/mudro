@@ -5,16 +5,11 @@ vk_wall_*.json
 vk-export/
 data/
 tmp/
-
 # secrets
 .env
 *.env
 # local data and outputs
-data/
 var/log/
-.env
-
 # generated outputs
 out/
-
 .codex/logs/
