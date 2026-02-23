@@ -1,10 +1,6 @@
-<<<<<<< HEAD
 # mudro
-Go backend (Postgres) for unified VK + Telegram feed
-=======
-# vk-gallery
 
-Go backend (Postgres) that unifies VK + Telegram exports into a single feed.
+Go backend (Postgres) for unified VK + Telegram feed.
 
 ## Requirements
 - Docker + Docker Compose
@@ -16,4 +12,3 @@ Go backend (Postgres) that unifies VK + Telegram exports into a single feed.
 make up
 make test
 make logs
->>>>>>> 3a68266 (chore(mudro): firststep db bootstrap)
