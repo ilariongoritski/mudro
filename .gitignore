@@ -1,0 +1,18 @@
+# data dumps
+vk_wall_*.json
+
+# local dirs (выбери путь)
+vk-export/
+data/
+tmp/
+
+# secrets
+.env
+*.env
+# local data and outputs
+data/
+var/log/
+.env
+
+# generated outputs
+out/

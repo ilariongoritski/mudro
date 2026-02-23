@@ -12,3 +12,9 @@ Go backend (Postgres) for unified VK + Telegram feed.
 make up
 make test
 make logs
+git add README.md
+
+
+
+
+
