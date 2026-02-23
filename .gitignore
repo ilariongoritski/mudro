@@ -16,3 +16,5 @@ var/log/
 
 # generated outputs
 out/
+
+.codex/logs/
