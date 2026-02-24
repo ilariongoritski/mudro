@@ -26,6 +26,7 @@ func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/api/posts", s.handlePosts)
+	mux.HandleFunc("/api/front", s.handleFront)
 	return mux
 }
 
@@ -68,6 +69,81 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(resp)
+}
+
+func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	limit := parseLimit(r.URL.Query().Get("limit"))
+
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit)
+	if err != nil {
+		log.Printf("loadPosts(front): %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		totalPosts int64
+		lastSync   *time.Time
+	)
+	if err := s.pool.QueryRow(ctx, `select count(*) from posts`).Scan(&totalPosts); err != nil {
+		log.Printf("front count posts: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if err := s.pool.QueryRow(ctx, `select max(updated_at) from posts`).Scan(&lastSync); err != nil {
+		log.Printf("front max(updated_at): %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	sources, err := s.loadSourceStats(ctx)
+	if err != nil {
+		log.Printf("front source stats: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	resp := frontResponse{
+		Meta: frontMeta{
+			TotalPosts: totalPosts,
+			LastSyncAt: lastSync,
+			Sources:    sources,
+		},
+		Feed: postsResponse{
+			Limit:      limit,
+			Items:      posts,
+			NextCursor: next,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(resp)
+}
+
+func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
+	rows, err := s.pool.Query(ctx, `
+		select source, count(*) as posts
+		from posts
+		group by source
+		order by posts desc, source asc
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []sourceStat
+	for rows.Next() {
+		var st sourceStat
+		if err := rows.Scan(&st.Source, &st.Posts); err != nil {
+			return nil, err
+		}
+		out = append(out, st)
+	}
+	return out, rows.Err()
 }
 
 func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int) ([]postDTO, *cursor, error) {
@@ -219,6 +295,22 @@ type postsResponse struct {
 	Limit      int       `json:"limit"`
 	Items      []postDTO `json:"items"`
 	NextCursor *cursor   `json:"next_cursor,omitempty"`
+}
+
+type frontResponse struct {
+	Meta frontMeta     `json:"meta"`
+	Feed postsResponse `json:"feed"`
+}
+
+type frontMeta struct {
+	TotalPosts int64        `json:"total_posts"`
+	LastSyncAt *time.Time   `json:"last_sync_at,omitempty"`
+	Sources    []sourceStat `json:"sources"`
+}
+
+type sourceStat struct {
+	Source string `json:"source"`
+	Posts  int64  `json:"posts"`
 }
 
 func parseLimit(raw string) int {
