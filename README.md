@@ -27,6 +27,7 @@ make health
 ```
 
 ## Repo Layout
+- `cmd/api` — HTTP API server (JSON endpoints)
 - `cmd/vkimport` — VK raw export -> Postgres (`posts` + `media`)
 - `cmd/tgimport` — Telegram export JSON -> feed JSON
 - `cmd/bot` — Telegram bot (commands handler)
@@ -69,6 +70,24 @@ Override DSN for Make targets:
 DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" make dbcheck
 ```
 
+## HTTP API
+Run the API server:
+```bash
+API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" go run ./cmd/api
+```
 
+Endpoints:
+- `GET /healthz` → `{ "status": "ok" }`
+- `GET /api/posts?limit=50`
+- `GET /api/posts?page=2` (page-based, 1-indexed)
+- Cursor pagination: `GET /api/posts?before_ts=2026-02-24T12:00:00Z&before_id=123`
 
+Response wrapper (page-based):
+```json
+{
+  "page": 2,
+  "limit": 50,
+  "items": [ ... ]
+}
+```
 

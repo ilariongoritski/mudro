@@ -15,3 +15,5 @@ out/
 .codex/logs/
 *.save
 *.save.*
+reorganize.sh
+.codex/notes/

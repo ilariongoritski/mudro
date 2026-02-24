@@ -9,6 +9,7 @@ import (
 const (
 	DefaultDSN           = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
 	DefaultTelegramLimit = 3800
+	DefaultAPIAddr       = ":8080"
 )
 
 func DSN() string {
@@ -47,6 +48,10 @@ func RepoRoot() string {
 	}
 
 	return cwd
+}
+
+func APIAddr() string {
+	return envOr("API_ADDR", DefaultAPIAddr)
 }
 
 func fileExists(path string) bool {
