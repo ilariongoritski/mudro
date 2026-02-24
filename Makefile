@@ -47,3 +47,6 @@ health:
 	$(MAKE) tables
 	$(MAKE) test
 	$(MAKE) count-posts
+
+bot-run:
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; go run ./cmd/bot

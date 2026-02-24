@@ -12,6 +12,8 @@ tmp/
 var/log/
 # generated outputs
 out/
+/bot
+.bin/
 .codex/logs/
 *.save
 *.save.*

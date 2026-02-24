@@ -9,7 +9,11 @@ import (
 const (
 	DefaultDSN           = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
 	DefaultTelegramLimit = 3800
+	DefaultTelegramUser  = "sirilarion"
+	DefaultOpenAIModel   = "gpt-4.1-mini"
 	DefaultAPIAddr       = ":8080"
+	DefaultAPIBaseURL    = "http://127.0.0.1:8080"
+	DefaultCodexLogsDir  = ".codex/logs"
 )
 
 func DSN() string {
@@ -23,6 +27,18 @@ func TelegramMessageLimit() int {
 		}
 	}
 	return DefaultTelegramLimit
+}
+
+func TelegramAllowedUsername() string {
+	return strings.ToLower(envOr("TELEGRAM_ALLOWED_USERNAME", DefaultTelegramUser))
+}
+
+func OpenAIAPIKey() string {
+	return strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+}
+
+func OpenAIModel() string {
+	return envOr("OPENAI_MODEL", DefaultOpenAIModel)
 }
 
 func RepoRoot() string {
@@ -52,6 +68,14 @@ func RepoRoot() string {
 
 func APIAddr() string {
 	return envOr("API_ADDR", DefaultAPIAddr)
+}
+
+func APIBaseURL() string {
+	return strings.TrimRight(envOr("API_BASE_URL", DefaultAPIBaseURL), "/")
+}
+
+func CodexLogsDir() string {
+	return envOr("CODEX_LOGS_DIR", DefaultCodexLogsDir)
 }
 
 func fileExists(path string) bool {
