@@ -21,6 +21,62 @@ make logs
 Default DSN for Makefile targets:
 `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
 
+## Infrastructure Plan (Server + GitHub Pages)
+- Repo: `https://github.com/goritskimihail/mudro`
+- OS: Ubuntu 22.04 Server (no Desktop).
+- Static site/docs: GitHub Pages (default `*.github.io` subdomain until paid domain).
+- Runtime on VPS: Docker Compose (API + bot + Postgres + Redis + reverse proxy).
+- Email: external SMTP provider (no self-hosted mail).
+- Media storage: MinIO (S3-compatible), optional at MVP.
+- Access: VS Code Remote-SSH for development and ops.
+- Admin panel: optional later (Cockpit or ISPmanager).
+
+### Step-by-step Plan
+1. GitHub Pages (Docs)
+   - Source: `main` + `/root` (repository root).
+   - Content: documentation pages (install/config/architecture/FAQ).
+   - Result: `https://<owner>.github.io/<repo>` as free domain.
+
+2. VPS Base Setup (Ubuntu 22.04 Server)
+   - Create `admin` user, disable root SSH login.
+   - SSH keys only, disable password auth.
+   - UFW allow: 22, 80, 443.
+   - Install Docker + Compose.
+
+3. Project Runtime (Docker Compose)
+   - Services: `api`, `bot`, `postgres`, `redis`, `nginx` (or Traefik).
+   - `.env` on server: tokens, DB DSN, SMTP, API base URL.
+   - Volumes: `postgres_data`, `media_data`.
+
+4. API + Bot
+   - Build images from repo or use `go run` in container.
+   - Health: `GET /healthz`.
+   - Telegram bot: set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USERNAME`.
+
+5. Database
+   - Postgres with port exposed only to internal network.
+   - Run migrations on deploy.
+   - Backups: nightly dump to volume or object storage.
+
+6. Media Storage (optional MVP)
+   - Add MinIO service, S3-compatible.
+   - Bucket for media, credentials in `.env`.
+   - Expose via reverse proxy or internal only.
+
+7. Email (registration)
+   - Use external SMTP provider.
+   - Store SMTP creds in `.env`.
+   - Add email verification flow in API.
+
+8. CI/CD (optional)
+   - GitHub Actions: build, test, push image.
+   - Deploy: `docker compose pull && docker compose up -d`.
+   - Secrets stored in GitHub Actions and on server.
+
+9. Monitoring (optional)
+   - Add `node_exporter` + basic alerts.
+   - Log rotation and disk usage alerts.
+
 ## Health Loop
 ```bash
 make health
@@ -72,10 +128,23 @@ make bot-run
 - `/top10` (топ-10 наиболее значимых изменений проекта)
 - `/repo` (структура репозитория)
 - `/find` (поиск улучшений по репозиторию + авто-добавление важного в TODO)
-- `/time` (суммарное время работы: за день и всего)
+- `/time` (суммарное время работы + время генерации ответов)
 - `/rab` (автовыполнение простых задач из TODO, перенос в DONE, допоиск улучшений)
 - `/memento` (полная синхронизация памяти проекта и снимок структуры)
+- `/tglog` (история управления, что запускалось из Telegram)
+- `/chat on|off|status` (режим обычного чата без команд)
+- `/reportnow` (мгновенно отправить отчет через reporter-бота)
 - `/feed5` (вывод 5 постов из `GET /api/front`)
+
+## Reporter Bot (separate)
+```bash
+export REPORT_BOT_TOKEN="...second bot token..."
+# optional if fallback should not be used:
+# export REPORT_CHAT_ID="123456789"
+# optional:
+# export REPORT_INTERVAL_MIN="30"
+make report-run
+```
 - `/health` (состояние сейчас + поломки/успехи за день + git-итоги за день)
 - `/logs`
 - `/actions10`

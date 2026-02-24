@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "updated_at": "2026-02-24T20:46:14+03:00",
+  "totals": {
+    "responses": 53,
+    "total_ms": 13350
+  },
+  "by_command": {
+    "actions10": {
+      "responses": 1,
+      "total_ms": 82,
+      "max_ms": 82,
+      "last_ms": 82
+    },
+    "actions1h": {
+      "responses": 1,
+      "total_ms": 133,
+      "max_ms": 133,
+      "last_ms": 133
+    },
+    "chat": {
+      "responses": 9,
+      "total_ms": 700,
+      "max_ms": 96,
+      "last_ms": 74
+    },
+    "feed5": {
+      "responses": 3,
+      "total_ms": 261,
+      "max_ms": 107,
+      "last_ms": 107
+    },
+    "find": {
+      "responses": 4,
+      "total_ms": 2267,
+      "max_ms": 692,
+      "last_ms": 692
+    },
+    "health": {
+      "responses": 3,
+      "total_ms": 1777,
+      "max_ms": 626,
+      "last_ms": 548
+    },
+    "logs": {
+      "responses": 1,
+      "total_ms": 249,
+      "max_ms": 249,
+      "last_ms": 249
+    },
+    "memento": {
+      "responses": 3,
+      "total_ms": 462,
+      "max_ms": 257,
+      "last_ms": 121
+    },
+    "now": {
+      "responses": 5,
+      "total_ms": 2518,
+      "max_ms": 743,
+      "last_ms": 743
+    },
+    "rab": {
+      "responses": 3,
+      "total_ms": 2746,
+      "max_ms": 1157,
+      "last_ms": 772
+    },
+    "reportnow": {
+      "responses": 1,
+      "total_ms": 208,
+      "max_ms": 208,
+      "last_ms": 208
+    },
+    "tglog": {
+      "responses": 1,
+      "total_ms": 83,
+      "max_ms": 83,
+      "last_ms": 83
+    },
+    "time": {
+      "responses": 4,
+      "total_ms": 441,
+      "max_ms": 189,
+      "last_ms": 83
+    },
+    "todo": {
+      "responses": 4,
+      "total_ms": 454,
+      "max_ms": 171,
+      "last_ms": 171
+    },
+    "todoadd": {
+      "responses": 10,
+      "total_ms": 969,
+      "max_ms": 173,
+      "last_ms": 72
+    }
+  }
+}

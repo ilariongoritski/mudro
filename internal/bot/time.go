@@ -55,6 +55,13 @@ func (r *Runner) TimeSummary() ([]byte, error) {
 		fmtDuration(todayStat.TotalSeconds), todayStat.TotalSeconds/60, todayStat.TotalSeconds, todayStat.Runs))
 	out.WriteString(fmt.Sprintf("- Всего: %s (%d мин, %d сек), прогонов: %d\n",
 		fmtDuration(mem.Totals.TotalSeconds), mem.Totals.TotalSeconds/60, mem.Totals.TotalSeconds, mem.Totals.Runs))
+
+	if rt, err := readRuntimeTime(filepath.Join(r.RepoRoot, ".codex", "time_runtime.json")); err == nil && rt != nil && rt.Totals.Responses > 0 {
+		avgMS := rt.Totals.TotalMS / int64(rt.Totals.Responses)
+		out.WriteString(fmt.Sprintf("- Генерация ответов: %s (%d мин, %d сек), ответов: %d, среднее: %d мс\n",
+			fmtDuration(rt.Totals.TotalMS/1000), (rt.Totals.TotalMS/1000)/60, rt.Totals.TotalMS/1000,
+			rt.Totals.Responses, avgMS))
+	}
 	out.WriteString("- Память JSON: .codex/memory.json")
 	return []byte(out.String()), nil
 }

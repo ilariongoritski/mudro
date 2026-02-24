@@ -1,181 +1,257 @@
 {
   "version": 1,
-  "updated_at": "2026-02-24T15:33:04+03:00",
+  "updated_at": "2026-02-25T02:29:17+03:00",
   "days": {
     "2026-02-24": {
-      "runs": 33,
-      "total_seconds": 10080,
+      "runs": 46,
+      "total_seconds": 16020,
       "entries": [
         {
-          "RunID": "20260224-1138",
-          "StartedAt": "2026-02-24T11:38:00Z",
-          "EstimatedSeconds": 900
+          "run_id": "20260224-1138",
+          "started_at": "2026-02-24T11:38:00Z",
+          "estimated_seconds": 900
         },
         {
-          "RunID": "20260224-1153",
-          "StartedAt": "2026-02-24T11:53:00Z",
-          "EstimatedSeconds": 480
+          "run_id": "20260224-1153",
+          "started_at": "2026-02-24T11:53:00Z",
+          "estimated_seconds": 480
         },
         {
-          "RunID": "20260224-1201",
-          "StartedAt": "2026-02-24T12:01:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1201",
+          "started_at": "2026-02-24T12:01:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1202",
-          "StartedAt": "2026-02-24T12:02:00Z",
-          "EstimatedSeconds": 240
+          "run_id": "20260224-1202",
+          "started_at": "2026-02-24T12:02:00Z",
+          "estimated_seconds": 240
         },
         {
-          "RunID": "20260224-1206",
-          "StartedAt": "2026-02-24T12:06:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1206",
+          "started_at": "2026-02-24T12:06:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1209",
-          "StartedAt": "2026-02-24T12:09:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1209",
+          "started_at": "2026-02-24T12:09:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1212",
-          "StartedAt": "2026-02-24T12:12:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1212",
+          "started_at": "2026-02-24T12:12:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1215",
-          "StartedAt": "2026-02-24T12:15:00Z",
-          "EstimatedSeconds": 600
+          "run_id": "20260224-1215",
+          "started_at": "2026-02-24T12:15:00Z",
+          "estimated_seconds": 600
         },
         {
-          "RunID": "20260224-1346",
-          "StartedAt": "2026-02-24T13:46:00Z",
-          "EstimatedSeconds": 420
+          "run_id": "20260224-1346",
+          "started_at": "2026-02-24T13:46:00Z",
+          "estimated_seconds": 420
         },
         {
-          "RunID": "20260224-1353",
-          "StartedAt": "2026-02-24T13:53:00Z",
-          "EstimatedSeconds": 1440
+          "run_id": "20260224-1353",
+          "started_at": "2026-02-24T13:53:00Z",
+          "estimated_seconds": 1440
         },
         {
-          "RunID": "20260224-1417",
-          "StartedAt": "2026-02-24T14:17:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1417",
+          "started_at": "2026-02-24T14:17:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1420",
-          "StartedAt": "2026-02-24T14:20:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1420",
+          "started_at": "2026-02-24T14:20:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1423",
-          "StartedAt": "2026-02-24T14:23:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1423",
+          "started_at": "2026-02-24T14:23:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1424",
-          "StartedAt": "2026-02-24T14:24:00Z",
-          "EstimatedSeconds": 660
+          "run_id": "20260224-1424",
+          "started_at": "2026-02-24T14:24:00Z",
+          "estimated_seconds": 660
         },
         {
-          "RunID": "20260224-1435",
-          "StartedAt": "2026-02-24T14:35:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1435",
+          "started_at": "2026-02-24T14:35:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1438",
-          "StartedAt": "2026-02-24T14:38:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1438",
+          "started_at": "2026-02-24T14:38:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1441",
-          "StartedAt": "2026-02-24T14:41:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1441",
+          "started_at": "2026-02-24T14:41:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1444",
-          "StartedAt": "2026-02-24T14:44:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1444",
+          "started_at": "2026-02-24T14:44:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1445",
-          "StartedAt": "2026-02-24T14:45:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1445",
+          "started_at": "2026-02-24T14:45:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1448",
-          "StartedAt": "2026-02-24T14:48:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1448",
+          "started_at": "2026-02-24T14:48:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1449",
-          "StartedAt": "2026-02-24T14:49:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1449",
+          "started_at": "2026-02-24T14:49:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1451",
-          "StartedAt": "2026-02-24T14:51:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1451",
+          "started_at": "2026-02-24T14:51:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1452",
-          "StartedAt": "2026-02-24T14:52:00Z",
-          "EstimatedSeconds": 300
+          "run_id": "20260224-1452",
+          "started_at": "2026-02-24T14:52:00Z",
+          "estimated_seconds": 300
         },
         {
-          "RunID": "20260224-1457",
-          "StartedAt": "2026-02-24T14:57:00Z",
-          "EstimatedSeconds": 180
+          "run_id": "20260224-1457",
+          "started_at": "2026-02-24T14:57:00Z",
+          "estimated_seconds": 180
         },
         {
-          "RunID": "20260224-1500",
-          "StartedAt": "2026-02-24T15:00:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1500",
+          "started_at": "2026-02-24T15:00:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1501",
-          "StartedAt": "2026-02-24T15:01:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1501",
+          "started_at": "2026-02-24T15:01:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1503",
-          "StartedAt": "2026-02-24T15:03:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1503",
+          "started_at": "2026-02-24T15:03:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1504",
-          "StartedAt": "2026-02-24T15:04:00Z",
-          "EstimatedSeconds": 360
+          "run_id": "20260224-1504",
+          "started_at": "2026-02-24T15:04:00Z",
+          "estimated_seconds": 360
         },
         {
-          "RunID": "20260224-1510",
-          "StartedAt": "2026-02-24T15:10:00Z",
-          "EstimatedSeconds": 840
+          "run_id": "20260224-1510",
+          "started_at": "2026-02-24T15:10:00Z",
+          "estimated_seconds": 840
         },
         {
-          "RunID": "20260224-1524",
-          "StartedAt": "2026-02-24T15:24:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1524",
+          "started_at": "2026-02-24T15:24:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1525",
-          "StartedAt": "2026-02-24T15:25:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1525",
+          "started_at": "2026-02-24T15:25:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1527",
-          "StartedAt": "2026-02-24T15:27:00Z",
-          "EstimatedSeconds": 120
+          "run_id": "20260224-1527",
+          "started_at": "2026-02-24T15:27:00Z",
+          "estimated_seconds": 120
         },
         {
-          "RunID": "20260224-1528",
-          "StartedAt": "2026-02-24T15:28:00Z",
-          "EstimatedSeconds": 600
+          "run_id": "20260224-1528",
+          "started_at": "2026-02-24T15:28:00Z",
+          "estimated_seconds": 300
+        },
+        {
+          "run_id": "20260224-1533",
+          "started_at": "2026-02-24T15:33:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1534",
+          "started_at": "2026-02-24T15:34:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1536",
+          "started_at": "2026-02-24T15:36:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260224-1539",
+          "started_at": "2026-02-24T15:39:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1540",
+          "started_at": "2026-02-24T15:40:00Z",
+          "estimated_seconds": 660
+        },
+        {
+          "run_id": "20260224-1551",
+          "started_at": "2026-02-24T15:51:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1552",
+          "started_at": "2026-02-24T15:52:00Z",
+          "estimated_seconds": 600
+        },
+        {
+          "run_id": "20260224-1713",
+          "started_at": "2026-02-24T17:13:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1714",
+          "started_at": "2026-02-24T17:14:00Z",
+          "estimated_seconds": 780
+        },
+        {
+          "run_id": "20260224-1727",
+          "started_at": "2026-02-24T17:27:00Z",
+          "estimated_seconds": 1020
+        },
+        {
+          "run_id": "20260224-1744",
+          "started_at": "2026-02-24T17:44:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260224-1746",
+          "started_at": "2026-02-24T17:46:00Z",
+          "estimated_seconds": 1680
+        },
+        {
+          "run_id": "20260224-1814",
+          "started_at": "2026-02-24T18:14:00Z",
+          "estimated_seconds": 600
+        }
+      ]
+    },
+    "2026-02-25": {
+      "runs": 1,
+      "total_seconds": 7200,
+      "entries": [
+        {
+          "run_id": "20260225-0229",
+          "started_at": "2026-02-25T02:29:17+03:00",
+          "estimated_seconds": 7200
         }
       ]
     }
   },
   "totals": {
-    "runs": 33,
-    "total_seconds": 10080
+    "runs": 47,
+    "total_seconds": 23220
   }
 }

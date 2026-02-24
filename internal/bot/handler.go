@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/internal/reporter"
 )
 
 // RegisterBotCommands registers bot commands visible in the Telegram UI.
@@ -25,6 +27,9 @@ func RegisterBotCommands(botAPI *tgbotapi.BotAPI) error {
 		{Command: "time", Description: "Суммарное время работы"},
 		{Command: "rab", Description: "Авто-работяга по TODO"},
 		{Command: "memento", Description: "Полная синхронизация памяти"},
+		{Command: "tglog", Description: "История управления из Telegram"},
+		{Command: "chat", Description: "Режим обычного чата on/off/status"},
+		{Command: "reportnow", Description: "Отправить репорт прямо сейчас"},
 		{Command: "feed5", Description: "Лента из API: 5 постов"},
 		{Command: "health", Description: "Здоровье и итоги за день"},
 		{Command: "logs", Description: "Последние логи БД"},
@@ -45,6 +50,9 @@ func HandleCommands(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	if update.Message == nil {
 		return
 	}
+	key := updateKey(update.Message.Chat.ID, update.Message.MessageID)
+	markCommandStart(key)
+
 	if !isAllowedUser(update) {
 		denyUnauthorized(bot, update)
 		return
@@ -79,6 +87,12 @@ func HandleCommands(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		handleRab(bot, update)
 	case "memento":
 		handleMemento(bot, update)
+	case "tglog":
+		handleTGLog(bot, update)
+	case "chat":
+		handleChatMode(bot, update)
+	case "reportnow":
+		handleReportNow(bot, update)
 	case "feed5":
 		handleFeed5(bot, update)
 	case "health":
@@ -136,6 +150,9 @@ func handleHelp(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		"/time - Суммарное время работы за день и всего",
 		"/rab - Выполнить простые задачи из TODO и обновить память",
 		"/memento - Полная синхронизация памяти проекта",
+		"/tglog - Показать историю управления из Telegram",
+		"/chat on|off|status - Переключить режим обычного чата",
+		"/reportnow - Отправить мгновенный отчет reporter-ботом",
 		"/feed5 - Показать 5 постов из API",
 		"/health - Здоровье и итоги за день",
 		"/logs - Последние логи БД",
@@ -181,6 +198,21 @@ func handleMudro(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 func handleTextFollowup(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	choice, ok := isChoiceReply(update.Message.Text)
 	if !ok {
+		r := NewRunner()
+		if err := r.loadChatModes(); err == nil && r.isChatModeEnabled(update.Message.Chat.ID) {
+			if query, ok := r.handleChatText(update.Message.Text); ok {
+				out, err := r.AskMudro(query)
+				if err != nil {
+					if strings.Contains(err.Error(), "OPENAI_API_KEY") {
+						sendPlain(bot, update, "Режим чата включен, но OPENAI_API_KEY не задан.\nДобавь ключ в .env или выключи режим: /chat off")
+						return
+					}
+					sendPlain(bot, update, "Ошибка chat-mode: "+err.Error())
+					return
+				}
+				sendPlain(bot, update, string(out))
+			}
+		}
 		return
 	}
 	pending, ok := loadPendingChoice(update.Message.Chat.ID)
@@ -260,6 +292,63 @@ func handleMemento(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	sendReply(bot, update, "/memento", out, err)
 }
 
+func handleTGLog(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	r := NewRunner()
+	out, err := r.TelegramControlLog()
+	sendReply(bot, update, "/tglog", out, err)
+}
+
+func handleChatMode(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	r := NewRunner()
+	arg := strings.ToLower(strings.TrimSpace(update.Message.CommandArguments()))
+	switch arg {
+	case "on", "enable", "1":
+		out, err := r.SetChatMode(update.Message.Chat.ID, true)
+		if err == nil && config.OpenAIAPIKey() == "" {
+			out = append(out, []byte("\nВнимание: OPENAI_API_KEY не задан, ответы LLM недоступны.")...)
+		}
+		sendReply(bot, update, "/chat", out, err)
+	case "off", "disable", "0":
+		out, err := r.SetChatMode(update.Message.Chat.ID, false)
+		sendReply(bot, update, "/chat", out, err)
+	case "status", "":
+		out, err := r.ChatModeStatus(update.Message.Chat.ID)
+		sendReply(bot, update, "/chat", out, err)
+	default:
+		sendReply(bot, update, "/chat", []byte("Использование: /chat on | /chat off | /chat status"), nil)
+	}
+}
+
+func handleReportNow(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	token := config.ReportBotToken()
+	if token == "" {
+		sendReply(bot, update, "/reportnow", nil, fmt.Errorf("REPORT_BOT_TOKEN is not set"))
+		return
+	}
+	r := NewRunner()
+	chatID := reporter.ResolveChatID(r.RepoRoot, config.ReportChatID())
+	if chatID <= 0 {
+		sendReply(bot, update, "/reportnow", nil, fmt.Errorf("REPORT_CHAT_ID not found"))
+		return
+	}
+	repBot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		sendReply(bot, update, "/reportnow", nil, err)
+		return
+	}
+	s, err := reporter.BuildSummary(r.RepoRoot)
+	if err != nil {
+		sendReply(bot, update, "/reportnow", nil, err)
+		return
+	}
+	msg := tgbotapi.NewMessage(chatID, s.Text)
+	if _, err := repBot.Send(msg); err != nil {
+		sendReply(bot, update, "/reportnow", nil, err)
+		return
+	}
+	sendReply(bot, update, "/reportnow", []byte("Отчет отправлен reporter-ботом."), nil)
+}
+
 func handleFeed5(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	r := NewRunner()
 	out, err := r.Feed5()
@@ -296,5 +385,44 @@ func sendReply(bot *tgbotapi.BotAPI, update tgbotapi.Update, prefix string, out 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	if _, sendErr := bot.Send(msg); sendErr != nil {
 		log.Printf("send %s: %v", prefix, sendErr)
+	}
+
+	key := updateKey(update.Message.Chat.ID, update.Message.MessageID)
+	if startedAt, ok := popCommandStart(key); ok {
+		elapsed := time.Since(startedAt)
+		r := NewRunner()
+		if recErr := recordRuntimeTime(r.RepoRoot, prefix, elapsed); recErr != nil {
+			log.Printf("record runtime time %s: %v", prefix, recErr)
+		}
+	}
+
+	r := NewRunner()
+	status := "ok"
+	errText := ""
+	if err != nil {
+		status = "error"
+		errText = err.Error()
+	}
+	username := ""
+	if update.Message.From != nil {
+		username = update.Message.From.UserName
+	}
+	if logErr := appendTGControlEvent(r.RepoRoot, tgControlEvent{
+		Username:  username,
+		ChatID:    update.Message.Chat.ID,
+		Command:   prefix,
+		Args:      trimForLog(update.Message.CommandArguments(), 120),
+		Status:    status,
+		Error:     errText,
+		ReplyHint: trimForLog(string(out), 120),
+	}); logErr != nil {
+		log.Printf("tg control log %s: %v", prefix, logErr)
+	}
+}
+
+func sendPlain(bot *tgbotapi.BotAPI, update tgbotapi.Update, text string) {
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, trimMessage(text, NewRunner().Limit))
+	if _, sendErr := bot.Send(msg); sendErr != nil {
+		log.Printf("send plain: %v", sendErr)
 	}
 }

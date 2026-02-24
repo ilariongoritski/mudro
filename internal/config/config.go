@@ -14,6 +14,7 @@ const (
 	DefaultAPIAddr       = ":8080"
 	DefaultAPIBaseURL    = "http://127.0.0.1:8080"
 	DefaultCodexLogsDir  = ".codex/logs"
+	DefaultReportMinutes = 30
 )
 
 func DSN() string {
@@ -39,6 +40,28 @@ func OpenAIAPIKey() string {
 
 func OpenAIModel() string {
 	return envOr("OPENAI_MODEL", DefaultOpenAIModel)
+}
+
+func ReportBotToken() string {
+	return strings.TrimSpace(os.Getenv("REPORT_BOT_TOKEN"))
+}
+
+func ReportChatID() int64 {
+	if v := strings.TrimSpace(os.Getenv("REPORT_CHAT_ID")); v != "" {
+		if n, ok := parsePositiveInt64(v); ok {
+			return n
+		}
+	}
+	return 0
+}
+
+func ReportIntervalMinutes() int {
+	if v := strings.TrimSpace(os.Getenv("REPORT_INTERVAL_MIN")); v != "" {
+		if n, ok := parsePositiveInt(v); ok {
+			return n
+		}
+	}
+	return DefaultReportMinutes
 }
 
 func RepoRoot() string {
@@ -98,6 +121,21 @@ func parsePositiveInt(v string) (int, bool) {
 			return 0, false
 		}
 		n = n*10 + int(c-'0')
+		if n <= 0 {
+			return 0, false
+		}
+	}
+	return n, n > 0
+}
+
+func parsePositiveInt64(v string) (int64, bool) {
+	var n int64
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		n = n*10 + int64(c-'0')
 		if n <= 0 {
 			return 0, false
 		}
