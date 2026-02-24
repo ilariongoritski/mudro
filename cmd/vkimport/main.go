@@ -360,7 +360,10 @@ func pickPreviewGeneric(imgs []struct {
 	if len(imgs) == 0 {
 		return best
 	}
-	type it struct{ URL string; W, H int }
+	type it struct {
+		URL  string
+		W, H int
+	}
 	cand := make([]it, 0, len(imgs))
 	for _, s := range imgs {
 		if s.URL != "" && s.W > 0 && s.H > 0 {
@@ -373,11 +376,17 @@ func pickPreviewGeneric(imgs []struct {
 	sort.Slice(cand, func(i, j int) bool { return cand[i].W < cand[j].W })
 	for _, s := range cand {
 		if s.W >= targetW {
-			return struct{ URL string; W, H int }{s.URL, s.W, s.H}
+			return struct {
+				URL  string
+				W, H int
+			}{s.URL, s.W, s.H}
 		}
 	}
 	s := cand[len(cand)-1]
-	return struct{ URL string; W, H int }{s.URL, s.W, s.H}
+	return struct {
+		URL  string
+		W, H int
+	}{s.URL, s.W, s.H}
 }
 
 //

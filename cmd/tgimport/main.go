@@ -21,12 +21,12 @@ type Export struct {
 }
 
 type TGMessage struct {
-	ID           int64      `json:"id"`
-	Type         string     `json:"type"` // "message" | "service"
-	Date         string     `json:"date"`
-	DateUnixtime string     `json:"date_unixtime"`
-	Text         any        `json:"text"` // string | []any
-	TextEntities []TGEntity `json:"text_entities"`
+	ID           int64        `json:"id"`
+	Type         string       `json:"type"` // "message" | "service"
+	Date         string       `json:"date"`
+	DateUnixtime string       `json:"date_unixtime"`
+	Text         any          `json:"text"` // string | []any
+	TextEntities []TGEntity   `json:"text_entities"`
 	Reactions    []TGReaction `json:"reactions"`
 
 	// media (may be absent)
@@ -76,12 +76,11 @@ type FeedItem struct {
 }
 
 type Stats struct {
-    Views     *int           `json:"views"`
-    Likes     *int           `json:"likes"`
-    Comments  *int           `json:"comments"`
-    Reactions map[string]int `json:"reactions"` 
+	Views     *int           `json:"views"`
+	Likes     *int           `json:"likes"`
+	Comments  *int           `json:"comments"`
+	Reactions map[string]int `json:"reactions"`
 }
-
 
 type MediaItem struct {
 	Kind       string         `json:"kind"`
@@ -230,26 +229,26 @@ func buildText(ents []TGEntity, raw any) string {
 }
 
 func buildReactions(rs []TGReaction) (*int, map[string]int) {
-    sum := 0
-    m := make(map[string]int) // даже если пусто — будет {}
+	sum := 0
+	m := make(map[string]int) // даже если пусто — будет {}
 
-    for _, r := range rs {
-        sum += r.Count
+	for _, r := range rs {
+		sum += r.Count
 
-        var key string
-        switch r.Type {
-        case "emoji":
-            key = "emoji:" + r.Emoji
-        case "custom_emoji":
-            key = "custom:" + r.DocumentID
-        default:
-            key = "unknown:"
-        }
+		var key string
+		switch r.Type {
+		case "emoji":
+			key = "emoji:" + r.Emoji
+		case "custom_emoji":
+			key = "custom:" + r.DocumentID
+		default:
+			key = "unknown:"
+		}
 
-        m[key] += r.Count
-    }
+		m[key] += r.Count
+	}
 
-    return &sum, m // likes всегда число (0 тоже ок)
+	return &sum, m // likes всегда число (0 тоже ок)
 }
 
 func buildMediaAndAudio(m TGMessage) ([]MediaItem, []string) {

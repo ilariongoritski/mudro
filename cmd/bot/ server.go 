@@ -1,0 +1,27 @@
+package bot
+
+import (
+	"github.com/go-telegram-bot-api/telegram-bot-api"
+)
+
+// Функция для запуска бота
+func StartBot(botAPI *tgbotapi.BotAPI) error {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+	updates, err := botAPI.GetUpdatesChan(u)
+	if err != nil {
+		return err
+	}
+
+	// Обработка обновлений (команд)
+	for update := range updates {
+		if update.Message == nil { // Игнорируем пустые сообщения
+			continue
+		}
+
+		// Обрабатываем команды
+		HandleCommands(update)
+	}
+
+	return nil
+}
