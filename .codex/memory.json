@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "updated_at": "2026-02-24T15:33:04+03:00",
+  "days": {
+    "2026-02-24": {
+      "runs": 33,
+      "total_seconds": 10080,
+      "entries": [
+        {
+          "RunID": "20260224-1138",
+          "StartedAt": "2026-02-24T11:38:00Z",
+          "EstimatedSeconds": 900
+        },
+        {
+          "RunID": "20260224-1153",
+          "StartedAt": "2026-02-24T11:53:00Z",
+          "EstimatedSeconds": 480
+        },
+        {
+          "RunID": "20260224-1201",
+          "StartedAt": "2026-02-24T12:01:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1202",
+          "StartedAt": "2026-02-24T12:02:00Z",
+          "EstimatedSeconds": 240
+        },
+        {
+          "RunID": "20260224-1206",
+          "StartedAt": "2026-02-24T12:06:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1209",
+          "StartedAt": "2026-02-24T12:09:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1212",
+          "StartedAt": "2026-02-24T12:12:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1215",
+          "StartedAt": "2026-02-24T12:15:00Z",
+          "EstimatedSeconds": 600
+        },
+        {
+          "RunID": "20260224-1346",
+          "StartedAt": "2026-02-24T13:46:00Z",
+          "EstimatedSeconds": 420
+        },
+        {
+          "RunID": "20260224-1353",
+          "StartedAt": "2026-02-24T13:53:00Z",
+          "EstimatedSeconds": 1440
+        },
+        {
+          "RunID": "20260224-1417",
+          "StartedAt": "2026-02-24T14:17:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1420",
+          "StartedAt": "2026-02-24T14:20:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1423",
+          "StartedAt": "2026-02-24T14:23:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1424",
+          "StartedAt": "2026-02-24T14:24:00Z",
+          "EstimatedSeconds": 660
+        },
+        {
+          "RunID": "20260224-1435",
+          "StartedAt": "2026-02-24T14:35:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1438",
+          "StartedAt": "2026-02-24T14:38:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1441",
+          "StartedAt": "2026-02-24T14:41:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1444",
+          "StartedAt": "2026-02-24T14:44:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1445",
+          "StartedAt": "2026-02-24T14:45:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1448",
+          "StartedAt": "2026-02-24T14:48:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1449",
+          "StartedAt": "2026-02-24T14:49:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1451",
+          "StartedAt": "2026-02-24T14:51:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1452",
+          "StartedAt": "2026-02-24T14:52:00Z",
+          "EstimatedSeconds": 300
+        },
+        {
+          "RunID": "20260224-1457",
+          "StartedAt": "2026-02-24T14:57:00Z",
+          "EstimatedSeconds": 180
+        },
+        {
+          "RunID": "20260224-1500",
+          "StartedAt": "2026-02-24T15:00:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1501",
+          "StartedAt": "2026-02-24T15:01:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1503",
+          "StartedAt": "2026-02-24T15:03:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1504",
+          "StartedAt": "2026-02-24T15:04:00Z",
+          "EstimatedSeconds": 360
+        },
+        {
+          "RunID": "20260224-1510",
+          "StartedAt": "2026-02-24T15:10:00Z",
+          "EstimatedSeconds": 840
+        },
+        {
+          "RunID": "20260224-1524",
+          "StartedAt": "2026-02-24T15:24:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1525",
+          "StartedAt": "2026-02-24T15:25:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1527",
+          "StartedAt": "2026-02-24T15:27:00Z",
+          "EstimatedSeconds": 120
+        },
+        {
+          "RunID": "20260224-1528",
+          "StartedAt": "2026-02-24T15:28:00Z",
+          "EstimatedSeconds": 600
+        }
+      ]
+    }
+  },
+  "totals": {
+    "runs": 33,
+    "total_seconds": 10080
+  }
+}

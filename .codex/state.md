@@ -1,46 +1,152 @@
-# Состояние
+- Дата/время: 2026-02-24 14:17
+- Что запускал: make up; docker compose ps; make dbcheck; make migrate; make tables; make test; go test ./... (fallback); make count-posts
+- Что прошло: make up; docker compose ps; make dbcheck; make migrate; make tables; go test ./...; make count-posts
+- Что упало (ошибка 5–15 строк):
+  go test ./...
+  snap-confine is packaged without necessary permissions and cannot continue
+  required permitted capability cap_dac_override not found in current capabilities:
+    =: Operation canceled
+  make: *** [Makefile:37: test] Error 1
+- Что починил (если было): fallback на /usr/local/go/bin/go test ./... с GOCACHE=/tmp/go-build
+- Следующий шаг: health loop завершён, можно работать
 
-- Время: 2026-02-23
-- Run folder: .codex/logs/20260223-154026
-- Baseline: ❌
+- Дата/время: 2026-02-24 14:20
+- Что запускал: поиск файлов бота; просмотр cmd/bot/main.go, internal/bot/*, Makefile, internal/config/config.go; go test ./...
+- Что прошло: чтение структуры и кода; go test ./... (вне sandbox) — успешно
+- Что упало (ошибка 5–15 строк):
+  go test ./...
+  snap-confine is packaged without necessary permissions and cannot continue
+  required permitted capability cap_dac_override not found in current capabilities:
+    =: Operation canceled
+- Что починил (если было): повторил go test ./... с повышенными правами, получил успешный прогон всех пакетов
+- Следующий шаг: согласовать правки по найденным рискам в bot runner/handler
 
-## Предложения
-- (не сгенерированы, baseline не зелёный)
+- Дата/время: 2026-02-24 14:23
+- Что запускал: правка internal/bot/{handler,actions,runner}.go; go test ./...
+- Что прошло: go test ./... успешно по всем пакетам
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): ограничил публичный набор команд до logs/actions/commits3; actions2h заменил на actions1h
+- Следующий шаг: настроить остальные команды по username (по запросу)
 
-## Изменения
-- (нет)
+- Дата/время: 2026-02-24 14:24
+- Что запускал: правка internal/config/config.go и internal/bot/handler.go; go test ./...
+- Что прошло: go test ./... успешно
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): добавил ограничение доступа к командам бота по username `sirilarion`
+- Следующий шаг: при необходимости добавить whitelist нескольких username/chat_id
 
-## Верификация
-- Baseline health loop: ❌ (остановка на docker version)
+- Дата/время: 2026-02-24 14:35
+- Что запускал: правка internal/bot/{runner,handler,health}.go, .gitignore, Makefile, README.md; удаление старого бинарника bot; gofmt; go test ./...
+- Что прошло: gofmt и go test ./... успешно
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): реализовал /health (сводка за день), исправил .gitignore (`/bot` вместо `bot`), чтобы не игнорировать internal/bot/*
+- Следующий шаг: перезапустить бот через make bot-run и обновить команды в BotFather
 
-## Сбои
-- permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
-- Лог: .codex/logs/20260223-154026/cmd-04-baseline-docker-version.log
+- Дата/время: 2026-02-24 14:38
+- Что запускал: создал `.codex/todo.md` и `.codex/done.md`; обновил `AGENTS.md` разделом памяти задач
+- Что прошло: файлы памяти и регламент добавлены
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): нет
+- Следующий шаг: использовать TODO/DONE как постоянную рабочую память в следующих прогонах
 
-## Следующие действия
-1. Дать доступ текущей сессии к /var/run/docker.sock (перезапуск сессии/WSL или корректное членство в группе docker).
-2. Повторить baseline health loop.
----
+- Дата/время: 2026-02-24 14:41
+- Что запускал: диагностика процессов бота; проверка tmux; остановка старого cmd/kserver; запуск актуального cmd/bot в tmux-сессии mudro-bot
+- Что прошло: старый процесс kserver не найден после остановки; новый cmd/bot запущен и авторизован как Mudrot_bot
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): устранен запуск старого бота, который отдавал устаревший /health
+- Следующий шаг: проверить /help и /health из Telegram
 
-# Состояние (обновление)
+- Дата/время: 2026-02-24 14:44
+- Что запускал: добавление `/mudro` в bot handler; добавление LLM клиента internal/bot/llm.go; обновление config/README; gofmt; go test ./...; перезапуск tmux-сессии mudro-bot
+- Что прошло: go test ./... успешно; бот перезапущен и авторизован как Mudrot_bot
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): нет
+- Следующий шаг: проверить `/mudro` в Telegram и убедиться что задан OPENAI_API_KEY
 
-- Время: 2026-02-23
-- Run folder: .codex/logs/20260223-<НОВЫЙ_ВРЕМЕННОЙ_КОД>
-- Baseline: ✅
+- Дата/время: 2026-02-24 14:48
+- Что запускал: переработка internal/bot/actions.go и internal/bot/commits.go; обновление handler/runner; gofmt; go test ./...; перезапуск mudro-bot
+- Что прошло: go test ./... успешно; бот перезапущен и авторизован
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): сменил формат `/actions10`, `/actions1h`, `/commits3` на русские аналитические сводки
+- Следующий шаг: проверить ответы команд в Telegram на живых данных
 
-## Верификация
-- docker/compose: ✅ (docker version OK, docker ps OK)
-- db: ✅ (mudro-db-1 healthy, порт 5433)
-- dbcheck: ✅ (select 1)
-- migrate: ✅ (001_init.sql, идемпотентно: already exists, skipping)
-- tables: ✅ (posts, post_reactions)
-- test: ✅ (go test ./... ok)
-- count(posts): 0 (норма до импорта)
+- Дата/время: 2026-02-24 14:51
+- Что запускал: добавление команды `/now` (handler + internal/bot/now.go), обновление README, gofmt, go test ./..., перезапуск mudro-bot
+- Что прошло: go test ./... успешно; бот перезапущен и авторизован
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): нет
+- Следующий шаг: проверить `/now` в Telegram и формат итоговой сводки
 
-## Изменения
-- Исправлен доступ к Docker (группа docker / WSL integration)
-- Восстановлен Makefile (health loop + таргеты dbcheck/migrate/tables/health)
+- Дата/время: 2026-02-24 14:57
+- Что запускал: добавление flow выбора 1/2 для /mudro (internal/bot/mudro_flow.go + правки handler); gofmt; go test ./...; очистка дубликатов процессов cmd/bot; перезапуск mudro-bot
+- Что прошло: go test ./... успешно; запущен один экземпляр cmd/bot в tmux
+- Что упало (ошибка 5–15 строк): первая команда массовой очистки завершилась без вывода/результата, выполнен повтор шагами
+- Что починил (если было): устранены множественные экземпляры бота (конфликт getUpdates)
+- Следующий шаг: проверить сценарий `/mudro` -> выбор `1`/`2` в Telegram
 
-## Следующие действия
-1) Импорт данных (tgimport/vkimport) → заполнить posts/post_reactions
-2) Проверить API (kserver): выдача ленты и пагинация
+- Дата/время: 2026-02-24 15:00
+- Что запускал: добавление команд `/todo` и `/todoadd` (handler + internal/bot/todo.go); gofmt; go test ./...; перезапуск mudro-bot
+- Что прошло: go test ./... успешно; команды добавлены; оставлен один процесс cmd/bot
+- Что упало (ошибка 5–15 строк): промежуточные попытки массовой очистки процессов завершались без вывода, выполнен безопасный повтор перезапуска
+- Что починил (если было): устранены дубликаты процессов бота
+- Следующий шаг: проверить `/todo` и `/todoadd` в Telegram
+
+- Дата/время: 2026-02-24 15:01
+- Что запускал: добавление фронтового GET-эндпоинта `/api/front` в internal/api/server.go; обновление README; gofmt; go test ./...
+- Что прошло: endpoint добавлен; go test ./... успешно
+- Что упало (ошибка 5–15 строк): нет
+- Что починил (если было): нет
+- Следующий шаг: фронту перейти на `/api/front?limit=...` для стартовой загрузки
+
+- Дата/время: 2026-02-24 15:03
+- Что запускал: добавление команды `/feed5` в Telegram-бот (internal/bot/feed.go + handler); добавление API_BASE_URL в config; обновление README; gofmt; go test ./...; перезапуск mudro-bot
+- Что прошло: go test ./... успешно; `/feed5` подключена; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): были дубликаты процессов cmd/bot после промежуточного перезапуска
+- Что починил (если было): перезапустил bot через tmux и оставил один экземпляр
+- Следующий шаг: проверить `/feed5` в Telegram при запущенном API сервере
+
+- Дата/время: 2026-02-24 15:10
+- Что запускал: создание `.codex/top10.md`; добавление команды `/top10` (handler + internal/bot/top10.go); обновление AGENTS.md и README; gofmt; go test ./...; перезапуск mudro-bot
+- Что прошло: `top10`-память введена; `/top10` работает; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): после первого перезапуска были дубликаты cmd/bot
+- Что починил (если было): выполнил `pkill -f 'go run ./cmd/bot'` и поднял один экземпляр в tmux
+- Следующий шаг: проверить `/top10` в Telegram и поддерживать файл top10 при каждом значимом изменении
+
+- Дата/время: 2026-02-24 15:24
+- Что запускал: добавление команды `/repo` (internal/bot/repo.go + handler); обновление README; gofmt; go test ./...; перезапуск mudro-bot
+- Что прошло: команда `/repo` добавлена; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): первая комбинированная команда перезапуска завершилась без результата
+- Что починил (если было): выполнен повторный чистый запуск tmux-сессии mudro-bot
+- Следующий шаг: проверить `/repo` в Telegram
+
+- Дата/время: 2026-02-24 15:27
+- Что запускал: добавление команды `/find` (internal/bot/find.go + handler), обновление README, gofmt, go test ./..., перезапуск mudro-bot
+- Что прошло: `/find` реализована; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): `pkill -f 'go run ./cmd/bot'` вернул code 1 (процессов на момент вызова не было)
+- Что починил (если было): выполнен чистый запуск mudro-bot в tmux
+- Следующий шаг: проверить `/find` в Telegram и убедиться, что важные находки попадают в TODO
+
+- Дата/время: 2026-02-24 15:33
+- Что запускал: добавление команды `/time` (internal/bot/time.go + handler), генерация `.codex/memory.json`, обновление README и AGENTS.md, gofmt, go test ./..., перезапуск mudro-bot
+- Что прошло: `/time` реализована; `.codex/memory.json` создан; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк):
+  попытка генерации memory json в sandbox:
+  snap-confine is packaged without necessary permissions and cannot continue
+  required permitted capability cap_dac_override not found in current capabilities:
+    =: Operation canceled
+- Что починил (если было): повторил генерацию `.codex/memory.json` с повышенными правами
+- Следующий шаг: проверить `/time` в Telegram
+
+- Дата/время: 2026-02-24 15:36
+- Что запускал: добавление команды `/rab` (internal/bot/rab.go + handler), обновление README, gofmt, go test ./..., перезапуск mudro-bot
+- Что прошло: `/rab` реализована; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): первая комбинированная команда перезапуска завершилась без результата
+- Что починил (если было): выполнен повторный чистый запуск tmux-сессии mudro-bot
+- Следующий шаг: проверить `/rab` в Telegram и посмотреть перенос задач TODO->DONE
+
+- Дата/время: 2026-02-24 15:39
+- Что запускал: добавление команды `/memento` (internal/bot/memento.go + handler), обновление README, gofmt, go test ./..., перезапуск mudro-bot
+- Что прошло: `/memento` реализована; go test ./... успешно; бот запущен одним процессом
+- Что упало (ошибка 5–15 строк): `pkill -f 'go run ./cmd/bot'` вернул code 1 (процессов на момент вызова не было)
+- Что починил (если было): выполнен чистый запуск `mudro-bot` в tmux
+- Следующий шаг: вызвать `/memento` в Telegram для первичного снимка `.codex/memento.json`
