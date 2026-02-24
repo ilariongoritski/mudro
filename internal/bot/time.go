@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -58,9 +59,13 @@ func (r *Runner) TimeSummary() ([]byte, error) {
 
 	if rt, err := readRuntimeTime(filepath.Join(r.RepoRoot, ".codex", "time_runtime.json")); err == nil && rt != nil && rt.Totals.Responses > 0 {
 		avgMS := rt.Totals.TotalMS / int64(rt.Totals.Responses)
+		thinkSec := rt.Totals.TotalMS / 1000
+		evapMl := estimateEvaporationML(thinkSec)
 		out.WriteString(fmt.Sprintf("- Генерация ответов: %s (%d мин, %d сек), ответов: %d, среднее: %d мс\n",
 			fmtDuration(rt.Totals.TotalMS/1000), (rt.Totals.TotalMS/1000)/60, rt.Totals.TotalMS/1000,
 			rt.Totals.Responses, avgMS))
+		out.WriteString(fmt.Sprintf("- Потрачено на размышления: %s.\n", formatHoursMinutes(thinkSec)))
+		out.WriteString(fmt.Sprintf("- Я испарил примерно %d мл за это время.\n", evapMl))
 	}
 	out.WriteString("- Память JSON: .codex/memory.json")
 	return []byte(out.String()), nil
@@ -150,4 +155,23 @@ func fmtDuration(sec int64) string {
 	m := (sec % 3600) / 60
 	s := sec % 60
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+}
+
+func formatHoursMinutes(sec int64) string {
+	if sec < 0 {
+		sec = 0
+	}
+	h := sec / 3600
+	m := (sec % 3600) / 60
+	return fmt.Sprintf("%d часов %d минут", h, m)
+}
+
+func estimateEvaporationML(sec int64) int64 {
+	// Approximation: 50 ml/hour "evaporation" during thinking time.
+	const mlPerHour = 50.0
+	ml := (float64(sec) / 3600.0) * mlPerHour
+	if ml < 0 {
+		return 0
+	}
+	return int64(math.Round(ml))
 }
