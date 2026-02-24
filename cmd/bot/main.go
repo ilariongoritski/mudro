@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/goritskimihail/mudro/internal/bot" // Пакет с обработчиками команд
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"github.com/goritskimihail/mudro/internal/bot"
 )
 
 var botAPI *tgbotapi.BotAPI
@@ -18,7 +19,7 @@ func init() {
 	}
 
 	var err error
-	botAPI, err =  ewBotAPI(token)
+	botAPI, err = tgbotapi.NewBotAPI(token)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,10 +37,7 @@ func init() {
 func main() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	updates, err := botAPI.GetUpdatesChan(u)
-	if err != nil {
-		log.Fatal(err)
-	}
+	updates := botAPI.GetUpdatesChan(u)
 
 	// Обрабатываем обновления
 	for update := range updates {

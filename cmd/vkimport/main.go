@@ -29,7 +29,7 @@ vkimport: VK RAW -> Postgres (MVP archive snapshot)
 func main() {
 	var (
 		dir = flag.String("dir", filepath.Join(os.Getenv("HOME"), "vk-export"), "dir with vk_wall_*.json")
-		dsn = flag.String("dsn", envOr("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/gallery"), "postgres dsn")
+		dsn = flag.String("dsn", envOr("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"), "postgres dsn")
 	)
 	flag.Parse()
 
