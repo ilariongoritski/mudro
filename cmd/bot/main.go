@@ -18,7 +18,7 @@ func init() {
 	}
 
 	var err error
-	botAPI, err = tgbotapi.NewBotAPI(token)
+	botAPI, err =  ewBotAPI(token)
 	if err != nil {
 		log.Fatal(err)
 	}
