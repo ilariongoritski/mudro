@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,6 +30,7 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
+	mux.HandleFunc("/feed", s.handleFeed)
 	return mux
 }
 
@@ -121,6 +125,65 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(resp)
+}
+
+func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	limit := parseLimit(r.URL.Query().Get("limit"))
+
+	cursorTS, cursorID, err := parseCursor(r.URL.Query().Get("before_ts"), r.URL.Query().Get("before_id"))
+	if err != nil {
+		http.Error(w, "invalid cursor: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, nil, limit)
+	if err != nil {
+		log.Printf("loadPosts(feed): %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	data := feedPageData{
+		Limit: limit,
+		Items: make([]feedItem, 0, len(posts)),
+	}
+	for _, p := range posts {
+		data.Items = append(data.Items, feedItem{
+			ID:            p.ID,
+			Source:        p.Source,
+			SourcePostID:  p.SourcePostID,
+			PublishedAt:   p.PublishedAt.Format("2006-01-02 15:04:05"),
+			Text:          compactText(p.Text),
+			LikesCount:    p.LikesCount,
+			ViewsCount:    p.ViewsCount,
+			CommentsCount: p.CommentsCount,
+		})
+	}
+
+	if next != nil {
+		q := url.Values{}
+		q.Set("limit", strconv.Itoa(limit))
+		q.Set("before_ts", next.BeforeTS.Format(time.RFC3339))
+		q.Set("before_id", strconv.FormatInt(next.BeforeID, 10))
+		data.NextURL = "/feed?" + q.Encode()
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := feedPageTmpl.Execute(w, data); err != nil {
+		log.Printf("template feed: %v", err)
+	}
+}
+
+func compactText(s *string) string {
+	if s == nil {
+		return ""
+	}
+	t := strings.TrimSpace(*s)
+	if t == "" {
+		return ""
+	}
+	return t
 }
 
 func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
@@ -312,6 +375,114 @@ type sourceStat struct {
 	Source string `json:"source"`
 	Posts  int64  `json:"posts"`
 }
+
+type feedPageData struct {
+	Limit   int
+	Items   []feedItem
+	NextURL string
+}
+
+type feedItem struct {
+	ID            int64
+	Source        string
+	SourcePostID  string
+	PublishedAt   string
+	Text          string
+	LikesCount    int
+	ViewsCount    *int
+	CommentsCount *int
+}
+
+var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mudro Feed</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --accent: #0f766e;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #e0f2fe 0%, var(--bg) 45%);
+      color: var(--text);
+      font: 16px/1.45 "Segoe UI", -apple-system, "Helvetica Neue", sans-serif;
+    }
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+    }
+    .head {
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .post {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 6px 22px rgba(15, 23, 42, 0.05);
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .txt {
+      white-space: pre-wrap;
+      margin: 0;
+    }
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+    .stats {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .more {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="head">Mudro feed, лимит: {{.Limit}}</div>
+    {{range .Items}}
+      <article class="post">
+        <div class="meta">#{{.ID}} | {{.Source}}/{{.SourcePostID}} | {{.PublishedAt}}</div>
+        {{if .Text}}
+          <p class="txt">{{.Text}}</p>
+        {{else}}
+          <p class="empty">Без текста</p>
+        {{end}}
+        <div class="stats">likes: {{.LikesCount}} | views: {{if .ViewsCount}}{{.ViewsCount}}{{else}}-{{end}} | comments: {{if .CommentsCount}}{{.CommentsCount}}{{else}}-{{end}}</div>
+      </article>
+    {{else}}
+      <p class="empty">Постов пока нет.</p>
+    {{end}}
+    {{if .NextURL}}
+      <a class="more" href="{{.NextURL}}">Загрузить еще</a>
+    {{end}}
+  </main>
+</body>
+</html>`))
 
 func parseLimit(raw string) int {
 	const (

@@ -82,6 +82,17 @@ Default DSN for Makefile targets:
 make health
 ```
 
+## Agent Queue (MVP)
+Простой каркас автономного агента:
+- planner читает `.codex/todo.md` и ставит задачи в `agent_queue`
+- worker забирает задачи и обрабатывает safe-only типы
+
+```bash
+make migrate-agent
+make agent-plan-once
+make agent-work
+```
+
 ## Repo Layout
 - `cmd/api` — HTTP API server (JSON endpoints)
 - `cmd/vkimport` — VK raw export -> Postgres (`posts` + `media`)
@@ -165,6 +176,7 @@ API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmod
 
 Endpoints:
 - `GET /healthz` → `{ "status": "ok" }`
+- `GET /feed?limit=20` (простой HTML-шаблон ленты с кнопкой "Загрузить еще")
 - `GET /api/front?limit=50` (одним запросом: мета + лента для фронта)
 - `GET /api/posts?limit=50`
 - `GET /api/posts?page=2` (page-based, 1-indexed)
