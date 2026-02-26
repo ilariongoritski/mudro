@@ -59,16 +59,52 @@ func (r *Runner) TimeSummary() ([]byte, error) {
 
 	if rt, err := readRuntimeTime(filepath.Join(r.RepoRoot, ".codex", "time_runtime.json")); err == nil && rt != nil && rt.Totals.Responses > 0 {
 		avgMS := rt.Totals.TotalMS / int64(rt.Totals.Responses)
-		thinkSec := rt.Totals.TotalMS / 1000
-		evapMl := estimateEvaporationML(thinkSec)
-		out.WriteString(fmt.Sprintf("- Генерация ответов: %s (%d мин, %d сек), ответов: %d, среднее: %d мс\n",
-			fmtDuration(rt.Totals.TotalMS/1000), (rt.Totals.TotalMS/1000)/60, rt.Totals.TotalMS/1000,
-			rt.Totals.Responses, avgMS))
-		out.WriteString(fmt.Sprintf("- Потрачено на размышления: %s.\n", formatHoursMinutes(thinkSec)))
-		out.WriteString(fmt.Sprintf("- Я испарил примерно %d мл за это время.\n", evapMl))
+		thinkSec := rt.Totals.ProcessMS / 1000
+		evapProcessMl := estimateEvaporationML(thinkSec)
+		evapTotalMl := estimateEvaporationML(rt.Totals.TotalMS / 1000)
+		out.WriteString("- Учет runtime ответов бота (факт):\n")
+		out.WriteString(fmt.Sprintf("  - total: %s (%d мс), ответов: %d, среднее: %d мс, max: %d мс\n",
+			fmtDuration(rt.Totals.TotalMS/1000), rt.Totals.TotalMS, rt.Totals.Responses, avgMS, rt.Totals.MaxTotalMS))
+		out.WriteString(fmt.Sprintf("  - process: %s (%d мс)\n", fmtDuration(rt.Totals.ProcessMS/1000), rt.Totals.ProcessMS))
+		out.WriteString(fmt.Sprintf("  - send: %s (%d мс)\n", fmtDuration(rt.Totals.SendMS/1000), rt.Totals.SendMS))
+		out.WriteString(fmt.Sprintf("  - unknown: %s (%d мс)\n", fmtDuration(rt.Totals.UnknownMS/1000), rt.Totals.UnknownMS))
+		out.WriteString(fmt.Sprintf("- Потрачено на обдумывание/обработку (process): %s.\n", formatHoursMinutes(thinkSec)))
+		out.WriteString(fmt.Sprintf("- Вода (оценка): process=%d мл, total=%d мл.\n", evapProcessMl, evapTotalMl))
+		out.WriteString("- Модель воды: 50 мл/час, расчет оценочный.\n")
+		out.WriteString("- Детализация по командам (top 5 по total):\n")
+		for _, line := range topRuntimeCommands(rt, 5) {
+			out.WriteString("  - " + line + "\n")
+		}
 	}
-	out.WriteString("- Память JSON: .codex/memory.json")
+	out.WriteString("- Память JSON: .codex/memory.json, .codex/time_runtime.json")
 	return []byte(out.String()), nil
+}
+
+func topRuntimeCommands(rt *runtimeTimeMemory, n int) []string {
+	type item struct {
+		cmd  string
+		stat runtimeCommand
+	}
+	items := make([]item, 0, len(rt.ByCommand))
+	for cmd, st := range rt.ByCommand {
+		items = append(items, item{cmd: cmd, stat: st})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].stat.TotalMS == items[j].stat.TotalMS {
+			return items[i].cmd < items[j].cmd
+		}
+		return items[i].stat.TotalMS > items[j].stat.TotalMS
+	})
+	if n <= 0 || n > len(items) {
+		n = len(items)
+	}
+	out := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		st := items[i].stat
+		out = append(out, fmt.Sprintf("/%s: total=%dms, process=%dms, send=%dms, responses=%d",
+			items[i].cmd, st.TotalMS, st.ProcessMS, st.SendMS, st.Responses))
+	}
+	return out
 }
 
 func (r *Runner) rebuildMemoryJSON() (*memoryJSON, error) {

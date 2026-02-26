@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "updated_at": "2026-02-24T20:46:14+03:00",
+  "updated_at": "2026-02-25T03:17:10+03:00",
   "totals": {
-    "responses": 53,
-    "total_ms": 13350
+    "responses": 76,
+    "total_ms": 18443
   },
   "by_command": {
     "actions10": {
@@ -13,16 +13,22 @@
       "last_ms": 82
     },
     "actions1h": {
-      "responses": 1,
-      "total_ms": 133,
+      "responses": 2,
+      "total_ms": 229,
       "max_ms": 133,
-      "last_ms": 133
+      "last_ms": 96
     },
     "chat": {
-      "responses": 9,
-      "total_ms": 700,
+      "responses": 12,
+      "total_ms": 928,
       "max_ms": 96,
-      "last_ms": 74
+      "last_ms": 64
+    },
+    "commits3": {
+      "responses": 2,
+      "total_ms": 103,
+      "max_ms": 53,
+      "last_ms": 53
     },
     "feed5": {
       "responses": 3,
@@ -31,16 +37,16 @@
       "last_ms": 107
     },
     "find": {
-      "responses": 4,
-      "total_ms": 2267,
-      "max_ms": 692,
-      "last_ms": 692
+      "responses": 5,
+      "total_ms": 3131,
+      "max_ms": 864,
+      "last_ms": 864
     },
     "health": {
-      "responses": 3,
-      "total_ms": 1777,
+      "responses": 4,
+      "total_ms": 2260,
       "max_ms": 626,
-      "last_ms": 548
+      "last_ms": 483
     },
     "logs": {
       "responses": 1,
@@ -49,26 +55,26 @@
       "last_ms": 249
     },
     "memento": {
-      "responses": 3,
-      "total_ms": 462,
+      "responses": 4,
+      "total_ms": 539,
       "max_ms": 257,
-      "last_ms": 121
+      "last_ms": 77
     },
     "now": {
-      "responses": 5,
-      "total_ms": 2518,
-      "max_ms": 743,
-      "last_ms": 743
+      "responses": 7,
+      "total_ms": 3893,
+      "max_ms": 982,
+      "last_ms": 393
     },
     "rab": {
-      "responses": 3,
-      "total_ms": 2746,
+      "responses": 4,
+      "total_ms": 3545,
       "max_ms": 1157,
-      "last_ms": 772
+      "last_ms": 799
     },
     "reportnow": {
-      "responses": 1,
-      "total_ms": 208,
+      "responses": 3,
+      "total_ms": 619,
       "max_ms": 208,
       "last_ms": 208
     },
@@ -79,22 +85,28 @@
       "last_ms": 83
     },
     "time": {
-      "responses": 4,
-      "total_ms": 441,
+      "responses": 8,
+      "total_ms": 740,
       "max_ms": 189,
-      "last_ms": 83
+      "last_ms": 77
     },
     "todo": {
-      "responses": 4,
-      "total_ms": 454,
+      "responses": 5,
+      "total_ms": 525,
       "max_ms": 171,
-      "last_ms": 171
+      "last_ms": 71
     },
     "todoadd": {
-      "responses": 10,
-      "total_ms": 969,
+      "responses": 12,
+      "total_ms": 1108,
       "max_ms": 173,
-      "last_ms": 72
+      "last_ms": 68
+    },
+    "top10": {
+      "responses": 2,
+      "total_ms": 148,
+      "max_ms": 79,
+      "last_ms": 69
     }
   }
 }

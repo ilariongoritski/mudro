@@ -18,15 +18,23 @@ type runtimeTimeMemory struct {
 }
 
 type runtimeTotals struct {
-	Responses int   `json:"responses"`
-	TotalMS   int64 `json:"total_ms"`
+	Responses  int   `json:"responses"`
+	TotalMS    int64 `json:"total_ms"`
+	ProcessMS  int64 `json:"process_ms"`
+	SendMS     int64 `json:"send_ms"`
+	UnknownMS  int64 `json:"unknown_ms"`
+	MaxTotalMS int64 `json:"max_total_ms"`
+	LastTotal  int64 `json:"last_total_ms"`
 }
 
 type runtimeCommand struct {
-	Responses int   `json:"responses"`
-	TotalMS   int64 `json:"total_ms"`
-	MaxMS     int64 `json:"max_ms"`
-	LastMS    int64 `json:"last_ms"`
+	Responses  int   `json:"responses"`
+	TotalMS    int64 `json:"total_ms"`
+	ProcessMS  int64 `json:"process_ms"`
+	SendMS     int64 `json:"send_ms"`
+	UnknownMS  int64 `json:"unknown_ms"`
+	MaxTotalMS int64 `json:"max_total_ms"`
+	LastTotal  int64 `json:"last_total_ms"`
 }
 
 var commandStartStore = struct {
@@ -56,7 +64,7 @@ func updateKey(chatID int64, msgID int) string {
 	return fmt.Sprintf("%d:%d", chatID, msgID)
 }
 
-func recordRuntimeTime(repoRoot string, command string, d time.Duration) error {
+func recordRuntimeTime(repoRoot string, command string, process, send, total time.Duration) error {
 	path := filepath.Join(repoRoot, ".codex", "time_runtime.json")
 	mem, _ := readRuntimeTime(path)
 	if mem == nil {
@@ -66,13 +74,24 @@ func recordRuntimeTime(repoRoot string, command string, d time.Duration) error {
 		}
 	}
 
-	ms := d.Milliseconds()
-	if ms < 0 {
-		ms = 0
+	totalMS := nonNegativeMS(total)
+	processMS := nonNegativeMS(process)
+	sendMS := nonNegativeMS(send)
+	unknownMS := totalMS - processMS - sendMS
+	if unknownMS < 0 {
+		unknownMS = 0
 	}
+
 	mem.UpdatedAt = time.Now().Format(time.RFC3339)
 	mem.Totals.Responses++
-	mem.Totals.TotalMS += ms
+	mem.Totals.TotalMS += totalMS
+	mem.Totals.ProcessMS += processMS
+	mem.Totals.SendMS += sendMS
+	mem.Totals.UnknownMS += unknownMS
+	mem.Totals.LastTotal = totalMS
+	if totalMS > mem.Totals.MaxTotalMS {
+		mem.Totals.MaxTotalMS = totalMS
+	}
 
 	command = strings.TrimSpace(strings.TrimPrefix(command, "/"))
 	if command == "" {
@@ -80,10 +99,13 @@ func recordRuntimeTime(repoRoot string, command string, d time.Duration) error {
 	}
 	cs := mem.ByCommand[command]
 	cs.Responses++
-	cs.TotalMS += ms
-	cs.LastMS = ms
-	if ms > cs.MaxMS {
-		cs.MaxMS = ms
+	cs.TotalMS += totalMS
+	cs.ProcessMS += processMS
+	cs.SendMS += sendMS
+	cs.UnknownMS += unknownMS
+	cs.LastTotal = totalMS
+	if totalMS > cs.MaxTotalMS {
+		cs.MaxTotalMS = totalMS
 	}
 	mem.ByCommand[command] = cs
 
@@ -92,6 +114,14 @@ func recordRuntimeTime(repoRoot string, command string, d time.Duration) error {
 		return err
 	}
 	return os.WriteFile(path, b, 0o644)
+}
+
+func nonNegativeMS(d time.Duration) int64 {
+	ms := d.Milliseconds()
+	if ms < 0 {
+		return 0
+	}
+	return ms
 }
 
 func readRuntimeTime(path string) (*runtimeTimeMemory, error) {

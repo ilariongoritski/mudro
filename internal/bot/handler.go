@@ -383,15 +383,21 @@ func handleUnknown(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 func sendReply(bot *tgbotapi.BotAPI, update tgbotapi.Update, prefix string, out []byte, err error) {
 	text := formatReply(prefix, out, err)
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	sendStartedAt := time.Now()
 	if _, sendErr := bot.Send(msg); sendErr != nil {
 		log.Printf("send %s: %v", prefix, sendErr)
 	}
+	sendElapsed := time.Since(sendStartedAt)
 
 	key := updateKey(update.Message.Chat.ID, update.Message.MessageID)
 	if startedAt, ok := popCommandStart(key); ok {
-		elapsed := time.Since(startedAt)
+		totalElapsed := time.Since(startedAt)
+		processElapsed := sendStartedAt.Sub(startedAt)
+		if processElapsed < 0 {
+			processElapsed = 0
+		}
 		r := NewRunner()
-		if recErr := recordRuntimeTime(r.RepoRoot, prefix, elapsed); recErr != nil {
+		if recErr := recordRuntimeTime(r.RepoRoot, prefix, processElapsed, sendElapsed, totalElapsed); recErr != nil {
 			log.Printf("record runtime time %s: %v", prefix, recErr)
 		}
 	}
