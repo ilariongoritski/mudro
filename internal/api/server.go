@@ -9,11 +9,14 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -181,6 +184,16 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var totalPosts int64
+	if err := s.pool.QueryRow(ctx, `select count(*) from posts`).Scan(&totalPosts); err != nil {
+		log.Printf("feed count posts: %v", err)
+	}
+	sourceStats, err := s.loadSourceStats(ctx)
+	if err != nil {
+		log.Printf("feed source stats: %v", err)
+	}
+	vkTotal, tgTotal := sourceTotals(sourceStats)
+
 	data := feedPageData{
 		Limit:      limit,
 		Page:       *page,
@@ -193,7 +206,20 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		OldestURL:  buildFeedURL(limit, 1, source, "asc"),
 		Items:      make([]feedItem, 0, len(posts)),
 		SourceName: sourceLabel(source),
+		TotalPosts: totalPosts,
+		VKTotal:    vkTotal,
+		TGTotal:    tgTotal,
 	}
+
+	postIDs := make([]int64, 0, len(posts))
+	for _, p := range posts {
+		postIDs = append(postIDs, p.ID)
+	}
+	commentsByPost, err := s.loadPostComments(ctx, postIDs)
+	if err != nil {
+		log.Printf("feed load comments: %v", err)
+	}
+
 	for _, p := range posts {
 		originalURL := buildOriginalPostURL(p.Source, p.SourcePostID)
 		commentsURL := ""
@@ -211,6 +237,8 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 			CommentsCount: p.CommentsCount,
 			OriginalURL:   originalURL,
 			CommentsURL:   commentsURL,
+			Reactions:     buildFeedReactions(p.Reactions),
+			Comments:      commentsByPost[p.ID],
 			Media:         parseMediaItems(p.Media),
 		})
 	}
@@ -453,6 +481,9 @@ type feedPageData struct {
 	Source     string
 	SourceName string
 	SortOrder  string
+	TotalPosts int64
+	VKTotal    int64
+	TGTotal    int64
 	AllURL     string
 	VKURL      string
 	TGURL      string
@@ -473,13 +504,31 @@ type feedItem struct {
 	CommentsCount *int
 	OriginalURL   string
 	CommentsURL   string
+	Reactions     []feedReaction
+	Comments      []feedComment
 	Media         []feedMediaItem
+}
+
+type feedReaction struct {
+	Label string
+	Count int
+	Raw   string
+}
+
+type feedComment struct {
+	SourceCommentID string
+	ParentCommentID string
+	AuthorName      string
+	PublishedAt     string
+	Text            string
+	Reactions       []feedReaction
 }
 
 type feedMediaItem struct {
 	Kind       string
 	URL        string
 	PreviewURL string
+	Title      string
 	Width      int
 	Height     int
 	Position   int
@@ -579,6 +628,29 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
       text-decoration: none;
       font-weight: 600;
     }
+    .comments {
+      margin-top: 12px;
+      border-top: 1px dashed var(--line);
+      padding-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .comment {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fcfdff;
+    }
+    .comment-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .comment-text {
+      margin: 0;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
     .media {
       margin-top: 12px;
       display: grid;
@@ -620,6 +692,7 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
 <body>
   <main class="wrap">
     <div class="head">Mudro feed, лимит: {{.Limit}}, страница: {{.Page}}, источник: {{.SourceName}}, сортировка: {{if eq .SortOrder "asc"}}старые сверху{{else}}новые сверху{{end}}</div>
+    <div class="head">Всего постов: {{.TotalPosts}} | TG: {{.TGTotal}} | VK: {{.VKTotal}}</div>
     <div class="toolbar">
       <a class="chip {{if eq .Source ""}}active{{end}}" href="{{.AllURL}}">Общая</a>
       <a class="chip {{if eq .Source "vk"}}active{{end}}" href="{{.VKURL}}">VK</a>
@@ -638,10 +711,42 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
           <p class="empty">Без текста</p>
         {{end}}
         <div class="stats">likes: {{.LikesCount}} | views: {{if .ViewsCount}}{{.ViewsCount}}{{else}}-{{end}} | comments: {{if .CommentsCount}}{{.CommentsCount}}{{else}}-{{end}}</div>
+        {{if .Reactions}}
+          <div class="links">
+            {{range .Reactions}}
+              <span class="chip" title="{{.Raw}}">{{.Label}} {{.Count}}</span>
+            {{end}}
+          </div>
+        {{end}}
         <div class="links">
           {{if .OriginalURL}}<a href="{{.OriginalURL}}" target="_blank" rel="noopener noreferrer">Оригинальный пост</a>{{end}}
           {{if .CommentsURL}}<a href="{{.CommentsURL}}" target="_blank" rel="noopener noreferrer">Обсуждение</a>{{end}}
         </div>
+        {{if .Comments}}
+          <div class="comments">
+            <div class="meta">Комментарии: {{len .Comments}}</div>
+            {{range .Comments}}
+              <div class="comment">
+                <div class="comment-meta">
+                  {{if .AuthorName}}{{.AuthorName}}{{else}}без имени{{end}} | {{.PublishedAt}}
+                  {{if .ParentCommentID}} | ответ на #{{.ParentCommentID}}{{end}}
+                </div>
+                {{if .Text}}
+                  <p class="comment-text">{{.Text}}</p>
+                {{else}}
+                  <p class="empty">Без текста</p>
+                {{end}}
+                {{if .Reactions}}
+                  <div class="links">
+                    {{range .Reactions}}
+                      <span class="chip" title="{{.Raw}}">{{.Label}} {{.Count}}</span>
+                    {{end}}
+                  </div>
+                {{end}}
+              </div>
+            {{end}}
+          </div>
+        {{end}}
         {{if .Media}}
           <div class="media">
             {{range .Media}}
@@ -651,15 +756,15 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
                   <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть изображение</a>
                 {{else if .IsVideo}}
                   {{if .PreviewURL}}<img src="{{.PreviewURL}}" alt="video preview" loading="lazy">{{end}}
-                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть видео</a>{{else}}Видео (без URL в экспорте){{end}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть видео</a>{{else if .Title}}Видео: {{.Title}}{{else}}Видео (без URL в экспорте){{end}}
                 {{else if .IsAudio}}
-                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть аудио</a>{{else}}Аудио во вложении (без URL в экспорте){{end}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть аудио</a>{{else if .Title}}Аудио: {{.Title}}{{else}}Аудио во вложении (без URL в экспорте){{end}}
                 {{else if .IsDocument}}
-                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть документ</a>{{else}}Документ (без URL){{end}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть документ</a>{{else if .Title}}Документ: {{.Title}}{{else}}Документ (без URL){{end}}
                 {{else if .IsLink}}
                   {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Связанная ссылка</a>{{else}}Связанная ссылка (без URL){{end}}
                 {{else}}
-                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть вложение ({{.Kind}})</a>{{else}}Вложение: {{.Kind}}{{end}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть вложение ({{.Kind}})</a>{{else if .Title}}Вложение {{.Kind}}: {{.Title}}{{else}}Вложение: {{.Kind}}{{end}}
                 {{end}}
               </div>
             {{end}}
@@ -789,23 +894,36 @@ func parseMediaItems(raw json.RawMessage) []feedMediaItem {
 
 	items := make([]feedMediaItem, 0, len(decoded))
 	for _, m := range decoded {
-		kind := strings.ToLower(strings.TrimSpace(anyString(m, "kind", "Kind")))
-		url := strings.TrimSpace(anyString(m, "url", "URL"))
-		preview := strings.TrimSpace(anyString(m, "preview_url", "PreviewURL"))
+		kindRaw := strings.ToLower(strings.TrimSpace(anyString(m, "kind", "Kind")))
+		urlRaw := strings.TrimSpace(anyString(m, "url", "URL"))
+		previewRaw := strings.TrimSpace(anyString(m, "preview_url", "PreviewURL"))
 		width := anyInt(m, "width", "Width")
 		height := anyInt(m, "height", "Height")
 		position := anyInt(m, "position", "Position")
-		if kind == "" && url == "" && preview == "" {
+		title := strings.TrimSpace(anyString(m, "title", "Title"))
+		if title == "" {
+			title = strings.TrimSpace(mediaExtraString(m, "file_name", "filename", "title"))
+		}
+		if title == "" {
+			title = guessMediaTitle(urlRaw)
+		}
+
+		kind := normalizeMediaKind(kindRaw, mediaExtraString(m, "media_type"), mediaExtraString(m, "mime_type"), urlRaw, title)
+		url := normalizeMediaURL(urlRaw)
+		preview := normalizeMediaURL(previewRaw)
+		if kind == "" && url == "" && preview == "" && title == "" {
 			continue
 		}
+
 		items = append(items, feedMediaItem{
 			Kind:       kind,
 			URL:        url,
 			PreviewURL: preview,
+			Title:      title,
 			Width:      width,
 			Height:     height,
 			Position:   position,
-			IsImage:    kind == "photo" || kind == "gif",
+			IsImage:    kind == "photo" || kind == "gif" || kind == "image",
 			IsAudio:    kind == "audio",
 			IsVideo:    kind == "video",
 			IsDocument: kind == "doc",
@@ -813,6 +931,129 @@ func parseMediaItems(raw json.RawMessage) []feedMediaItem {
 		})
 	}
 	return items
+}
+
+func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int64][]feedComment, error) {
+	out := make(map[int64][]feedComment, len(postIDs))
+	if len(postIDs) == 0 {
+		return out, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		select post_id, source_comment_id, source_parent_comment_id, author_name, published_at, text, reactions
+		from post_comments
+		where post_id = any($1)
+		order by post_id asc, published_at asc, id asc
+	`, postIDs)
+	if err != nil {
+		if isUndefinedTableErr(err) {
+			return out, nil
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			postID           int64
+			sourceCommentID  string
+			parentCommentID  *string
+			authorName       *string
+			publishedAt      time.Time
+			text             *string
+			reactionsRawJSON []byte
+		)
+		if err := rows.Scan(&postID, &sourceCommentID, &parentCommentID, &authorName, &publishedAt, &text, &reactionsRawJSON); err != nil {
+			return nil, err
+		}
+		reactions := parseReactionsJSON(reactionsRawJSON)
+		item := feedComment{
+			SourceCommentID: sourceCommentID,
+			AuthorName:      compactText(authorName),
+			PublishedAt:     publishedAt.Format("2006-01-02 15:04:05"),
+			Text:            compactText(text),
+			Reactions:       buildFeedReactions(reactions),
+		}
+		if parentCommentID != nil {
+			item.ParentCommentID = *parentCommentID
+		}
+		out[postID] = append(out[postID], item)
+	}
+	return out, rows.Err()
+}
+
+func parseReactionsJSON(raw []byte) map[string]int {
+	if len(raw) == 0 {
+		return nil
+	}
+	var out map[string]int
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+func isUndefinedTableErr(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "42P01"
+}
+
+func sourceTotals(stats []sourceStat) (vkTotal, tgTotal int64) {
+	for _, st := range stats {
+		switch st.Source {
+		case "vk":
+			vkTotal = st.Posts
+		case "tg":
+			tgTotal = st.Posts
+		}
+	}
+	return vkTotal, tgTotal
+}
+
+func buildFeedReactions(reactions map[string]int) []feedReaction {
+	if len(reactions) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(reactions))
+	for k, v := range reactions {
+		if v > 0 {
+			keys = append(keys, k)
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		vi := reactions[keys[i]]
+		vj := reactions[keys[j]]
+		if vi == vj {
+			return keys[i] < keys[j]
+		}
+		return vi > vj
+	})
+	out := make([]feedReaction, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, feedReaction{
+			Label: reactionLabel(k),
+			Count: reactions[k],
+			Raw:   k,
+		})
+	}
+	return out
+}
+
+func reactionLabel(raw string) string {
+	switch {
+	case strings.HasPrefix(raw, "emoji:"):
+		label := strings.TrimSpace(strings.TrimPrefix(raw, "emoji:"))
+		if label != "" {
+			return label
+		}
+	case strings.HasPrefix(raw, "custom:"):
+		return "✨"
+	case strings.HasPrefix(raw, "unknown:"):
+		return "?"
+	}
+	if raw == "" {
+		return "?"
+	}
+	return raw
 }
 
 func anyString(m map[string]any, keys ...string) string {
@@ -844,4 +1085,106 @@ func anyInt(m map[string]any, keys ...string) int {
 		}
 	}
 	return 0
+}
+
+func mediaExtraString(m map[string]any, keys ...string) string {
+	raw, ok := m["extra"]
+	if !ok {
+		raw, ok = m["Extra"]
+	}
+	if !ok {
+		return ""
+	}
+	obj, ok := raw.(map[string]any)
+	if !ok {
+		return ""
+	}
+	return anyString(obj, keys...)
+}
+
+func normalizeMediaURL(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" || strings.HasPrefix(s, "missing://") {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return ""
+	}
+	return s
+}
+
+func guessMediaTitle(rawURL string) string {
+	s := strings.TrimSpace(rawURL)
+	if s == "" || strings.HasPrefix(s, "missing://") {
+		return ""
+	}
+	if u, err := url.Parse(s); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		return ""
+	}
+	name := filepath.Base(s)
+	if name == "." || name == "/" || strings.TrimSpace(name) == "" {
+		return ""
+	}
+	return name
+}
+
+func normalizeMediaKind(kindRaw, mediaTypeRaw, mimeRaw, rawURL, title string) string {
+	kind := strings.ToLower(strings.TrimSpace(kindRaw))
+	switch kind {
+	case "photo", "image", "gif", "video", "audio", "doc", "link":
+		return kind
+	case "document":
+		return "doc"
+	}
+
+	mediaType := strings.ToLower(strings.TrimSpace(mediaTypeRaw))
+	if strings.Contains(mediaType, "video") {
+		return "video"
+	}
+	if strings.Contains(mediaType, "audio") || strings.Contains(mediaType, "voice") {
+		return "audio"
+	}
+	if strings.Contains(mediaType, "sticker") || strings.Contains(mediaType, "animation") || strings.Contains(mediaType, "gif") {
+		return "gif"
+	}
+
+	mimeType := strings.ToLower(strings.TrimSpace(mimeRaw))
+	if strings.HasPrefix(mimeType, "image/") {
+		return "photo"
+	}
+	if strings.HasPrefix(mimeType, "video/") {
+		return "video"
+	}
+	if strings.HasPrefix(mimeType, "audio/") {
+		return "audio"
+	}
+	if strings.HasPrefix(mimeType, "application/") || strings.HasPrefix(mimeType, "text/") {
+		return "doc"
+	}
+
+	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(rawURL)))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff":
+		return "photo"
+	case ".gif":
+		return "gif"
+	case ".mp4", ".mov", ".mkv", ".webm", ".avi":
+		return "video"
+	case ".mp3", ".m4a", ".aac", ".ogg", ".wav", ".flac":
+		return "audio"
+	case ".pdf", ".doc", ".docx", ".txt", ".zip", ".rar", ".7z":
+		return "doc"
+	}
+
+	if strings.HasPrefix(strings.TrimSpace(rawURL), "http://") || strings.HasPrefix(strings.TrimSpace(rawURL), "https://") {
+		if kind == "link" {
+			return "link"
+		}
+		return "doc"
+	}
+	if strings.TrimSpace(title) != "" && kind == "" {
+		return "doc"
+	}
+	return kind
 }

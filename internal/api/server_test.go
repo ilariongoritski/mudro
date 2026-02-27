@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -126,5 +128,85 @@ func TestCompactText(t *testing.T) {
 	s := "  hello  "
 	if got := compactText(&s); got != "hello" {
 		t.Fatalf("compactText = %q, want hello", got)
+	}
+}
+
+func TestReactionLabel(t *testing.T) {
+	cases := map[string]string{
+		"emoji:🔥":  "🔥",
+		"custom:x": "✨",
+		"unknown:": "?",
+		"":         "?",
+		"plain":    "plain",
+	}
+	for in, want := range cases {
+		if got := reactionLabel(in); got != want {
+			t.Fatalf("reactionLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestBuildFeedReactions(t *testing.T) {
+	got := buildFeedReactions(map[string]int{
+		"emoji:🔥":   3,
+		"emoji:❤️":  5,
+		"custom:id": 2,
+		"emoji:0":   0,
+	})
+	want := []feedReaction{
+		{Label: "❤️", Count: 5, Raw: "emoji:❤️"},
+		{Label: "🔥", Count: 3, Raw: "emoji:🔥"},
+		{Label: "✨", Count: 2, Raw: "custom:id"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildFeedReactions() = %#v, want %#v", got, want)
+	}
+}
+
+func TestParseMediaItemsDetectsKindsAndTitles(t *testing.T) {
+	raw := json.RawMessage(`[
+	  {"kind":"file","url":"photos/video_1.mp4","extra":{"media_type":"video_file","file_name":"video_1.mp4"}},
+	  {"kind":"file","url":"https://cdn.example.com/pic.png"},
+	  {"kind":"audio","title":"Artist - Track"},
+	  {"kind":"doc","url":"https://cdn.example.com/file.pdf"},
+	  {"kind":"link","url":"https://example.com/readme"}
+	]`)
+
+	got := parseMediaItems(raw)
+	if len(got) != 5 {
+		t.Fatalf("len=%d, want 5", len(got))
+	}
+
+	if !got[0].IsVideo || got[0].URL != "" || got[0].Title != "video_1.mp4" {
+		t.Fatalf("item0 unexpected: %+v", got[0])
+	}
+	if !got[1].IsImage || got[1].URL == "" {
+		t.Fatalf("item1 unexpected: %+v", got[1])
+	}
+	if !got[2].IsAudio || got[2].Title == "" {
+		t.Fatalf("item2 unexpected: %+v", got[2])
+	}
+	if !got[3].IsDocument {
+		t.Fatalf("item3 unexpected: %+v", got[3])
+	}
+	if !got[4].IsLink || got[4].URL == "" {
+		t.Fatalf("item4 unexpected: %+v", got[4])
+	}
+}
+
+func TestNormalizeMediaURL(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{in: "https://example.com/a.jpg", want: "https://example.com/a.jpg"},
+		{in: "http://example.com/a.jpg", want: "http://example.com/a.jpg"},
+		{in: "missing://file.mp4", want: ""},
+		{in: "photos/file.jpg", want: ""},
+	}
+	for _, tc := range cases {
+		if got := normalizeMediaURL(tc.in); got != tc.want {
+			t.Fatalf("normalizeMediaURL(%q)=%q want %q", tc.in, got, tc.want)
+		}
 	}
 }

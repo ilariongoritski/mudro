@@ -96,4 +96,7 @@ func TestHandleFeedIntegration(t *testing.T) {
 	if !strings.Contains(body, "Mudro feed") || !strings.Contains(body, "post a") {
 		t.Fatalf("feed body=%s", body)
 	}
+	if !strings.Contains(body, "👍 3") {
+		t.Fatalf("feed reactions not rendered, body=%s", body)
+	}
 }

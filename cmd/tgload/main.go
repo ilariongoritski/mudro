@@ -33,12 +33,14 @@ type feedStats struct {
 }
 
 type mediaItem struct {
-	Kind       string `json:"kind"`
-	URL        string `json:"url"`
-	PreviewURL string `json:"preview_url"`
-	Width      *int   `json:"width"`
-	Height     *int   `json:"height"`
-	Position   int    `json:"position"`
+	Kind       string         `json:"kind"`
+	URL        string         `json:"url"`
+	PreviewURL string         `json:"preview_url"`
+	Width      *int           `json:"width"`
+	Height     *int           `json:"height"`
+	Position   int            `json:"position"`
+	Title      string         `json:"title"`
+	Extra      map[string]any `json:"extra"`
 }
 
 func main() {
@@ -171,6 +173,9 @@ func buildMediaJSON(media []mediaItem, tracks []string) ([]byte, error) {
 			"url":      strings.TrimSpace(m.URL),
 			"position": m.Position,
 		}
+		if strings.TrimSpace(m.Title) != "" {
+			row["title"] = strings.TrimSpace(m.Title)
+		}
 		if strings.TrimSpace(m.PreviewURL) != "" {
 			row["preview_url"] = strings.TrimSpace(m.PreviewURL)
 		}
@@ -179,6 +184,9 @@ func buildMediaJSON(media []mediaItem, tracks []string) ([]byte, error) {
 		}
 		if m.Height != nil && *m.Height > 0 {
 			row["height"] = *m.Height
+		}
+		if len(m.Extra) > 0 {
+			row["extra"] = m.Extra
 		}
 		out = append(out, row)
 	}
@@ -191,7 +199,7 @@ func buildMediaJSON(media []mediaItem, tracks []string) ([]byte, error) {
 		}
 		out = append(out, map[string]any{
 			"kind":     "audio",
-			"url":      track,
+			"title":    track,
 			"position": pos,
 		})
 		pos++
