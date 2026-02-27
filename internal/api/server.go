@@ -54,8 +54,18 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid cursor: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	source, err := parseSource(r.URL.Query().Get("source"))
+	if err != nil {
+		http.Error(w, "invalid source: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	sortOrder, err := parseSort(r.URL.Query().Get("sort"))
+	if err != nil {
+		http.Error(w, "invalid sort: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit)
+	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit, source, sortOrder)
 	if err != nil {
 		log.Printf("loadPosts: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -78,8 +88,18 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	limit := parseLimit(r.URL.Query().Get("limit"))
+	source, err := parseSource(r.URL.Query().Get("source"))
+	if err != nil {
+		http.Error(w, "invalid source: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	sortOrder, err := parseSort(r.URL.Query().Get("sort"))
+	if err != nil {
+		http.Error(w, "invalid sort: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit)
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit, source, sortOrder)
 	if err != nil {
 		log.Printf("loadPosts(front): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -129,15 +149,32 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	limit := parseLimit(r.URL.Query().Get("limit"))
-
-	cursorTS, cursorID, err := parseCursor(r.URL.Query().Get("before_ts"), r.URL.Query().Get("before_id"))
-	if err != nil {
+	if _, _, err := parseCursor(r.URL.Query().Get("before_ts"), r.URL.Query().Get("before_id")); err != nil {
 		http.Error(w, "invalid cursor: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	limit := parseLimit(r.URL.Query().Get("limit"))
+	page, err := parsePage(r.URL.Query().Get("page"))
+	if err != nil {
+		http.Error(w, "invalid page: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if page == nil {
+		defaultPage := 1
+		page = &defaultPage
+	}
+	source, err := parseSource(r.URL.Query().Get("source"))
+	if err != nil {
+		http.Error(w, "invalid source: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	sortOrder, err := parseSort(r.URL.Query().Get("sort"))
+	if err != nil {
+		http.Error(w, "invalid sort: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, nil, limit)
+	posts, _, err := s.loadPosts(ctx, nil, nil, page, limit, source, sortOrder)
 	if err != nil {
 		log.Printf("loadPosts(feed): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -145,10 +182,24 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := feedPageData{
-		Limit: limit,
-		Items: make([]feedItem, 0, len(posts)),
+		Limit:      limit,
+		Page:       *page,
+		Source:     source,
+		SortOrder:  sortOrder,
+		AllURL:     buildFeedURL(limit, 1, "", sortOrder),
+		VKURL:      buildFeedURL(limit, 1, "vk", sortOrder),
+		TGURL:      buildFeedURL(limit, 1, "tg", sortOrder),
+		NewestURL:  buildFeedURL(limit, 1, source, "desc"),
+		OldestURL:  buildFeedURL(limit, 1, source, "asc"),
+		Items:      make([]feedItem, 0, len(posts)),
+		SourceName: sourceLabel(source),
 	}
 	for _, p := range posts {
+		originalURL := buildOriginalPostURL(p.Source, p.SourcePostID)
+		commentsURL := ""
+		if p.CommentsCount != nil && *p.CommentsCount > 0 && originalURL != "" {
+			commentsURL = originalURL
+		}
 		data.Items = append(data.Items, feedItem{
 			ID:            p.ID,
 			Source:        p.Source,
@@ -158,15 +209,14 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 			LikesCount:    p.LikesCount,
 			ViewsCount:    p.ViewsCount,
 			CommentsCount: p.CommentsCount,
+			OriginalURL:   originalURL,
+			CommentsURL:   commentsURL,
+			Media:         parseMediaItems(p.Media),
 		})
 	}
 
-	if next != nil {
-		q := url.Values{}
-		q.Set("limit", strconv.Itoa(limit))
-		q.Set("before_ts", next.BeforeTS.Format(time.RFC3339))
-		q.Set("before_id", strconv.FormatInt(next.BeforeID, 10))
-		data.NextURL = "/feed?" + q.Encode()
+	if len(posts) == limit {
+		data.NextURL = buildFeedURL(limit, *page+1, source, sortOrder)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -209,43 +259,64 @@ func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 	return out, rows.Err()
 }
 
-func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int) ([]postDTO, *cursor, error) {
+func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder string) ([]postDTO, *cursor, error) {
 	var (
 		rows pgx.Rows
 		err  error
 	)
+	order := "desc"
+	comparator := "<"
+	if sortOrder == "asc" {
+		order = "asc"
+		comparator = ">"
+	}
 
 	if page != nil {
 		offset := (*page - 1) * limit
-		rows, err = s.pool.Query(ctx, `
+		args := []any{}
+		q := `
 			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
 			from posts
-			order by published_at desc, id desc
-			limit $1 offset $2
-		`, limit, offset)
-		goto scan
-	}
-
-	if beforeTS == nil || beforeID == nil {
-		rows, err = s.pool.Query(ctx, `
-			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
-			from posts
-			order by published_at desc, id desc
-			limit $1
-		`, limit)
+		`
+		if source != "" {
+			args = append(args, source)
+			q += fmt.Sprintf(" where source = $%d", len(args))
+		}
+		args = append(args, limit, offset)
+		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
+		rows, err = s.pool.Query(ctx, q, args...)
 	} else {
-		rows, err = s.pool.Query(ctx, `
+		base := `
 			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
 			from posts
-			where (published_at, id) < ($1, $2)
-			order by published_at desc, id desc
-			limit $3
-		`, *beforeTS, *beforeID, limit)
+		`
+		if beforeTS == nil || beforeID == nil {
+			args := []any{}
+			q := base
+			if source != "" {
+				args = append(args, source)
+				q += fmt.Sprintf(" where source = $%d", len(args))
+			}
+			args = append(args, limit)
+			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
+			rows, err = s.pool.Query(ctx, q, args...)
+		} else {
+			args := []any{}
+			q := base
+			if source != "" {
+				args = append(args, source)
+				q += fmt.Sprintf(" where source = $%d and ", len(args))
+			} else {
+				q += " where "
+			}
+			args = append(args, *beforeTS, *beforeID, limit)
+			q += fmt.Sprintf("(published_at, id) %s ($%d, $%d) order by published_at %s, id %s limit $%d", comparator, len(args)-2, len(args)-1, order, order, len(args))
+			rows, err = s.pool.Query(ctx, q, args...)
+		}
 	}
 	if err != nil {
 		return nil, nil, err
 	}
-scan:
 	defer rows.Close()
 
 	posts := make([]postDTO, 0, limit)
@@ -377,9 +448,18 @@ type sourceStat struct {
 }
 
 type feedPageData struct {
-	Limit   int
-	Items   []feedItem
-	NextURL string
+	Limit      int
+	Page       int
+	Source     string
+	SourceName string
+	SortOrder  string
+	AllURL     string
+	VKURL      string
+	TGURL      string
+	NewestURL  string
+	OldestURL  string
+	Items      []feedItem
+	NextURL    string
 }
 
 type feedItem struct {
@@ -391,6 +471,23 @@ type feedItem struct {
 	LikesCount    int
 	ViewsCount    *int
 	CommentsCount *int
+	OriginalURL   string
+	CommentsURL   string
+	Media         []feedMediaItem
+}
+
+type feedMediaItem struct {
+	Kind       string
+	URL        string
+	PreviewURL string
+	Width      int
+	Height     int
+	Position   int
+	IsImage    bool
+	IsAudio    bool
+	IsVideo    bool
+	IsDocument bool
+	IsLink     bool
 }
 
 var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
@@ -424,6 +521,27 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
       color: var(--muted);
       font-size: 14px;
     }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .chip {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      text-decoration: none;
+      color: var(--text);
+      background: #fff;
+      font-size: 14px;
+    }
+    .chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
     .post {
       background: var(--card);
       border: 1px solid var(--line);
@@ -450,6 +568,44 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
       color: var(--muted);
       font-size: 13px;
     }
+    .links {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .links a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .media {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .media-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #f8fafc;
+      font-size: 14px;
+    }
+    .media-item img {
+      display: block;
+      width: 100%;
+      max-height: 420px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .media-item a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      word-break: break-all;
+    }
     .more {
       display: inline-block;
       background: var(--accent);
@@ -463,7 +619,16 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
 </head>
 <body>
   <main class="wrap">
-    <div class="head">Mudro feed, лимит: {{.Limit}}</div>
+    <div class="head">Mudro feed, лимит: {{.Limit}}, страница: {{.Page}}, источник: {{.SourceName}}, сортировка: {{if eq .SortOrder "asc"}}старые сверху{{else}}новые сверху{{end}}</div>
+    <div class="toolbar">
+      <a class="chip {{if eq .Source ""}}active{{end}}" href="{{.AllURL}}">Общая</a>
+      <a class="chip {{if eq .Source "vk"}}active{{end}}" href="{{.VKURL}}">VK</a>
+      <a class="chip {{if eq .Source "tg"}}active{{end}}" href="{{.TGURL}}">TG</a>
+    </div>
+    <div class="toolbar">
+      <a class="chip {{if eq .SortOrder "desc"}}active{{end}}" href="{{.NewestURL}}">Новые</a>
+      <a class="chip {{if eq .SortOrder "asc"}}active{{end}}" href="{{.OldestURL}}">Старые</a>
+    </div>
     {{range .Items}}
       <article class="post">
         <div class="meta">#{{.ID}} | {{.Source}}/{{.SourcePostID}} | {{.PublishedAt}}</div>
@@ -473,6 +638,33 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
           <p class="empty">Без текста</p>
         {{end}}
         <div class="stats">likes: {{.LikesCount}} | views: {{if .ViewsCount}}{{.ViewsCount}}{{else}}-{{end}} | comments: {{if .CommentsCount}}{{.CommentsCount}}{{else}}-{{end}}</div>
+        <div class="links">
+          {{if .OriginalURL}}<a href="{{.OriginalURL}}" target="_blank" rel="noopener noreferrer">Оригинальный пост</a>{{end}}
+          {{if .CommentsURL}}<a href="{{.CommentsURL}}" target="_blank" rel="noopener noreferrer">Обсуждение</a>{{end}}
+        </div>
+        {{if .Media}}
+          <div class="media">
+            {{range .Media}}
+              <div class="media-item">
+                {{if .IsImage}}
+                  <img src="{{.URL}}" alt="media {{.Kind}}" loading="lazy">
+                  <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть изображение</a>
+                {{else if .IsVideo}}
+                  {{if .PreviewURL}}<img src="{{.PreviewURL}}" alt="video preview" loading="lazy">{{end}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть видео</a>{{else}}Видео (без URL в экспорте){{end}}
+                {{else if .IsAudio}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть аудио</a>{{else}}Аудио во вложении (без URL в экспорте){{end}}
+                {{else if .IsDocument}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть документ</a>{{else}}Документ (без URL){{end}}
+                {{else if .IsLink}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Связанная ссылка</a>{{else}}Связанная ссылка (без URL){{end}}
+                {{else}}
+                  {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть вложение ({{.Kind}})</a>{{else}}Вложение: {{.Kind}}{{end}}
+                {{end}}
+              </div>
+            {{end}}
+          </div>
+        {{end}}
       </article>
     {{else}}
       <p class="empty">Постов пока нет.</p>
@@ -529,4 +721,127 @@ func parseCursor(tsRaw, idRaw string) (*time.Time, *int64, error) {
 		return nil, nil, fmt.Errorf("before_id: %w", err)
 	}
 	return &ts, &id, nil
+}
+
+func parseSource(raw string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "all":
+		return "", nil
+	case "vk":
+		return "vk", nil
+	case "tg":
+		return "tg", nil
+	default:
+		return "", errors.New("use all|vk|tg")
+	}
+}
+
+func sourceLabel(source string) string {
+	if source == "" {
+		return "all"
+	}
+	return source
+}
+
+func parseSort(raw string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "desc":
+		return "desc", nil
+	case "asc":
+		return "asc", nil
+	default:
+		return "", errors.New("use asc|desc")
+	}
+}
+
+func buildFeedURL(limit, page int, source, sortOrder string) string {
+	q := url.Values{}
+	q.Set("limit", strconv.Itoa(limit))
+	q.Set("page", strconv.Itoa(page))
+	if source != "" {
+		q.Set("source", source)
+	}
+	if sortOrder != "" {
+		q.Set("sort", sortOrder)
+	}
+	return "/feed?" + q.Encode()
+}
+
+func buildOriginalPostURL(source, sourcePostID string) string {
+	switch source {
+	case "vk":
+		if strings.Contains(sourcePostID, "_") {
+			return "https://vk.com/wall" + sourcePostID
+		}
+	}
+	return ""
+}
+
+func parseMediaItems(raw json.RawMessage) []feedMediaItem {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	var decoded []map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return nil
+	}
+
+	items := make([]feedMediaItem, 0, len(decoded))
+	for _, m := range decoded {
+		kind := strings.ToLower(strings.TrimSpace(anyString(m, "kind", "Kind")))
+		url := strings.TrimSpace(anyString(m, "url", "URL"))
+		preview := strings.TrimSpace(anyString(m, "preview_url", "PreviewURL"))
+		width := anyInt(m, "width", "Width")
+		height := anyInt(m, "height", "Height")
+		position := anyInt(m, "position", "Position")
+		if kind == "" && url == "" && preview == "" {
+			continue
+		}
+		items = append(items, feedMediaItem{
+			Kind:       kind,
+			URL:        url,
+			PreviewURL: preview,
+			Width:      width,
+			Height:     height,
+			Position:   position,
+			IsImage:    kind == "photo" || kind == "gif",
+			IsAudio:    kind == "audio",
+			IsVideo:    kind == "video",
+			IsDocument: kind == "doc",
+			IsLink:     kind == "link",
+		})
+	}
+	return items
+}
+
+func anyString(m map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func anyInt(m map[string]any, keys ...string) int {
+	for _, k := range keys {
+		v, ok := m[k]
+		if !ok {
+			continue
+		}
+		switch n := v.(type) {
+		case float64:
+			return int(n)
+		case int:
+			return n
+		case int32:
+			return int(n)
+		case int64:
+			return int(n)
+		}
+	}
+	return 0
 }

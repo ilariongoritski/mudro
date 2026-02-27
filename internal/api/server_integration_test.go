@@ -52,7 +52,7 @@ func TestLoadPostsAndFrontHandlersIntegration(t *testing.T) {
 	s := testDBServer(t)
 	ctx := context.Background()
 
-	posts, next, err := s.loadPosts(ctx, nil, nil, nil, 10)
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, 10, "", "desc")
 	if err != nil {
 		t.Fatalf("loadPosts: %v", err)
 	}

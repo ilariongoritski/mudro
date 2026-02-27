@@ -207,12 +207,12 @@ type UnifiedPost struct {
 }
 
 type MediaItem struct {
-	Kind       string
-	URL        string
-	PreviewURL string
-	Width      int
-	Height     int
-	Position   int
+	Kind       string `json:"kind"`
+	URL        string `json:"url"`
+	PreviewURL string `json:"preview_url,omitempty"`
+	Width      int    `json:"width,omitempty"`
+	Height     int    `json:"height,omitempty"`
+	Position   int    `json:"position"`
 }
 
 func MapVKPostToUnified(p VKPost) UnifiedPost {
@@ -408,90 +408,57 @@ func (r *Repo) UpsertPostWithMedia(ctx context.Context, p UnifiedPost, media []M
 	}
 	defer tx.Rollback(txCtx)
 
-	postID, err := upsertPost(txCtx, tx, p)
-	if err != nil {
-		return err
-	}
-	if err := replaceMedia(txCtx, tx, postID, media); err != nil {
+	if _, err := upsertPost(txCtx, tx, p, media); err != nil {
 		return err
 	}
 
 	return tx.Commit(txCtx)
 }
 
-func upsertPost(ctx context.Context, tx pgx.Tx, p UnifiedPost) (int64, error) {
+func upsertPost(ctx context.Context, tx pgx.Tx, p UnifiedPost, media []MediaItem) (int64, error) {
 	var views any
 	if p.ViewsNullable == nil {
 		views = nil
 	} else {
 		views = *p.ViewsNullable
 	}
+	var mediaJSON any
+	if len(media) == 0 {
+		mediaJSON = nil
+	} else {
+		b, err := json.Marshal(media)
+		if err != nil {
+			return 0, fmt.Errorf("marshal media: %w", err)
+		}
+		mediaJSON = b
+	}
 
 	var id int64
 	err := tx.QueryRow(ctx, `
 insert into posts (
-  source, source_post_id, source_url,
-  published_at, text, likes, views, comments_count, reposts,
-  raw_file, raw_index, updated_at
+  source, source_post_id,
+  published_at, text, media, likes_count, views_count, comments_count,
+  updated_at
 ) values (
-  $1,$2,$3,
-  $4,$5,$6,$7,$8,$9,
-  $10,$11, now()
+  $1,$2,
+  $3,$4,$5,$6,$7,$8,
+  now()
 )
 on conflict (source, source_post_id) do update set
-  source_url = excluded.source_url,
   published_at = excluded.published_at,
   text = excluded.text,
-  likes = excluded.likes,
-  views = excluded.views,
+  media = excluded.media,
+  likes_count = excluded.likes_count,
+  views_count = excluded.views_count,
   comments_count = excluded.comments_count,
-  reposts = excluded.reposts,
-  raw_file = excluded.raw_file,
-  raw_index = excluded.raw_index,
   updated_at = now()
 returning id
 `,
-		p.Source, p.SourcePostID, p.SourceURL,
-		p.PublishedAt, p.Text, p.Likes, views, p.CommentsCount, p.Reposts,
-		p.RawFile, p.RawIndex,
+		p.Source, p.SourcePostID,
+		p.PublishedAt, nullIfEmpty(p.Text), mediaJSON, p.Likes, views, p.CommentsCount,
 	).Scan(&id)
 
 	return id, err
-}
-
-func replaceMedia(ctx context.Context, tx pgx.Tx, postID int64, media []MediaItem) error {
-	if _, err := tx.Exec(ctx, `delete from media where post_id=$1`, postID); err != nil {
-		return err
-	}
-	if len(media) == 0 {
-		return nil
-	}
-
-	b := &pgx.Batch{}
-	for _, m := range media {
-		b.Queue(`
-insert into media (post_id, kind, url, preview_url, width, height, position)
-values ($1,$2,$3,$4,$5,$6,$7)
-`,
-			postID,
-			m.Kind,
-			nullIfEmpty(m.URL),
-			nullIfEmpty(m.PreviewURL),
-			intOrNull(m.Width),
-			intOrNull(m.Height),
-			m.Position,
-		)
-	}
-
-	br := tx.SendBatch(ctx, b)
-	defer br.Close()
-
-	for range media {
-		if _, err := br.Exec(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func nullIfEmpty(s string) any {
