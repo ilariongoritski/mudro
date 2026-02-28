@@ -49,10 +49,11 @@ func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, err
 			id  int64
 			err error
 		)
+		kind := detectTaskKind(text)
 		if isRiskyTodo(text) {
-			id, err = q.EnqueueWaitingApproval(ctx, "todo_item", payload, 10, time.Now(), 3, dedupeKey)
+			id, err = q.EnqueueWaitingApproval(ctx, kind, payload, 10, time.Now(), 3, dedupeKey)
 		} else {
-			id, err = q.Enqueue(ctx, "todo_item", payload, 10, time.Now(), 3, dedupeKey)
+			id, err = q.Enqueue(ctx, kind, payload, 10, time.Now(), 3, dedupeKey)
 		}
 		if err != nil {
 			return enqueued, err
@@ -69,4 +70,20 @@ func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, err
 
 func isRiskyTodo(text string) bool {
 	return riskyTodoRe.MatchString(strings.TrimSpace(text))
+}
+
+func detectTaskKind(text string) string {
+	t := strings.ToLower(strings.TrimSpace(text))
+	switch {
+	case strings.Contains(t, "dbcheck"), strings.Contains(t, "select 1"), strings.Contains(t, "проверка бд"), strings.Contains(t, "проверки бд"):
+		return "db_check"
+	case strings.Contains(t, "tables"), strings.Contains(t, "\\dt"), strings.Contains(t, "список таблиц"), strings.Contains(t, "таблиц"):
+		return "tables_check"
+	case strings.Contains(t, "count(*) from posts"), strings.Contains(t, "count-posts"), strings.Contains(t, "количество постов"):
+		return "count_posts"
+	case strings.Contains(t, "health"), strings.Contains(t, "go test"), strings.Contains(t, "make test"), strings.Contains(t, "test"):
+		return "health_check"
+	default:
+		return "todo_item"
+	}
 }

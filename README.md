@@ -110,9 +110,16 @@ make health
 
 ```bash
 make migrate-agent
+make migrate-agent-events
 make agent-plan-once
 make agent-work
 ```
+
+Частые safe task kinds в worker:
+- `health_check` -> `make test`
+- `db_check` -> `make dbcheck`
+- `tables_check` -> `make tables`
+- `count_posts` -> `make count-posts`
 
 ## Repo Layout
 - `cmd/api` — HTTP API server (JSON endpoints)

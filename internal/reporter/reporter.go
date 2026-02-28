@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Summary struct {
@@ -50,7 +54,119 @@ func BuildSummary(repoRoot string) (Summary, error) {
 			b.WriteString("- " + r + "\n")
 		}
 	}
+	if q, e, err := loadAgentMetrics(); err == nil {
+		b.WriteString("Агент (24ч):\n")
+		b.WriteString(fmt.Sprintf("- created/done/failed/retry: %d/%d/%d/%d\n", e.Created, e.Done, e.Failed, e.Retry))
+		b.WriteString(fmt.Sprintf("- approved/rejected: %d/%d\n", e.Approved, e.Rejected))
+		b.WriteString(fmt.Sprintf("- queue queued/waiting/in_progress: %d/%d/%d\n", q.Queued, q.WaitingApproval, q.InProgress))
+		if len(e.TopKinds) > 0 {
+			b.WriteString("- частые task kinds:\n")
+			for _, k := range e.TopKinds {
+				b.WriteString(fmt.Sprintf("  - %s: %d\n", k.Kind, k.Count))
+			}
+		}
+	}
 	return Summary{Text: strings.TrimSpace(b.String())}, nil
+}
+
+type agentQueueStatus struct {
+	Queued          int64
+	WaitingApproval int64
+	InProgress      int64
+}
+
+type topKind struct {
+	Kind  string
+	Count int64
+}
+
+type agentEventStats struct {
+	Created  int64
+	Done     int64
+	Failed   int64
+	Retry    int64
+	Approved int64
+	Rejected int64
+	TopKinds []topKind
+}
+
+func loadAgentMetrics() (agentQueueStatus, agentEventStats, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, config.DSN())
+	if err != nil {
+		return agentQueueStatus{}, agentEventStats{}, err
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		return agentQueueStatus{}, agentEventStats{}, err
+	}
+
+	var q agentQueueStatus
+	rows, err := pool.Query(ctx, `select status, count(*) from agent_queue group by status`)
+	if err != nil {
+		return agentQueueStatus{}, agentEventStats{}, err
+	}
+	for rows.Next() {
+		var st string
+		var cnt int64
+		if err := rows.Scan(&st, &cnt); err != nil {
+			rows.Close()
+			return agentQueueStatus{}, agentEventStats{}, err
+		}
+		switch st {
+		case "queued":
+			q.Queued = cnt
+		case "waiting_approval":
+			q.WaitingApproval = cnt
+		case "in_progress":
+			q.InProgress = cnt
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return agentQueueStatus{}, agentEventStats{}, err
+	}
+	rows.Close()
+
+	var e agentEventStats
+	err = pool.QueryRow(ctx, `
+		select
+			count(*) filter (where event_type='task.created'),
+			count(*) filter (where event_type='task.done'),
+			count(*) filter (where event_type='task.failed'),
+			count(*) filter (where event_type='task.retry_scheduled'),
+			count(*) filter (where event_type='task.approved'),
+			count(*) filter (where event_type='task.rejected')
+		from agent_task_events
+		where occurred_at >= now() - interval '24 hours'
+	`).Scan(&e.Created, &e.Done, &e.Failed, &e.Retry, &e.Approved, &e.Rejected)
+	if err != nil {
+		return agentQueueStatus{}, agentEventStats{}, err
+	}
+
+	krows, err := pool.Query(ctx, `
+		select coalesce(kind,'unknown') as kind, count(*) as cnt
+		from agent_task_events
+		where occurred_at >= now() - interval '24 hours'
+		  and event_type in ('task.done','task.failed','task.retry_scheduled')
+		group by 1
+		order by cnt desc, kind asc
+		limit 3
+	`)
+	if err == nil {
+		defer krows.Close()
+		for krows.Next() {
+			var k topKind
+			if err := krows.Scan(&k.Kind, &k.Count); err != nil {
+				break
+			}
+			e.TopKinds = append(e.TopKinds, k)
+		}
+	}
+
+	return q, e, nil
 }
 
 func ResolveChatID(repoRoot string, envChatID int64) int64 {

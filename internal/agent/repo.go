@@ -262,10 +262,34 @@ func IsUniqueViolation(err error) bool {
 }
 
 func (r *Repository) publishTaskEvent(ctx context.Context, ev events.TaskEvent) {
+	if ev.Occurred.IsZero() {
+		ev.Occurred = time.Now().UTC()
+	}
+	if ev.EventID == "" {
+		ev.EventID = fmt.Sprintf("%d-%s-%d", ev.TaskID, ev.EventType, ev.Occurred.UnixNano())
+	}
+
+	if err := r.persistTaskEvent(ctx, ev); err != nil {
+		log.Printf("persist task event %s task_id=%d: %v", ev.EventType, ev.TaskID, err)
+	}
+
 	if r.publisher == nil {
 		return
 	}
 	if err := r.publisher.PublishTaskEvent(ctx, ev); err != nil {
 		log.Printf("publish task event %s task_id=%d: %v", ev.EventType, ev.TaskID, err)
 	}
+}
+
+func (r *Repository) persistTaskEvent(ctx context.Context, ev events.TaskEvent) error {
+	if r.pool == nil {
+		return nil
+	}
+	_, err := r.pool.Exec(ctx, `
+		insert into agent_task_events (
+			event_id, task_id, event_type, status, kind, dedupe_key, error, occurred_at
+		) values ($1,$2,$3,$4,nullif($5,''),nullif($6,''),nullif($7,''),$8)
+		on conflict (event_id) do nothing
+	`, ev.EventID, ev.TaskID, ev.EventType, ev.Status, ev.Kind, ev.DedupeKey, ev.Error, ev.Occurred)
+	return err
 }

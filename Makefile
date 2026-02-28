@@ -3,6 +3,7 @@ MIGRATION ?= migrations/001_init.sql
 AGENT_MIGRATION ?= migrations/002_agent_queue.sql
 COMMENTS_MIGRATION ?= migrations/003_post_comments.sql
 AGENT_REVIEW_MIGRATION ?= migrations/004_agent_review_gate.sql
+AGENT_EVENTS_MIGRATION ?= migrations/005_agent_task_events.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -62,6 +63,13 @@ ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(AGENT_REVIEW_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_REVIEW_MIGRATION)"
+endif
+
+migrate-agent-events:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(AGENT_EVENTS_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_MIGRATION)"
 endif
 
 tables:

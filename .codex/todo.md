@@ -48,15 +48,15 @@
 - [ ] 2026-02-27 | P2 | area:import | Повторно импортировать TG после догрузки медиафайлов
   - Контекст: сейчас загружен `result.json` без медиафайлов; текст и метаданные импортированы
   - Следующий шаг: докинуть недостающие файлы в `data/tg-export/` и повторить `go run ./cmd/tgimport ...` + `go run ./cmd/tgload ...` (upsert)
-- [ ] 2026-02-25 | P2 | area:observability | Метрики агента (`tasks_total/success/fail/retry`)
-  - Контекст: без метрик нельзя оценивать автономный цикл
-  - Следующий шаг: добавить сбор статистики в БД и вывод в `/health`
-- [ ] 2026-02-28 | P2 | area:events | Внедрить Kafka publisher для событий `posts/comments/tasks`
-  - Контекст: архитектурная схема и топики описаны в `docs/microservices-architecture.md`, но runtime интеграции пока нет
-  - Следующий шаг: добавить флаг `KAFKA_ENABLED`, клиент producer и публикацию `task status` событий из `agent`
-- [ ] 2026-02-25 | P2 | area:reporter | Ежедневный digest по агенту в Telegram
-  - Контекст: нужен компактный статус за сутки для принятия решений
-  - Следующий шаг: добавить шаблон отчета и расписание отправки
+- [x] 2026-02-28 | P2 | area:observability | Метрики агента (`tasks_total/success/fail/retry`)
+  - Контекст: добавлена таблица `agent_task_events`, агент пишет lifecycle-события задач, reporter читает 24ч-агрегаты
+  - Следующий шаг: дополнительно вывести эти метрики в `/health` (bot) для единообразия каналов
+- [x] 2026-02-28 | P2 | area:events | Внедрить Kafka publisher для событий `tasks`
+  - Контекст: добавлен runtime publisher при `KAFKA_ENABLED=true`, события задач публикуются в `KAFKA_TOPIC_TASKS`
+  - Следующий шаг: расширить event-pipeline на `posts/comments` и добавить consumer + DLQ
+- [x] 2026-02-28 | P2 | area:reporter | Ежедневный digest по агенту в Telegram
+  - Контекст: digest теперь включает метрики агента за 24ч (created/done/failed/retry, queue state, top kinds)
+  - Следующий шаг: добавить алерт-порог (например, fail>0 или waiting_approval>0) и краткий action plan в конец отчета
 - [ ] 2026-02-25 | P2 | area:repo | Убрать/перенести backup/save артефакты из рабочей структуры
   - Контекст: шум в репозитории ухудшает обзор и автопоиск задач
   - Следующий шаг: инвентаризировать артефакты и вынести в `docs/legacy` или удалить по согласованию

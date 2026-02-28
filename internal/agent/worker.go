@@ -49,6 +49,12 @@ func (w *Worker) processTask(ctx context.Context, task *Task) error {
 		return w.processTodoTask(task)
 	case "health_check":
 		return w.runCommand(ctx, "make", "test")
+	case "db_check":
+		return w.runCommand(ctx, "make", "dbcheck")
+	case "tables_check":
+		return w.runCommand(ctx, "make", "tables")
+	case "count_posts":
+		return w.runCommand(ctx, "make", "count-posts")
 	default:
 		return fmt.Errorf("unsupported task kind: %s", task.Kind)
 	}

@@ -300,3 +300,9 @@
 - Что починил (если было): добавлены runtime пакеты events/ratelimit + конфиг + сервисы compose
 - Следующий шаг: опционально включить KAFKA_ENABLED и REDIS_RATE_LIMIT_ENABLED в целевом окружении
 
+- Дата/время: 2026-02-28T15:43:03+03:00
+- Что запускал: реализация P2 (agent metrics/events, reporter quality, frequent safe task kinds)
+- Что прошло: миграция 005 применена; reporter читает метрики из БД; worker поддерживает db_check/tables_check/count_posts; make test проходит
+- Что упало (ошибка 5–15 строк): sandbox ошибки docker/go cache (permission denied), устранено повтором с нужными правами
+- Что починил (если было): заменена классификация task kind на string contains для корректной работы с кириллицей
+- Следующий шаг: вынести метрики агента также в /health команды бота и добавить consumer/DLQ для Kafka events

@@ -43,3 +43,5 @@
 - 2026-02-28 | Добавлен API RateLimiter (token-bucket, env-конфиг `API_RATE_LIMIT_RPS/BURST`) | Эффект: базовая защита API от burst/abuse без внешних зависимостей
 - 2026-02-28 | Описана целевая микросервисная декомпозиция + схема Kafka/RateLimiter | Эффект: есть практичный roadmap для выделения сервисов и событийной шины
 - 2026-02-28 | Реализован Kafka runtime для событий агента + Redis backend для distributed rate limiting API | Эффект: event pipeline и масштабируемый лимитер готовы к включению через env-флаги
+- 2026-02-28 | Добавлена метрика `agent_task_events` + сбор агрегатов в reporter | Эффект: видны `created/done/failed/retry`, очередь и топ task-kind за 24ч
+- 2026-02-28 | Расширены safe task kinds агента (`db_check`, `tables_check`, `count_posts`) | Эффект: worker закрывает частые рутинные проверки без ручного shell

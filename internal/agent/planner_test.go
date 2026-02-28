@@ -21,3 +21,21 @@ func TestIsRiskyTodo(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectTaskKind(t *testing.T) {
+	tests := []struct {
+		text string
+		want string
+	}{
+		{text: "сделать dbcheck", want: "db_check"},
+		{text: "показать список таблиц", want: "tables_check"},
+		{text: "проверить count(*) from posts", want: "count_posts"},
+		{text: "прогнать make test", want: "health_check"},
+		{text: "обновить документацию", want: "todo_item"},
+	}
+	for _, tc := range tests {
+		if got := detectTaskKind(tc.text); got != tc.want {
+			t.Fatalf("detectTaskKind(%q)=%q want %q", tc.text, got, tc.want)
+		}
+	}
+}
