@@ -264,3 +264,14 @@
 - Что починил (если было): не применимо
 - Следующий шаг: отправить пользователю обновленный short-list P0/P1
 
+- Дата/время: 2026-02-28T14:34:17+03:00
+- Что запускал: закрытие P0 (SSH-проверка сервера, commit+push, актуализация TODO/DONE)
+- Что прошло: `git commit` (`36372bc`) и `git push` в `origin/snapshot/2026-02-24-morning`; P0 process закрыт
+- Что упало (ошибка 5–15 строк):
+  - `socket: Operation not permitted`
+  - `ssh: connect to host 91.218.113.247 port 22: failure`
+  - `Connection closed by 91.218.113.247 port 22`
+  - `ssh: Could not resolve hostname github.com: Temporary failure in name resolution`
+- Что починил (если было): повторил `git push` вне sandbox, push успешен
+- Следующий шаг: получить рабочий SSH-доступ на VPS и завершить оставшиеся P0 (sync repo + migrate-agent + rotation)
+

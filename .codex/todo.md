@@ -9,13 +9,16 @@
 ## P0 (сделать в первую очередь)
 - [ ] 2026-02-25 | P0 | area:ops | Синхронизировать сервер с текущим Makefile (`migrate-agent` отсутствует)
   - Контекст: подтверждено, что `/root/projects/mudro` не является git-репозиторием (`fatal: not a git repository`), `find /root -name .git` ничего не нашел
-  - Следующий шаг: на сервере пересоздать каталог как git-клон (`mv mudro mudro_nogit_*`, `git clone ... mudro`, вернуть `.env`, проверить `grep -n "migrate-agent" Makefile`)
+  - Блокер (2026-02-28): SSH на `91.218.113.247` отвечает `Connection closed by ... port 22` для `root` и `admin`
+  - Следующий шаг: восстановить SSH-доступ (ключ/allowlist/пользователь), затем пересоздать каталог как git-клон (`mv mudro mudro_nogit_*`, `git clone ... mudro`, вернуть `.env`, проверить `grep -n "migrate-agent" Makefile`)
 - [ ] 2026-02-25 | P0 | area:db | Применить миграцию `002_agent_queue.sql` на сервере
   - Контекст: без таблицы `agent_queue` planner/worker нерабочие
-  - Следующий шаг: выполнить `make migrate-agent && make agent-plan-once`
+  - Блокер (2026-02-28): нет рабочего SSH-доступа к серверу
+  - Следующий шаг: после восстановления SSH выполнить `make migrate-agent && make agent-plan-once`
 - [ ] 2026-02-25 | P0 | area:security | Ротация засвеченных секретов (Telegram/OpenAI)
   - Контекст: токены и ключи публиковались, риск компрометации высокий
-  - Следующий шаг: перевыпустить токены/ключи и обновить `/root/projects/mudro/.env`
+  - Блокер (2026-02-28): ротация требует доступа к провайдерам/серверу (`BotFather`, OpenAI, `.env` на VPS)
+  - Следующий шаг: перевыпустить токены/ключи и обновить `/root/projects/mudro/.env`, затем проверить запуск бота/API
 
 ## P1 (ближайшие 1-3 дня)
 - [ ] 2026-02-28 | P1 | area:ops | Восстановить доступ к Docker daemon для локального health loop
@@ -92,9 +95,6 @@
 - [ ] 2026-02-28 | P1 | area:media | Заменить placeholder media URL на реальные ссылки из Blob/S3
   - Контекст: временно используются `picsum/placehold`, чтобы лента выглядела прилично перед деплоем
   - Следующий шаг: после выбора storage выполнить загрузку файлов и backfill URL в `posts.media`
-- [x] 2026-02-28 | P0 | area:process | Ежедневно делать минимум 1 commit+push в GitHub (сегодня выполнено)
-  - Контекст: за 2026-02-28 уже есть commit `d622077`, ветка синхронизирована с `origin`
-  - Следующий шаг: повторить daily-check в следующий рабочий день (`git log --since='today 00:00' --oneline`)
 - [ ] 2026-02-28 | P1 | area:import | Завершить импорт VK-экспорта (`vk_wall_*.json`) в БД
   - Контекст: в памяти есть конфликт: в `.codex/done.md` указан полный VK-импорт, но для текущего окружения нужна повторная верификация на целевой БД
   - Следующий шаг: после восстановления Docker/DB доступа проверить `select count(*) from posts where source='vk'` и при необходимости повторить `go run ./cmd/vkimport -dir <папка>`
