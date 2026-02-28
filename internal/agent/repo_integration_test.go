@@ -195,3 +195,41 @@ func TestWorkerRunOnceIntegration(t *testing.T) {
 		t.Fatalf("worker-bad status=%q, want queued for retry", status)
 	}
 }
+
+func TestApproveRejectIntegration(t *testing.T) {
+	repo, pool := testAgentRepo(t)
+	ctx := context.Background()
+
+	waitID, err := repo.EnqueueWaitingApproval(ctx, "todo_item", map[string]any{"text": "risky op"}, 1, time.Now(), 3, "wait-1")
+	if err != nil || waitID == 0 {
+		t.Fatalf("enqueue waiting_approval: id=%d err=%v", waitID, err)
+	}
+	if err := repo.ApproveTask(ctx, waitID); err != nil {
+		t.Fatalf("approve task: %v", err)
+	}
+	var st string
+	if err := pool.QueryRow(ctx, `select status from agent_queue where id=$1`, waitID).Scan(&st); err != nil {
+		t.Fatalf("select approved status: %v", err)
+	}
+	if st != StatusQueued {
+		t.Fatalf("approved status=%q, want %q", st, StatusQueued)
+	}
+
+	rejectID, err := repo.EnqueueWaitingApproval(ctx, "todo_item", map[string]any{"text": "danger"}, 1, time.Now(), 3, "wait-2")
+	if err != nil || rejectID == 0 {
+		t.Fatalf("enqueue waiting_approval #2: id=%d err=%v", rejectID, err)
+	}
+	if err := repo.RejectTask(ctx, rejectID, "manual reject"); err != nil {
+		t.Fatalf("reject task: %v", err)
+	}
+	var st2, lastErr string
+	if err := pool.QueryRow(ctx, `select status, coalesce(last_error,'') from agent_queue where id=$1`, rejectID).Scan(&st2, &lastErr); err != nil {
+		t.Fatalf("select rejected status: %v", err)
+	}
+	if st2 != StatusRejected {
+		t.Fatalf("rejected status=%q, want %q", st2, StatusRejected)
+	}
+	if !strings.Contains(lastErr, "manual reject") {
+		t.Fatalf("rejected last_error=%q", lastErr)
+	}
+}

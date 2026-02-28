@@ -1,6 +1,8 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
 MIGRATION ?= migrations/001_init.sql
 AGENT_MIGRATION ?= migrations/002_agent_queue.sql
+COMMENTS_MIGRATION ?= migrations/003_post_comments.sql
+AGENT_REVIEW_MIGRATION ?= migrations/004_agent_review_gate.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 
@@ -43,6 +45,20 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_MIGRATION)"
 endif
 
+migrate-comments:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(COMMENTS_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(COMMENTS_MIGRATION)"
+endif
+
+migrate-agent-review:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(AGENT_REVIEW_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_REVIEW_MIGRATION)"
+endif
+
 tables:
 	$(PSQL_CMD) -X -c "\dt"
 
@@ -75,3 +91,11 @@ agent-plan:
 
 agent-work:
 	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode worker --interval 15s
+
+agent-approve:
+	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode approve --task-id "$(TASK_ID)"
+
+agent-reject:
+	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"

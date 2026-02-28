@@ -13,9 +13,11 @@ import (
 )
 
 func main() {
-	mode := flag.String("mode", "planner", "planner|worker|once")
+	mode := flag.String("mode", "planner", "planner|worker|once|approve|reject")
 	interval := flag.Duration("interval", 1*time.Minute, "loop interval")
 	workerID := flag.String("worker-id", "agent-worker-1", "worker id for queue locks")
+	taskID := flag.Int64("task-id", 0, "task id for approve/reject mode")
+	reason := flag.String("reason", "", "reject reason")
 	flag.Parse()
 
 	repoRoot := config.RepoRoot()
@@ -43,6 +45,22 @@ func main() {
 		if _, err := w.RunOnce(context.Background()); err != nil {
 			log.Printf("worker run once: %v", err)
 		}
+	case "approve":
+		if *taskID <= 0 {
+			log.Fatal("approve mode requires --task-id > 0")
+		}
+		if err := q.ApproveTask(context.Background(), *taskID); err != nil {
+			log.Fatalf("approve task: %v", err)
+		}
+		log.Printf("approved task id=%d", *taskID)
+	case "reject":
+		if *taskID <= 0 {
+			log.Fatal("reject mode requires --task-id > 0")
+		}
+		if err := q.RejectTask(context.Background(), *taskID, *reason); err != nil {
+			log.Fatalf("reject task: %v", err)
+		}
+		log.Printf("rejected task id=%d", *taskID)
 	default:
 		log.Fatalf("unsupported mode: %s", *mode)
 	}

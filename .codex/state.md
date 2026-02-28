@@ -275,3 +275,14 @@
 - Что починил (если было): повторил `git push` вне sandbox, push успешен
 - Следующий шаг: получить рабочий SSH-доступ на VPS и завершить оставшиеся P0 (sync repo + migrate-agent + rotation)
 
+- Дата/время: 2026-02-28T14:49:30+03:00
+- Что запускал: выполнение P1 по порядку (health loop, prod compose, runbook, review-gate, TG/VK импорт)
+- Что прошло: P1#1,#3,#4,#5,#7,#10 закрыты; `make test` проходит; `post_comments.tg=55`; `vkimport DONE total posts=1087`
+- Что упало (ошибка 5–15 строк):
+  - `permission denied while trying to connect to the Docker daemon socket ...`
+  - `db ping ... dial tcp 127.0.0.1:5433: socket: operation not permitted`
+  - `/bin/bash: line 1: vercel: command not found`
+  - `TestCmdAPISmokeHealthz ... socket: operation not permitted` (первый прогон в sandbox)
+- Что починил (если было): повторы вне sandbox для docker/go команд; добавлен `GOCACHE=/tmp/go-build-cache`; добавлен review-gate и миграция `004`
+- Следующий шаг: для P1 остаются Vercel deploy и Blob/S3 media (нужны доступы/ключи), плюс fail2ban при возврате к VPS
+

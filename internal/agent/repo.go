@@ -21,8 +21,19 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) Enqueue(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
+	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, StatusQueued)
+}
+
+func (r *Repository) EnqueueWaitingApproval(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
+	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, StatusWaitingApproval)
+}
+
+func (r *Repository) enqueueWithStatus(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey, status string) (int64, error) {
 	if kind == "" {
 		return 0, errors.New("kind is required")
+	}
+	if status == "" {
+		status = StatusQueued
 	}
 	if maxAttempts <= 0 {
 		maxAttempts = 3
@@ -38,11 +49,11 @@ func (r *Repository) Enqueue(ctx context.Context, kind string, payload any, prio
 
 	var id int64
 	err = r.pool.QueryRow(ctx, `
-		insert into agent_queue (kind, payload, priority, max_attempts, run_after, dedupe_key)
-		values ($1, $2::jsonb, $3, $4, $5, nullif($6, ''))
+		insert into agent_queue (kind, payload, status, priority, max_attempts, run_after, dedupe_key)
+		values ($1, $2::jsonb, $3, $4, $5, $6, nullif($7, ''))
 		on conflict do nothing
 		returning id
-	`, kind, string(data), priority, maxAttempts, runAfter, dedupeKey).Scan(&id)
+	`, kind, string(data), status, priority, maxAttempts, runAfter, dedupeKey).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, nil
 	}
@@ -50,6 +61,45 @@ func (r *Repository) Enqueue(ctx context.Context, kind string, payload any, prio
 		return 0, fmt.Errorf("enqueue: %w", err)
 	}
 	return id, nil
+}
+
+func (r *Repository) ApproveTask(ctx context.Context, id int64) error {
+	ct, err := r.pool.Exec(ctx, `
+		update agent_queue
+		set status = $2,
+		    updated_at = now(),
+		    run_after = case when run_after < now() then now() else run_after end,
+		    last_error = null
+		where id = $1 and status = $3
+	`, id, StatusQueued, StatusWaitingApproval)
+	if err != nil {
+		return fmt.Errorf("approve task: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("approve task: task %d is not in %q", id, StatusWaitingApproval)
+	}
+	return nil
+}
+
+func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) error {
+	if reason == "" {
+		reason = "rejected by reviewer"
+	}
+	ct, err := r.pool.Exec(ctx, `
+		update agent_queue
+		set status = $2,
+		    updated_at = now(),
+		    finished_at = now(),
+		    last_error = $4
+		where id = $1 and status = $3
+	`, id, StatusRejected, StatusWaitingApproval, reason)
+	if err != nil {
+		return fmt.Errorf("reject task: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("reject task: task %d is not in %q", id, StatusWaitingApproval)
+	}
+	return nil
 }
 
 func (r *Repository) ClaimNext(ctx context.Context, worker string) (*Task, error) {

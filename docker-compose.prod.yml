@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gallery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gallery"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./cmd/api"
+    environment:
+      API_ADDR: ":8080"
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  agent:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./cmd/agent --mode worker --interval 15s"
+    environment:
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./cmd/agent'"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  reporter:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./cmd/reporter"
+    environment:
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN:-}"
+      REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
+      REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./cmd/reporter'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_prod:

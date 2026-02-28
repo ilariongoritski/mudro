@@ -21,27 +21,28 @@
   - Следующий шаг: перевыпустить токены/ключи и обновить `/root/projects/mudro/.env`, затем проверить запуск бота/API
 
 ## P1 (ближайшие 1-3 дня)
-- [ ] 2026-02-28 | P1 | area:ops | Восстановить доступ к Docker daemon для локального health loop
-  - Контекст: `make up` падает с `permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock`
-  - Следующий шаг: проверить запуск Codex с правами доступа к docker.sock и повторить health loop (`make up -> ... -> make test`)
+- [x] 2026-02-28 | P1 | area:ops | Восстановить доступ к Docker daemon для локального health loop
+  - Контекст: доступ к Docker подтвержден при запуске вне sandbox; health loop пройден полностью
+  - Следующий шаг: для Docker-команд из Codex запускать с разрешением на docker.sock
 - [ ] 2026-02-27 | P1 | area:deploy | Поднять внешний URL ленты через Vercel (частично: кодовая подготовка сделана)
   - Контекст: `api/index.go` и `vercel.json` уже в ветке `snapshot/2026-02-24-morning`, локально `vercel` CLI отсутствует
+  - Блокер (2026-02-28): нет авторизации/доступа к Vercel проекту из текущей сессии
   - Следующий шаг: в Vercel подключить GitHub-репозиторий, добавить `DSN` (внешний Postgres), выполнить Deploy и проверить `/feed`
-- [ ] 2026-02-25 | P1 | area:ops | Подготовить `docker-compose.prod.yml` для `api+db+agent+reporter`
-  - Контекст: нужен единый прод-контур вместо ручного запуска отдельных компонентов
-  - Следующий шаг: создать файл и добавить healthcheck для каждого сервиса
-- [ ] 2026-02-28 | P1 | area:ops | Runbook восстановления после ребута (частично: локальный runbook уже есть)
-  - Контекст: есть `.codex/notes/runbook-local.md`, но целевой `docs/ops-runbook.md` еще не создан
-  - Следующий шаг: перенести и оформить runbook в `docs/ops-runbook.md`, затем проверить на чистом старте
-- [ ] 2026-02-25 | P1 | area:agent | Добавить `review-gate` (approve/reject) для risky-задач
-  - Контекст: до запуска автономки в фоне нужен безопасный барьер на destructive операции
-  - Следующий шаг: ввести статусы `waiting_approval/rejected` и команду подтверждения
+- [x] 2026-02-28 | P1 | area:ops | Подготовить `docker-compose.prod.yml` для `api+db+agent+reporter`
+  - Контекст: добавлен `docker-compose.prod.yml` с сервисами `db/api/agent/reporter` и healthcheck
+  - Следующий шаг: при подключении VPS задать production env и поднять `docker compose -f docker-compose.prod.yml up -d`
+- [x] 2026-02-28 | P1 | area:ops | Runbook восстановления после ребута
+  - Контекст: создан `docs/ops-runbook.md` с recovery-порядком и типовыми сбоями
+  - Следующий шаг: на следующем чистом старте проверить runbook по шагам
+- [x] 2026-02-28 | P1 | area:agent | Добавить `review-gate` (approve/reject) для risky-задач
+  - Контекст: добавлены статусы `waiting_approval/rejected`, миграция `004_agent_review_gate.sql`, команды `approve/reject` в `cmd/agent`
+  - Следующий шаг: использовать `make agent-approve TASK_ID=<id>` и `make agent-reject TASK_ID=<id> REASON='<reason>'`
 - [x] 2026-02-28 | P1 | area:agent | Реальные типы задач для worker (не только skeleton)
   - Контекст: в `internal/agent/worker.go` добавлен task kind `health_check` с запуском `make test`
   - Следующий шаг: расширить safe-пайплайн (например, `make dbcheck` + `make test`) без destructive-операций
-- [ ] 2026-02-25 | P1 | area:security | Включить fail2ban и закрыть SSH парольный вход
-  - Контекст: в логах есть bruteforce, нужно усилить базовую защиту VPS
-  - Следующий шаг: настроить `sshd_config` и jail для sshd
+- [ ] 2026-02-28 | P1 | area:security | Включить fail2ban и закрыть SSH парольный вход (отложено до подключения VPS)
+  - Контекст: VPS сейчас не в активном контуре; задача переносится на этап возврата к серверу
+  - Следующий шаг: при возврате к VPS настроить `sshd_config` и jail для sshd
 
 ## P2 (на неделю)
 - [ ] 2026-02-27 | P2 | area:import | Повторно импортировать TG после догрузки медиафайлов
@@ -86,18 +87,20 @@
 - [ ] 2026-02-25 | P2 | area:repo | Почистить или перенести backup/save артефакты из рабочей структуры
   - Контекст: авто-добавлено командой /find
   - Следующий шаг: уточнить план и выполнить
-- [ ] 2026-02-28 | P1 | area:import | Переимпортировать TG-комментарии из того же экспорта, что и TG-посты
-  - Контекст: найдена коллизия ID при импорте комментариев из `data/nu` и постов из другой выгрузки
-  - Следующий шаг: очистить `post_comments` для `source='tg'` по подтверждению и запустить `go run ./cmd/tgcommentsimport -dir <правильная_папка>`
+- [x] 2026-02-28 | P1 | area:import | Переимпортировать TG-комментарии из того же экспорта, что и TG-посты
+  - Контекст: выполнен `go run ./cmd/tgcommentsimport -dir data/tg-export`, итог `imported_comments=55`
+  - Следующий шаг: при обновлении экспорта повторять импорт из той же папки `data/tg-export`
 - [ ] 2026-02-28 | P1 | area:deploy | Подключить публичное хранилище медиа (Vercel Blob/S3) и заменить локальные пути в `posts.media`
   - Контекст: backend уже готов определять media type и fallback, но для реального рендера нужны публичные URL
+  - Блокер (2026-02-28): не выбрано/не подключено production storage и нет ключей доступа в текущей сессии
   - Следующий шаг: выбрать Blob/S3, загрузить файлы, выполнить backfill `url/preview_url` для TG-постов
 - [ ] 2026-02-28 | P1 | area:media | Заменить placeholder media URL на реальные ссылки из Blob/S3
   - Контекст: временно используются `picsum/placehold`, чтобы лента выглядела прилично перед деплоем
+  - Блокер (2026-02-28): без подключенного Blob/S3 невозможно выполнить финальный backfill URL
   - Следующий шаг: после выбора storage выполнить загрузку файлов и backfill URL в `posts.media`
-- [ ] 2026-02-28 | P1 | area:import | Завершить импорт VK-экспорта (`vk_wall_*.json`) в БД
-  - Контекст: в памяти есть конфликт: в `.codex/done.md` указан полный VK-импорт, но для текущего окружения нужна повторная верификация на целевой БД
-  - Следующий шаг: после восстановления Docker/DB доступа проверить `select count(*) from posts where source='vk'` и при необходимости повторить `go run ./cmd/vkimport -dir <папка>`
+- [x] 2026-02-28 | P1 | area:import | Завершить импорт VK-экспорта (`vk_wall_*.json`) в БД
+  - Контекст: выполнен повторный импорт из `/home/gorit/vk-export`, итог `DONE: total posts=1087`
+  - Следующий шаг: при следующем импорте делать проверку `select source,count(*) from posts group by source`
 - [ ] 2026-02-28 | P2 | area:repo | Добавить unit-тесты на ключевые bot/api сценарии
   - Контекст: авто-добавлено командой /find
   - Следующий шаг: уточнить план и выполнить

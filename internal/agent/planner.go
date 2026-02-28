@@ -14,6 +14,7 @@ import (
 )
 
 var todoLineRe = regexp.MustCompile(`^- \[ \] .+`)
+var riskyTodoRe = regexp.MustCompile(`(?i)\b(drop|truncate|reset|rm\s+-rf|docker compose down -v|alter table|delete from)\b`)
 
 func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, error) {
 	path := filepath.Join(repoRoot, ".codex", "todo.md")
@@ -44,7 +45,15 @@ func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, err
 			"source": "todo.md",
 			"text":   text,
 		}
-		id, err := q.Enqueue(ctx, "todo_item", payload, 10, time.Now(), 3, dedupeKey)
+		var (
+			id  int64
+			err error
+		)
+		if isRiskyTodo(text) {
+			id, err = q.EnqueueWaitingApproval(ctx, "todo_item", payload, 10, time.Now(), 3, dedupeKey)
+		} else {
+			id, err = q.Enqueue(ctx, "todo_item", payload, 10, time.Now(), 3, dedupeKey)
+		}
 		if err != nil {
 			return enqueued, err
 		}
@@ -56,4 +65,8 @@ func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, err
 		return enqueued, fmt.Errorf("scan todo: %w", err)
 	}
 	return enqueued, nil
+}
+
+func isRiskyTodo(text string) bool {
+	return riskyTodoRe.MatchString(strings.TrimSpace(text))
 }

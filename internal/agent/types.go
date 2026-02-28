@@ -3,10 +3,12 @@ package agent
 import "time"
 
 const (
-	StatusQueued     = "queued"
-	StatusInProgress = "in_progress"
-	StatusDone       = "done"
-	StatusFailed     = "failed"
+	StatusQueued          = "queued"
+	StatusWaitingApproval = "waiting_approval"
+	StatusInProgress      = "in_progress"
+	StatusDone            = "done"
+	StatusFailed          = "failed"
+	StatusRejected        = "rejected"
 )
 
 type Task struct {
