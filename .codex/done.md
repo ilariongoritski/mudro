@@ -45,3 +45,4 @@
 - 2026-02-28 | Реализован Kafka runtime для событий агента + Redis backend для distributed rate limiting API | Эффект: event pipeline и масштабируемый лимитер готовы к включению через env-флаги
 - 2026-02-28 | Добавлена метрика `agent_task_events` + сбор агрегатов в reporter | Эффект: видны `created/done/failed/retry`, очередь и топ task-kind за 24ч
 - 2026-02-28 | Расширены safe task kinds агента (`db_check`, `tables_check`, `count_posts`) | Эффект: worker закрывает частые рутинные проверки без ручного shell
+- 2026-02-28 | Внедрена расширенная memory-/todo-структура и новые TG-команды `/agent24` + `/todohealth` с confidence/metric-резюме | Эффект: память стала traceable (priority/impact/owner/due/trace), stale-элементы автоматически выделяются, командам доступен простой human-отчет по задачам и агенту

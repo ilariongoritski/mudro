@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-02-25T03:14:42+03:00",
+  "updated_at": "2026-02-28T16:43:20+03:00",
   "days": {
     "2026-02-24": {
       "runs": 49,
@@ -293,10 +293,288 @@
           "estimated_seconds": 600
         }
       ]
+    },
+    "2026-02-26": {
+      "runs": 17,
+      "total_seconds": 5400,
+      "entries": [
+        {
+          "run_id": "20260226-0143",
+          "started_at": "2026-02-26T01:43:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260226-0147",
+          "started_at": "2026-02-26T01:47:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260226-0149",
+          "started_at": "2026-02-26T01:49:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260226-0152",
+          "started_at": "2026-02-26T01:52:00Z",
+          "estimated_seconds": 600
+        },
+        {
+          "run_id": "20260226-2247",
+          "started_at": "2026-02-26T22:47:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260226-2251",
+          "started_at": "2026-02-26T22:51:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260226-2254",
+          "started_at": "2026-02-26T22:54:00Z",
+          "estimated_seconds": 480
+        },
+        {
+          "run_id": "20260226-2302",
+          "started_at": "2026-02-26T23:02:00Z",
+          "estimated_seconds": 480
+        },
+        {
+          "run_id": "20260226-2310",
+          "started_at": "2026-02-26T23:10:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260226-2312",
+          "started_at": "2026-02-26T23:12:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260226-2316",
+          "started_at": "2026-02-26T23:16:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260226-2319",
+          "started_at": "2026-02-26T23:19:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260226-2322",
+          "started_at": "2026-02-26T23:22:00Z",
+          "estimated_seconds": 780
+        },
+        {
+          "run_id": "20260226-2335",
+          "started_at": "2026-02-26T23:35:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260226-2338",
+          "started_at": "2026-02-26T23:38:00Z",
+          "estimated_seconds": 360
+        },
+        {
+          "run_id": "20260226-2344",
+          "started_at": "2026-02-26T23:44:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260226-2348",
+          "started_at": "2026-02-26T23:48:00Z",
+          "estimated_seconds": 600
+        }
+      ]
+    },
+    "2026-02-27": {
+      "runs": 13,
+      "total_seconds": 8280,
+      "entries": [
+        {
+          "run_id": "20260227-1920",
+          "started_at": "2026-02-27T19:20:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260227-1922",
+          "started_at": "2026-02-27T19:22:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260227-1926",
+          "started_at": "2026-02-27T19:26:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260227-1929",
+          "started_at": "2026-02-27T19:29:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260227-1931",
+          "started_at": "2026-02-27T19:31:00Z",
+          "estimated_seconds": 300
+        },
+        {
+          "run_id": "20260227-1936",
+          "started_at": "2026-02-27T19:36:00Z",
+          "estimated_seconds": 840
+        },
+        {
+          "run_id": "20260227-1950",
+          "started_at": "2026-02-27T19:50:00Z",
+          "estimated_seconds": 360
+        },
+        {
+          "run_id": "20260227-1956",
+          "started_at": "2026-02-27T19:56:00Z",
+          "estimated_seconds": 1740
+        },
+        {
+          "run_id": "20260227-2025",
+          "started_at": "2026-02-27T20:25:00Z",
+          "estimated_seconds": 1500
+        },
+        {
+          "run_id": "20260227-2050",
+          "started_at": "2026-02-27T20:50:00Z",
+          "estimated_seconds": 300
+        },
+        {
+          "run_id": "20260227-2055",
+          "started_at": "2026-02-27T20:55:00Z",
+          "estimated_seconds": 900
+        },
+        {
+          "run_id": "20260227-2110",
+          "started_at": "2026-02-27T21:10:00Z",
+          "estimated_seconds": 1080
+        },
+        {
+          "run_id": "20260227-2128",
+          "started_at": "2026-02-27T21:28:00Z",
+          "estimated_seconds": 600
+        }
+      ]
+    },
+    "2026-02-28": {
+      "runs": 22,
+      "total_seconds": 11580,
+      "entries": [
+        {
+          "run_id": "20260228-0000",
+          "started_at": "2026-02-28T00:00:00Z",
+          "estimated_seconds": 660
+        },
+        {
+          "run_id": "20260228-0011",
+          "started_at": "2026-02-28T00:11:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260228-0012",
+          "started_at": "2026-02-28T00:12:00Z",
+          "estimated_seconds": 600
+        },
+        {
+          "run_id": "20260228-0022",
+          "started_at": "2026-02-28T00:22:00Z",
+          "estimated_seconds": 540
+        },
+        {
+          "run_id": "20260228-0031",
+          "started_at": "2026-02-28T00:31:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260228-0033",
+          "started_at": "2026-02-28T00:33:00Z",
+          "estimated_seconds": 780
+        },
+        {
+          "run_id": "20260228-0046",
+          "started_at": "2026-02-28T00:46:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260228-0050",
+          "started_at": "2026-02-28T00:50:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260228-0053",
+          "started_at": "2026-02-28T00:53:00Z",
+          "estimated_seconds": 900
+        },
+        {
+          "run_id": "20260228-0108",
+          "started_at": "2026-02-28T01:08:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260228-0111",
+          "started_at": "2026-02-28T01:11:00Z",
+          "estimated_seconds": 240
+        },
+        {
+          "run_id": "20260228-0115",
+          "started_at": "2026-02-28T01:15:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260228-0118",
+          "started_at": "2026-02-28T01:18:00Z",
+          "estimated_seconds": 120
+        },
+        {
+          "run_id": "20260228-0120",
+          "started_at": "2026-02-28T01:20:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260228-0123",
+          "started_at": "2026-02-28T01:23:00Z",
+          "estimated_seconds": 1020
+        },
+        {
+          "run_id": "20260228-0140",
+          "started_at": "2026-02-28T01:40:00Z",
+          "estimated_seconds": 600
+        },
+        {
+          "run_id": "20260228-1431",
+          "started_at": "2026-02-28T14:31:00Z",
+          "estimated_seconds": 180
+        },
+        {
+          "run_id": "20260228-1434",
+          "started_at": "2026-02-28T14:34:00Z",
+          "estimated_seconds": 1860
+        },
+        {
+          "run_id": "20260228-1505",
+          "started_at": "2026-02-28T15:05:00Z",
+          "estimated_seconds": 600
+        },
+        {
+          "run_id": "20260228-1515",
+          "started_at": "2026-02-28T15:15:00Z",
+          "estimated_seconds": 960
+        },
+        {
+          "run_id": "20260228-1531",
+          "started_at": "2026-02-28T15:31:00Z",
+          "estimated_seconds": 720
+        },
+        {
+          "run_id": "20260228-1543",
+          "started_at": "2026-02-28T15:43:00Z",
+          "estimated_seconds": 600
+        }
+      ]
     }
   },
   "totals": {
-    "runs": 56,
-    "total_seconds": 19680
+    "runs": 108,
+    "total_seconds": 44940
   }
 }
