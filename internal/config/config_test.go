@@ -27,6 +27,21 @@ func TestParsePositiveInt64(t *testing.T) {
 	}
 }
 
+func TestParseNonNegativeInt(t *testing.T) {
+	if n, ok := parseNonNegativeInt("0"); !ok || n != 0 {
+		t.Fatalf("parseNonNegativeInt zero ok=%v n=%d", ok, n)
+	}
+	if n, ok := parseNonNegativeInt("42"); !ok || n != 42 {
+		t.Fatalf("parseNonNegativeInt ok=%v n=%d", ok, n)
+	}
+	if _, ok := parseNonNegativeInt("-1"); ok {
+		t.Fatal("expected invalid negative")
+	}
+	if _, ok := parseNonNegativeInt("abc"); ok {
+		t.Fatal("expected invalid alpha")
+	}
+}
+
 func TestEnvOrAndAPIBaseURL(t *testing.T) {
 	t.Setenv("X_TEST_ENV", "  value ")
 	if got := envOr("X_TEST_ENV", "def"); got != "value" {
@@ -54,5 +69,16 @@ func TestFileExists(t *testing.T) {
 	}
 	if !fileExists(f) {
 		t.Fatal("expected fileExists true")
+	}
+}
+
+func TestAPIRateLimitConfig(t *testing.T) {
+	t.Setenv("API_RATE_LIMIT_RPS", "15")
+	t.Setenv("API_RATE_LIMIT_BURST", "30")
+	if got := APIRateLimitRPS(); got != 15 {
+		t.Fatalf("APIRateLimitRPS=%d", got)
+	}
+	if got := APIRateLimitBurst(); got != 30 {
+		t.Fatalf("APIRateLimitBurst=%d", got)
 	}
 }

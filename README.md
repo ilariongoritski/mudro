@@ -8,6 +8,18 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 - `psql` client (used by Makefile targets)
 - Windows: WSL2 + Docker Desktop (WSL integration)
 
+## Environment Split (by service)
+Для локалки можно использовать один `.env`, но для безопасного запуска лучше разносить переменные по сервисам:
+- [env/README.md](env/README.md)
+- `env/common.env.example`
+- `env/api.env.example`
+- `env/agent.env.example`
+- `env/reporter.env.example`
+- `env/bot.env.example`
+- `env/db.env.example`
+
+`Makefile` поддерживает такую схему: сначала читает `.env` (backward compatibility), потом `env/common.env`, затем `env/<service>.env`.
+
 ## Quick Start (Local)
 ```bash
 make up
@@ -76,6 +88,15 @@ Default DSN for Makefile targets:
 9. Monitoring (optional)
    - Add `node_exporter` + basic alerts.
    - Log rotation and disk usage alerts.
+
+## Microservices Roadmap
+Концепция декомпозиции, Kafka-потоков и лимитеров описана в:
+- [docs/microservices-architecture.md](docs/microservices-architecture.md)
+
+Коротко:
+- выделяем `feed-api`, `agent-planner`, `agent-worker`, `reporter`, `telegram-bot`, import-сервисы;
+- Kafka как event backbone (`posts/comments/tasks/notifications`);
+- RateLimiter на входящий API-трафик и внешние интеграции.
 
 ## Health Loop
 ```bash
@@ -173,6 +194,11 @@ Run the API server:
 ```bash
 API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" go run ./cmd/api
 ```
+
+Rate limiter (входящие запросы):
+- `API_RATE_LIMIT_RPS` (default `20`)
+- `API_RATE_LIMIT_BURST` (default `40`)
+- если `API_RATE_LIMIT_RPS=0`, лимитер выключен
 
 Endpoints:
 - `GET /healthz` → `{ "status": "ok" }`

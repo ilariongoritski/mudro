@@ -13,6 +13,8 @@ const (
 	DefaultOpenAIModel   = "gpt-4.1-mini"
 	DefaultAPIAddr       = ":8080"
 	DefaultAPIBaseURL    = "http://127.0.0.1:8080"
+	DefaultAPIRateRPS    = 20
+	DefaultAPIRateBurst  = 40
 	DefaultCodexLogsDir  = ".codex/logs"
 	DefaultReportMinutes = 30
 )
@@ -97,6 +99,24 @@ func APIBaseURL() string {
 	return strings.TrimRight(envOr("API_BASE_URL", DefaultAPIBaseURL), "/")
 }
 
+func APIRateLimitRPS() int {
+	if v := strings.TrimSpace(os.Getenv("API_RATE_LIMIT_RPS")); v != "" {
+		if n, ok := parseNonNegativeInt(v); ok {
+			return n
+		}
+	}
+	return DefaultAPIRateRPS
+}
+
+func APIRateLimitBurst() int {
+	if v := strings.TrimSpace(os.Getenv("API_RATE_LIMIT_BURST")); v != "" {
+		if n, ok := parseNonNegativeInt(v); ok {
+			return n
+		}
+	}
+	return DefaultAPIRateBurst
+}
+
 func CodexLogsDir() string {
 	return envOr("CODEX_LOGS_DIR", DefaultCodexLogsDir)
 }
@@ -126,6 +146,24 @@ func parsePositiveInt(v string) (int, bool) {
 		}
 	}
 	return n, n > 0
+}
+
+func parseNonNegativeInt(v string) (int, bool) {
+	if v == "" {
+		return 0, false
+	}
+	n := 0
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		n = n*10 + int(c-'0')
+		if n < 0 {
+			return 0, false
+		}
+	}
+	return n, true
 }
 
 func parsePositiveInt64(v string) (int64, bool) {

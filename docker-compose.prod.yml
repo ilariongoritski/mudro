@@ -25,6 +25,8 @@ services:
       API_ADDR: ":8080"
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app
+      API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
+      API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
     depends_on:
       db:
         condition: service_healthy
@@ -46,6 +48,9 @@ services:
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app
+      KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
+      KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
+      KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
     depends_on:
       db:
         condition: service_healthy
@@ -70,6 +75,7 @@ services:
       REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN:-}"
       REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
       REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
+      API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
     depends_on:
       db:
         condition: service_healthy

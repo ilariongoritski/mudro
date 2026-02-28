@@ -5,6 +5,11 @@ COMMENTS_MIGRATION ?= migrations/003_post_comments.sql
 AGENT_REVIEW_MIGRATION ?= migrations/004_agent_review_gate.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
+ENV_COMMON ?= env/common.env
+ENV_API ?= env/api.env
+ENV_AGENT ?= env/agent.env
+ENV_BOT ?= env/bot.env
+ENV_REPORTER ?= env/reporter.env
 
 ifeq ($(shell [ -x "$(GO)" ] && echo 1 || echo 0),0)
 GO := go
@@ -78,24 +83,59 @@ health:
 	$(MAKE) count-posts
 
 bot-run:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/bot
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_BOT)" ]; then . "$(ENV_BOT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/bot
 
 report-run:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/reporter
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_REPORTER)" ]; then . "$(ENV_REPORTER)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/reporter
 
 agent-plan-once:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode once
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/agent --mode once
 
 agent-plan:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode planner --interval 1m
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/agent --mode planner --interval 1m
 
 agent-work:
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode worker --interval 15s
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/agent --mode worker --interval 15s
 
 agent-approve:
 	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode approve --task-id "$(TASK_ID)"
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/agent --mode approve --task-id "$(TASK_ID)"
 
 agent-reject:
 	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
-	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; $(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
+	set +a; \
+	$(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
