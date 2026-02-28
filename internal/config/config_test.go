@@ -82,3 +82,25 @@ func TestAPIRateLimitConfig(t *testing.T) {
 		t.Fatalf("APIRateLimitBurst=%d", got)
 	}
 }
+
+func TestParseBoolEnv(t *testing.T) {
+	t.Setenv("X_BOOL", "true")
+	if !parseBoolEnv("X_BOOL") {
+		t.Fatal("expected true")
+	}
+	t.Setenv("X_BOOL", "0")
+	if parseBoolEnv("X_BOOL") {
+		t.Fatal("expected false")
+	}
+}
+
+func TestKafkaBrokers(t *testing.T) {
+	t.Setenv("KAFKA_BROKERS", "kafka:9092, broker2:9092")
+	b := KafkaBrokers()
+	if len(b) != 2 {
+		t.Fatalf("brokers len=%d", len(b))
+	}
+	if b[0] != "kafka:9092" || b[1] != "broker2:9092" {
+		t.Fatalf("brokers=%v", b)
+	}
+}

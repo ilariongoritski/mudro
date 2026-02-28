@@ -43,6 +43,10 @@
 ## Kafka: как использовать в MUDRO
 Kafka добавлять как event backbone между импортерами, API и воркерами.
 
+Текущее состояние (2026-02-28):
+- runtime-публикация task-событий из `cmd/agent` уже включается флагом `KAFKA_ENABLED=true`
+- topic по умолчанию: `mudro.agent.tasks.v1`
+
 Топики (предложение):
 1. `mudro.posts.v1`
 - событие: post upserted
@@ -74,6 +78,10 @@ Kafka добавлять как event backbone между импортерами
 - per-IP limiter на `/api/*` и `/feed`
 - цели: защита от burst и дешёвый anti-abuse
 
+Текущее состояние (2026-02-28):
+- локальный in-memory token-bucket уже работает
+- опционально доступен distributed limiter через Redis (`REDIS_RATE_LIMIT_ENABLED=true`)
+
 2. Исходящие интеграции
 - Telegram send limiter (глобальный + per-chat)
 - OpenAI limiter (RPM/TPM budget)
@@ -93,4 +101,3 @@ Kafka добавлять как event backbone между импортерами
 2. `agent_tasks_total{status=*}`
 3. `kafka_publish_total`, `kafka_consume_lag`
 4. `telegram_send_total{status=*}`
-

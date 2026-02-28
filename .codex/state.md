@@ -293,3 +293,10 @@
 - Что починил (если было): не применимо
 - Следующий шаг: при необходимости подключить Kafka producer/runtime и включить лимитеры для bot/reporter
 
+- Дата/время: 2026-02-28T15:31:28+03:00
+- Что запускал: реализация Kafka/Redis runtime (код + compose + тесты)
+- Что прошло: unit/integration тесты проходят; redis и kafka подняты healthy в docker-compose.prod.yml
+- Что упало (ошибка 5–15 строк): сетевые/permission ошибки sandbox при docker/go download, устранено повтором вне sandbox
+- Что починил (если было): добавлены runtime пакеты events/ratelimit + конфиг + сервисы compose
+- Следующий шаг: опционально включить KAFKA_ENABLED и REDIS_RATE_LIMIT_ENABLED в целевом окружении
+

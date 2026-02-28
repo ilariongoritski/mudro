@@ -42,3 +42,4 @@
 - 2026-02-28 | Разнесены env-профили по сервисам (`env/*.env.example` + обновленный Makefile) | Эффект: переменные API/agent/reporter/bot разделены, снижен риск утечки и конфликтов конфигурации
 - 2026-02-28 | Добавлен API RateLimiter (token-bucket, env-конфиг `API_RATE_LIMIT_RPS/BURST`) | Эффект: базовая защита API от burst/abuse без внешних зависимостей
 - 2026-02-28 | Описана целевая микросервисная декомпозиция + схема Kafka/RateLimiter | Эффект: есть практичный roadmap для выделения сервисов и событийной шины
+- 2026-02-28 | Реализован Kafka runtime для событий агента + Redis backend для distributed rate limiting API | Эффект: event pipeline и масштабируемый лимитер готовы к включению через env-флаги

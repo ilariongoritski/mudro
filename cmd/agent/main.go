@@ -10,6 +10,7 @@ import (
 
 	"github.com/goritskimihail/mudro/internal/agent"
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/internal/events"
 )
 
 func main() {
@@ -32,7 +33,14 @@ func main() {
 	}
 	defer pool.Close()
 
-	q := agent.NewRepository(pool)
+	pub := initTaskEventPublisher()
+	defer func() {
+		if err := pub.Close(); err != nil {
+			log.Printf("publisher close: %v", err)
+		}
+	}()
+
+	q := agent.NewRepositoryWithPublisher(pool, pub)
 	w := &agent.Worker{RepoRoot: repoRoot, Queue: q, WorkerID: *workerID}
 
 	switch *mode {
@@ -64,6 +72,19 @@ func main() {
 	default:
 		log.Fatalf("unsupported mode: %s", *mode)
 	}
+}
+
+func initTaskEventPublisher() events.Publisher {
+	if !config.KafkaEnabled() {
+		return events.NoopPublisher{}
+	}
+	pub, err := events.NewKafkaPublisher(config.KafkaBrokers(), config.KafkaTopicTasks(), config.KafkaClientID())
+	if err != nil {
+		log.Printf("kafka disabled due init error: %v", err)
+		return events.NoopPublisher{}
+	}
+	log.Printf("kafka task events enabled: topic=%s brokers=%v", config.KafkaTopicTasks(), config.KafkaBrokers())
+	return pub
 }
 
 func runPlannerLoop(repoRoot string, q *agent.Repository, interval time.Duration) {

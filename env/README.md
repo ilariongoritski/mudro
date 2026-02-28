@@ -10,6 +10,10 @@
 - `env/bot.env` — только bot (`TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `API_BASE_URL`)
 - `env/db.env` — только db (`POSTGRES_PASSWORD`, `POSTGRES_PORT`)
 
+Дополнительно:
+- `env/api.env` поддерживает distributed rate limiting через Redis (`REDIS_RATE_LIMIT_ENABLED`, `REDIS_ADDR`, ...)
+- `env/common.env` и `env/agent.env` содержат Kafka runtime-переменные (`KAFKA_ENABLED`, `KAFKA_BROKERS`, `KAFKA_TOPIC_TASKS`)
+
 Шаблоны лежат рядом в `*.env.example`.
 
 Минимальный workflow:

@@ -198,7 +198,12 @@ API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmod
 Rate limiter (входящие запросы):
 - `API_RATE_LIMIT_RPS` (default `20`)
 - `API_RATE_LIMIT_BURST` (default `40`)
+- `REDIS_RATE_LIMIT_ENABLED=true` переключает лимитер на Redis backend (`REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB`)
 - если `API_RATE_LIMIT_RPS=0`, лимитер выключен
+
+Kafka events (agent runtime):
+- при `KAFKA_ENABLED=true` `cmd/agent` публикует lifecycle-события задач в `KAFKA_TOPIC_TASKS`
+- брокеры задаются через `KAFKA_BROKERS` (comma-separated)
 
 Endpoints:
 - `GET /healthz` → `{ "status": "ok" }`

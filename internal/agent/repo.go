@@ -5,19 +5,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/goritskimihail/mudro/internal/events"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
-	pool *pgxpool.Pool
+	pool      *pgxpool.Pool
+	publisher events.Publisher
 }
 
 func NewRepository(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool}
+	return &Repository{pool: pool, publisher: events.NoopPublisher{}}
+}
+
+func NewRepositoryWithPublisher(pool *pgxpool.Pool, p events.Publisher) *Repository {
+	if p == nil {
+		p = events.NoopPublisher{}
+	}
+	return &Repository{pool: pool, publisher: p}
 }
 
 func (r *Repository) Enqueue(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
@@ -60,24 +70,42 @@ func (r *Repository) enqueueWithStatus(ctx context.Context, kind string, payload
 	if err != nil {
 		return 0, fmt.Errorf("enqueue: %w", err)
 	}
+	r.publishTaskEvent(ctx, events.TaskEvent{
+		EventType: "task.created",
+		TaskID:    id,
+		Kind:      kind,
+		Status:    status,
+		DedupeKey: dedupeKey,
+		Occurred:  time.Now().UTC(),
+	})
 	return id, nil
 }
 
 func (r *Repository) ApproveTask(ctx context.Context, id int64) error {
-	ct, err := r.pool.Exec(ctx, `
+	var kind, dedupeKey string
+	err := r.pool.QueryRow(ctx, `
 		update agent_queue
 		set status = $2,
 		    updated_at = now(),
 		    run_after = case when run_after < now() then now() else run_after end,
 		    last_error = null
 		where id = $1 and status = $3
-	`, id, StatusQueued, StatusWaitingApproval)
+		returning kind, coalesce(dedupe_key, '')
+	`, id, StatusQueued, StatusWaitingApproval).Scan(&kind, &dedupeKey)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("approve task: task %d is not in %q", id, StatusWaitingApproval)
+		}
 		return fmt.Errorf("approve task: %w", err)
 	}
-	if ct.RowsAffected() == 0 {
-		return fmt.Errorf("approve task: task %d is not in %q", id, StatusWaitingApproval)
-	}
+	r.publishTaskEvent(ctx, events.TaskEvent{
+		EventType: "task.approved",
+		TaskID:    id,
+		Kind:      kind,
+		Status:    StatusQueued,
+		DedupeKey: dedupeKey,
+		Occurred:  time.Now().UTC(),
+	})
 	return nil
 }
 
@@ -85,20 +113,31 @@ func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) er
 	if reason == "" {
 		reason = "rejected by reviewer"
 	}
-	ct, err := r.pool.Exec(ctx, `
+	var kind, dedupeKey string
+	err := r.pool.QueryRow(ctx, `
 		update agent_queue
 		set status = $2,
 		    updated_at = now(),
 		    finished_at = now(),
 		    last_error = $4
 		where id = $1 and status = $3
-	`, id, StatusRejected, StatusWaitingApproval, reason)
+		returning kind, coalesce(dedupe_key, '')
+	`, id, StatusRejected, StatusWaitingApproval, reason).Scan(&kind, &dedupeKey)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("reject task: task %d is not in %q", id, StatusWaitingApproval)
+		}
 		return fmt.Errorf("reject task: %w", err)
 	}
-	if ct.RowsAffected() == 0 {
-		return fmt.Errorf("reject task: task %d is not in %q", id, StatusWaitingApproval)
-	}
+	r.publishTaskEvent(ctx, events.TaskEvent{
+		EventType: "task.rejected",
+		TaskID:    id,
+		Kind:      kind,
+		Status:    StatusRejected,
+		DedupeKey: dedupeKey,
+		Error:     reason,
+		Occurred:  time.Now().UTC(),
+	})
 	return nil
 }
 
@@ -140,17 +179,30 @@ func (r *Repository) ClaimNext(ctx context.Context, worker string) (*Task, error
 }
 
 func (r *Repository) MarkDone(ctx context.Context, id int64) error {
-	_, err := r.pool.Exec(ctx, `
+	var kind, dedupeKey string
+	err := r.pool.QueryRow(ctx, `
 		update agent_queue
 		set status = 'done',
 		    finished_at = now(),
 		    updated_at = now(),
 		    last_error = null
 		where id = $1
-	`, id)
+		returning kind, coalesce(dedupe_key, '')
+	`, id).Scan(&kind, &dedupeKey)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("mark done: task %d not found", id)
+		}
 		return fmt.Errorf("mark done: %w", err)
 	}
+	r.publishTaskEvent(ctx, events.TaskEvent{
+		EventType: "task.done",
+		TaskID:    id,
+		Kind:      kind,
+		Status:    StatusDone,
+		DedupeKey: dedupeKey,
+		Occurred:  time.Now().UTC(),
+	})
 	return nil
 }
 
@@ -166,7 +218,8 @@ func (r *Repository) MarkFailed(ctx context.Context, id int64, errText string, r
 		nextRun = time.Now().Add(retryAfter)
 	}
 
-	_, err := r.pool.Exec(ctx, `
+	var kind, dedupeKey string
+	err := r.pool.QueryRow(ctx, `
 		update agent_queue
 		set status = $2,
 		    run_after = coalesce($3, run_after),
@@ -176,10 +229,27 @@ func (r *Repository) MarkFailed(ctx context.Context, id int64, errText string, r
 		    updated_at = now(),
 		    finished_at = case when $2 = 'failed' then now() else null end
 		where id = $1
-	`, id, status, nextRun, errText)
+		returning kind, coalesce(dedupe_key, '')
+	`, id, status, nextRun, errText).Scan(&kind, &dedupeKey)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("mark failed: task %d not found", id)
+		}
 		return fmt.Errorf("mark failed: %w", err)
 	}
+	eventType := "task.failed"
+	if status == StatusQueued {
+		eventType = "task.retry_scheduled"
+	}
+	r.publishTaskEvent(ctx, events.TaskEvent{
+		EventType: eventType,
+		TaskID:    id,
+		Kind:      kind,
+		Status:    status,
+		DedupeKey: dedupeKey,
+		Error:     errText,
+		Occurred:  time.Now().UTC(),
+	})
 	return nil
 }
 
@@ -189,4 +259,13 @@ func IsUniqueViolation(err error) bool {
 		return pgErr.Code == "23505"
 	}
 	return false
+}
+
+func (r *Repository) publishTaskEvent(ctx context.Context, ev events.TaskEvent) {
+	if r.publisher == nil {
+		return
+	}
+	if err := r.publisher.PublishTaskEvent(ctx, ev); err != nil {
+		log.Printf("publish task event %s task_id=%d: %v", ev.EventType, ev.TaskID, err)
+	}
 }

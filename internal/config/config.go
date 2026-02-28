@@ -17,6 +17,9 @@ const (
 	DefaultAPIRateBurst  = 40
 	DefaultCodexLogsDir  = ".codex/logs"
 	DefaultReportMinutes = 30
+	DefaultRedisAddr     = "localhost:6379"
+	DefaultKafkaClientID = "mudro"
+	DefaultKafkaTopic    = "mudro.agent.tasks.v1"
 )
 
 func DSN() string {
@@ -121,6 +124,55 @@ func CodexLogsDir() string {
 	return envOr("CODEX_LOGS_DIR", DefaultCodexLogsDir)
 }
 
+func RedisAddr() string {
+	return envOr("REDIS_ADDR", DefaultRedisAddr)
+}
+
+func RedisPassword() string {
+	return strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
+}
+
+func RedisDB() int {
+	if v := strings.TrimSpace(os.Getenv("REDIS_DB")); v != "" {
+		if n, ok := parseNonNegativeInt(v); ok {
+			return n
+		}
+	}
+	return 0
+}
+
+func RedisRateLimitEnabled() bool {
+	return parseBoolEnv("REDIS_RATE_LIMIT_ENABLED")
+}
+
+func KafkaEnabled() bool {
+	return parseBoolEnv("KAFKA_ENABLED")
+}
+
+func KafkaBrokers() []string {
+	raw := strings.TrimSpace(os.Getenv("KAFKA_BROKERS"))
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		s := strings.TrimSpace(p)
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func KafkaClientID() string {
+	return envOr("KAFKA_CLIENT_ID", DefaultKafkaClientID)
+}
+
+func KafkaTopicTasks() string {
+	return envOr("KAFKA_TOPIC_TASKS", DefaultKafkaTopic)
+}
+
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
@@ -179,4 +231,14 @@ func parsePositiveInt64(v string) (int64, bool) {
 		}
 	}
 	return n, n > 0
+}
+
+func parseBoolEnv(key string) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch v {
+	case "1", "true", "yes", "y", "on":
+		return true
+	default:
+		return false
+	}
 }

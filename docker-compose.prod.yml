@@ -16,6 +16,50 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kafka:
+    image: redpandadata/redpanda:v24.3.6
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - "512M"
+      - --reserve-memory
+      - "0M"
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - "PLAINTEXT://0.0.0.0:9092"
+      - --advertise-kafka-addr
+      - "PLAINTEXT://kafka:9092"
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    volumes:
+      - kafka_prod:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:'"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
   api:
     image: golang:1.23
     restart: unless-stopped
@@ -27,8 +71,14 @@ services:
       MUDRO_ROOT: /app
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
+      REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
+      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_DB: "${REDIS_DB:-0}"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "${API_PORT:-8080}:8080"
@@ -51,10 +101,13 @@ services:
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
       KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
+      KAFKA_CLIENT_ID: "${KAFKA_CLIENT_ID:-mudro-agent}"
     depends_on:
       db:
         condition: service_healthy
       api:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     volumes:
       - ./:/app
@@ -91,3 +144,5 @@ services:
 
 volumes:
   pgdata_prod:
+  redis_prod:
+  kafka_prod:

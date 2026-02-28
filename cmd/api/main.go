@@ -34,7 +34,8 @@ func main() {
 	defer pool.Close()
 
 	baseHandler := api.NewServer(pool).Router()
-	handler := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
+	handler, closeLimiter := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
+	defer closeLimiter()
 
 	srv := &http.Server{
 		Addr:         addr,
@@ -63,9 +64,43 @@ func main() {
 	}
 }
 
-func withAPIRateLimit(next http.Handler, rps, burst int) http.Handler {
+func withAPIRateLimit(next http.Handler, rps, burst int) (http.Handler, func()) {
 	if rps <= 0 {
-		return next
+		return next, func() {}
+	}
+
+	if config.RedisRateLimitEnabled() {
+		rl := ratelimit.NewRedisFixedWindow(config.RedisAddr(), config.RedisPassword(), config.RedisDB())
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		if err := rl.Ping(ctx); err != nil {
+			cancel()
+			log.Printf("redis rate limiter disabled (ping failed): %v", err)
+		} else {
+			cancel()
+			log.Printf("redis rate limiter enabled: addr=%s db=%d", config.RedisAddr(), config.RedisDB())
+			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/healthz" {
+					next.ServeHTTP(w, r)
+					return
+				}
+				ip := clientIP(r)
+				allowed, err := rl.Allow(r.Context(), ip, rps, time.Second)
+				if err != nil {
+					log.Printf("redis limiter error: %v", err)
+					next.ServeHTTP(w, r)
+					return
+				}
+				if !allowed {
+					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("Retry-After", "1")
+					w.WriteHeader(http.StatusTooManyRequests)
+					_ = json.NewEncoder(w).Encode(map[string]string{"error": "rate limit exceeded"})
+					return
+				}
+				next.ServeHTTP(w, r)
+			})
+			return h, func() { _ = rl.Close() }
+		}
 	}
 
 	type clientEntry struct {
@@ -78,16 +113,23 @@ func withAPIRateLimit(next http.Handler, rps, burst int) http.Handler {
 	)
 
 	cleanupTicker := time.NewTicker(1 * time.Minute)
+	stopCh := make(chan struct{})
 	go func() {
-		for range cleanupTicker.C {
-			now := time.Now()
-			mu.Lock()
-			for ip, entry := range clients {
-				if now.Sub(entry.lim.LastSeen()) > ttl {
-					delete(clients, ip)
+		for {
+			select {
+			case <-cleanupTicker.C:
+				now := time.Now()
+				mu.Lock()
+				for ip, entry := range clients {
+					if now.Sub(entry.lim.LastSeen()) > ttl {
+						delete(clients, ip)
+					}
 				}
+				mu.Unlock()
+			case <-stopCh:
+				cleanupTicker.Stop()
+				return
 			}
-			mu.Unlock()
 		}
 	}()
 
@@ -117,7 +159,7 @@ func withAPIRateLimit(next http.Handler, rps, burst int) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
-	})
+	}), func() { close(stopCh) }
 }
 
 func clientIP(r *http.Request) string {
