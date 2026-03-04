@@ -42,6 +42,8 @@ Default DSN for Makefile targets:
 - Media storage: MinIO (S3-compatible), optional at MVP.
 - Access: VS Code Remote-SSH for development and ops.
 - Admin panel: optional later (Cockpit or ISPmanager).
+- Актуальный чеклист переноса на новый VPS (Ubuntu 24.04):
+  [docs/server-transfer-ubuntu24.md](docs/server-transfer-ubuntu24.md)
 
 ### Step-by-step Plan
 1. GitHub Pages (Docs)

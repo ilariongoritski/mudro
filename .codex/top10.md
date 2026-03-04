@@ -14,8 +14,8 @@
 3. [import-tg-db] Добавлен `cmd/tgload` и реализован импорт TG `feed_items.json` в таблицы `posts/post_reactions`.
    Эффект: в БД 1094 TG-поста, фильтр `source=tg` в ленте показывает реальные записи.
 
-4. [vercel-ready] Подготовлен деплой-контур для Vercel: `api/index.go` (serverless handler) + `vercel.json` (rewrites).
-   Эффект: проект готов к публикации внешнего URL после добавления production `DSN`.
+4. [vercel-prod] Выполнен production deploy в Vercel; добавлен адаптер `pkg/vercelapi` для корректной сборки handler.
+   Эффект: внешний URL активен и `/healthz` работает; для `/feed` осталось добавить production `DSN`.
 
 5. [agent-mvp] Реализован MVP автономного агента: `migrations/002_agent_queue.sql` + `cmd/agent` + `internal/agent` + make-таргеты.
    Эффект: проект перешел от идеи к рабочему queue-контуру (planner/worker).

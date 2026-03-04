@@ -19,3 +19,4 @@ out/
 *.save.*
 reorganize.sh
 .codex/notes/
+.vercel

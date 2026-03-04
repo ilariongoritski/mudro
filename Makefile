@@ -106,6 +106,13 @@ report-run:
 	set +a; \
 	$(GO) run ./cmd/reporter
 
+memento:
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	set +a; \
+	GOCACHE=/tmp/go-build-cache $(GO) run ./cmd/memento
+
 agent-plan-once:
 	@set -a; \
 	if [ -f ./.env ]; then . ./.env; fi; \
