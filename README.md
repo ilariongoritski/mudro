@@ -23,15 +23,41 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 ## Quick Start (Local)
 ```bash
 make up
+<<<<<<< ours
 make dbcheck
 make migrate
 make tables
+=======
+make migrate
+>>>>>>> theirs
 make test
+make selftest
 make logs
 ```
 
+<<<<<<< ours
 Default DSN for Makefile targets:
 `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
+
+## Frontend (React + TS + RTK + FSD)
+The repository now includes a dedicated frontend app in:
+- `frontend/`
+
+Run locally:
+```bash
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+Checks:
+```bash
+npm.cmd run lint
+npm.cmd run build
+```
+
+Static HTML concept preview:
+- `docs/frontend-preview.html`
 
 ## Infrastructure Plan (Server + GitHub Pages)
 - Repo: `https://github.com/goritskimihail/mudro`
@@ -99,11 +125,33 @@ Default DSN for Makefile targets:
 - выделяем `feed-api`, `agent-planner`, `agent-worker`, `reporter`, `telegram-bot`, import-сервисы;
 - Kafka как event backbone (`posts/comments/tasks/notifications`);
 - RateLimiter на входящий API-трафик и внешние интеграции.
+=======
+## Importers
+
+### VK -> DB
+```bash
+go run ./cmd/vkimport -dir ~/vk-export -dsn "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
+```
+
+### Telegram export -> JSON (+ optional DB sync)
+```bash
+go run ./cmd/tgimport -in result.json -out feed_items.json
+go run ./cmd/tgimport -in result.json -out feed_items.json -dsn "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
+```
+
+
+>>>>>>> theirs
 
 ## Health Loop
 ```bash
 make health
 ```
+
+Для автономного прогона локального работяги (авто-лог + ретраи + запись в `.codex/state.md`):
+```bash
+make worker-loop
+```
+Подробный регламент: [docs/worker-autonomy.md](docs/worker-autonomy.md)
 
 ## Agent Queue (MVP)
 Простой каркас автономного агента:
@@ -230,3 +278,11 @@ Response wrapper (page-based):
   "items": [ ... ]
 }
 ```
+## Notes
+- Для этого проекта лента VK рассматривается как архив: повторные обновления VK не требуются.
+- Подготовлена схема персональных лайков: `accounts` + `post_account_likes` (one-like-per-account-per-post).
+
+## Operations
+- Mission and guardrails: `Mission.md`
+- OpenClaw integration notes: `docs/openclaw-integration.md`
+- Draft process policy: `BIBLE.proposed.md`

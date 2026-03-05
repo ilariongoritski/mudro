@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -101,8 +100,9 @@ func importFile(ctx context.Context, repo *Repo, path string) (int, error) {
 		post.RawIndex = i
 
 		medias := MapVKAttachmentsToMedia(p.Attachments)
+		post.Media = medias
 
-		if err := repo.UpsertPostWithMedia(ctx, post, medias); err != nil {
+		if err := repo.UpsertPost(ctx, post); err != nil {
 			return 0, fmt.Errorf("post %s[%d] (%d_%d): %w", rawFile, i, p.OwnerID, p.ID, err)
 		}
 	}
@@ -201,6 +201,7 @@ type UnifiedPost struct {
 	ViewsNullable *int32 // nullable in DB
 	CommentsCount int
 	Reposts       int
+	Media         []MediaItem
 
 	RawFile  string
 	RawIndex int
@@ -397,11 +398,12 @@ type Repo struct{ pool *pgxpool.Pool }
 
 func NewRepo(pool *pgxpool.Pool) *Repo { return &Repo{pool: pool} }
 
-func (r *Repo) UpsertPostWithMedia(ctx context.Context, p UnifiedPost, media []MediaItem) error {
+func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 	// per-post transaction timeout
 	txCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+<<<<<<< ours
 	tx, err := r.pool.BeginTx(txCtx, pgx.TxOptions{})
 	if err != nil {
 		return err
@@ -442,6 +444,18 @@ insert into posts (
 ) values (
   $1,$2,
   $3,$4,$5,$6,$7,$8,
+=======
+	_, err := r.pool.Exec(txCtx, `
+insert into posts (
+  source, source_post_id,
+  published_at, text, media,
+  likes_count, views_count, comments_count,
+  updated_at
+) values (
+  $1, $2,
+  $3, $4, $5,
+  $6, $7, $8,
+>>>>>>> theirs
   now()
 )
 on conflict (source, source_post_id) do update set
@@ -452,6 +466,7 @@ on conflict (source, source_post_id) do update set
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
   updated_at = now()
+<<<<<<< ours
 returning id
 `,
 		p.Source, p.SourcePostID,
@@ -467,10 +482,18 @@ func nullIfEmpty(s string) any {
 	}
 	return s
 }
+=======
+`,
+		p.Source,
+		p.SourcePostID,
+		p.PublishedAt,
+		p.Text,
+		p.Media,
+		p.Likes,
+		p.ViewsNullable,
+		p.CommentsCount,
+	)
+>>>>>>> theirs
 
-func intOrNull(v int) any {
-	if v <= 0 {
-		return nil
-	}
-	return v
+	return err
 }

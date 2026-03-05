@@ -1,4 +1,5 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
+<<<<<<< ours
 MIGRATION ?= migrations/001_init.sql
 AGENT_MIGRATION ?= migrations/002_agent_queue.sql
 COMMENTS_MIGRATION ?= migrations/003_post_comments.sql
@@ -21,6 +22,9 @@ PSQL_CMD = docker compose exec -T db psql -U postgres -d gallery
 else
 PSQL_CMD = psql "$(DSN)"
 endif
+=======
+MIGRATIONS_DIR ?= migrations
+>>>>>>> theirs
 
 up:
 	docker compose up -d
@@ -38,6 +42,7 @@ dbcheck:
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"
 
 migrate:
+<<<<<<< ours
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
@@ -71,6 +76,12 @@ ifeq ($(USE_DOCKER_PSQL),1)
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_MIGRATION)"
 endif
+=======
+	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
+		echo "==> applying $$f"; \
+		psql "$(DSN)" -X -v ON_ERROR_STOP=1 -f "$$f" || exit $$?; \
+	done
+>>>>>>> theirs
 
 tables:
 	$(PSQL_CMD) -X -c "\dt"
@@ -89,6 +100,10 @@ health:
 	$(MAKE) tables
 	$(MAKE) test
 	$(MAKE) count-posts
+
+<<<<<<< ours
+worker-loop:
+	./scripts/worker_autonomy_loop.sh
 
 bot-run:
 	@set -a; \
@@ -154,3 +169,8 @@ agent-reject:
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
 	$(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
+=======
+
+selftest:
+	go test ./cmd/vkimport ./cmd/tgimport
+>>>>>>> theirs
