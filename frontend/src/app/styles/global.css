@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+body {
+  color: var(--mudro-text);
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(1100px 500px at 8% 5%, rgba(255, 255, 255, 0.58), transparent 70%),
+    radial-gradient(900px 450px at 92% 0%, rgba(30, 10, 40, 0.34), transparent 70%),
+    linear-gradient(140deg, var(--mudro-bg-base) 0%, #ff8ac6 35%, var(--mudro-bg-soft) 100%);
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+}
+
+.mudro-shell {
+  width: min(1180px, 100% - 2.2rem);
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.mudro-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.8vw, 3.4rem);
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+}
+
+.mudro-lead {
+  margin: 0.65rem 0 0;
+  max-width: 64ch;
+  color: rgba(19, 10, 23, 0.78);
+}
+
+.mudro-hero {
+  position: relative;
+  border-radius: calc(var(--mudro-radius-lg) + 4px);
+  padding: clamp(1.2rem, 2vw, 1.8rem);
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--mudro-shadow);
+  backdrop-filter: blur(5px);
+  overflow: hidden;
+}
+
+.mudro-hero::after {
+  content: '';
+  position: absolute;
+  width: 210px;
+  height: 210px;
+  right: -60px;
+  top: -75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 105, 180, 0.42), transparent 72%);
+}
+
+.mudro-fade-up {
+  animation: mudroFadeUp 420ms ease-out both;
+}
+
+@keyframes mudroFadeUp {
+  from {
+    transform: translate3d(0, 16px, 0);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}

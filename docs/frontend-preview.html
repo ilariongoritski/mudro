@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mudro11 Frontend Preview</title>
+    <style>
+      :root {
+        --bg: #ff69b4;
+        --bg-soft: #ffe4f4;
+        --ink: #2a0f2d;
+        --muted: #6e546f;
+        --card: rgba(255, 255, 255, 0.92);
+        --line: rgba(42, 15, 45, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font: 16px/1.45 'Segoe UI', sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(900px 360px at 8% 4%, rgba(255, 255, 255, 0.54), transparent 70%),
+          linear-gradient(135deg, var(--bg) 0%, #ff89c5 38%, var(--bg-soft) 100%);
+      }
+
+      .shell {
+        width: min(1120px, 100% - 2rem);
+        margin: 0 auto;
+        padding: 1.4rem 0 2.3rem;
+      }
+
+      .hero {
+        border-radius: 22px;
+        padding: 1.2rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: 0 18px 40px rgba(42, 15, 45, 0.18);
+      }
+
+      .hero h1 {
+        margin: 0.3rem 0 0;
+        line-height: 1.05;
+        font-size: clamp(1.8rem, 3.6vw, 3.1rem);
+      }
+
+      .hero p {
+        margin: 0.65rem 0 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 0.85rem;
+      }
+
+      .card {
+        border-radius: 14px;
+        padding: 0.9rem;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: 0.6rem;
+      }
+
+      .chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0.2rem 0.54rem;
+        font-size: 0.82rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <small>HTML preview (визуальная концепция)</small>
+        <h1>Mudro Feed Console</h1>
+        <p>
+          Статическая демонстрация внешнего вида. Полная интерактивная реализация находится в `frontend/`
+          (React + TypeScript + Redux Toolkit + RTK Query + FSD).
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="meta">VK · #1087 · 05 марта 2026, 16:40</div>
+          <strong>Запуск фронтенд-контура Mudro11</strong>
+          <p>Собрана основа SPA-ленты с фильтрами, сортировкой и режимом догрузки страниц.</p>
+          <div class="chips">
+            <span class="chip">❤️ 24</span>
+            <span class="chip">👁 842</span>
+            <span class="chip">💬 6</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="meta">TG · #1094 · 05 марта 2026, 16:42</div>
+          <strong>FSD-архитектура</strong>
+          <p>Слои `app/pages/widgets/features/entities/shared` разведены с RTK Query на data-уровне.</p>
+          <div class="chips">
+            <span class="chip">❤️ 31</span>
+            <span class="chip">👁 690</span>
+            <span class="chip">💬 8</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="meta">TG · #1095 · 05 марта 2026, 16:43</div>
+          <strong>Визуальная стилистика</strong>
+          <p>Основной фон hotpink, контрастные карточки и адаптивная сетка для desktop/mobile.</p>
+          <div class="chips">
+            <span class="chip">❤️ 18</span>
+            <span class="chip">👁 502</span>
+            <span class="chip">💬 3</span>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
