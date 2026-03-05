@@ -648,3 +648,18 @@
 - Что починил (если было): добавил миграцию для персональных лайков аккаунтов; обновил migrate-таргет для последовательного применения всех SQL; добавил заметки в README про архивный VK и personal likes
 - Следующий шаг: добавить API/handler для toggle-like и чтения персонального лайка по account_id
 >>>>>>> theirs
+- Дата/время: 2026-03-05 18:43 MSK
+- Что запускал: синхронизацию на VPS (rsync), docker compose up/ps, миграции 001+003, импорты vk/tg/tgcomments, запуск API и проверку /healthz + /api/front.
+- Что прошло: SSH доступ к серверу есть; БД заполнена; API отвечает; /api/front отдает непустую ленту.
+- Что упало (ошибка 5–15 строк):
+  - `go test ./...` на VPS падал на `cmd/vkimport/main.go` из-за merge-маркеров (`syntax error: unexpected <<`).
+  - попытка SQL-restore дампа: `ERROR: invalid byte sequence for encoding "UTF8": 0xff`.
+- Что починил (если было): исправил `cmd/vkimport/main.go`, повторил импорт штатными командами, поднял API.
+- Следующий шаг: очистить merge-конфликты в Makefile/README/.codex и убрать лишний seed-пост для полного совпадения с локальной БД.
+- Дата/время: 2026-03-05 19:10 MSK
+- Что запускал: включение TLS для Postgres на VPS, перезапуск db, проверка psql c `sslmode=require`.
+- Что прошло: DB healthy; TLS активен; `pg_stat_ssl` показывает `TLSv1.3`.
+- Что упало (ошибка 5–15 строк):
+  - `psql: FATAL: password authentication failed for user "postgres"` при первичной SSL-проверке.
+- Что починил (если было): сбросил пароль `postgres` на `postgres` через `ALTER ROLE`.
+- Следующий шаг: использовать в Vercel DSN с `sslmode=require`.

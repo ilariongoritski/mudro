@@ -187,3 +187,5 @@
 >>>>>>> theirs
 =======
 >>>>>>> theirs
+
+- [ ] 2026-03-05 | P1 | area:repo | Закрыть merge-конфликты в Makefile/README/.codex файлах (убрать markers <<<<<<< ======= >>>>>>>)

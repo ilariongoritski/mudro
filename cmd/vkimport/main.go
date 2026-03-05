@@ -403,40 +403,25 @@ func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 	txCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-<<<<<<< ours
-	tx, err := r.pool.BeginTx(txCtx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(txCtx)
-
-	if _, err := upsertPost(txCtx, tx, p, media); err != nil {
-		return err
-	}
-
-	return tx.Commit(txCtx)
-}
-
-func upsertPost(ctx context.Context, tx pgx.Tx, p UnifiedPost, media []MediaItem) (int64, error) {
 	var views any
 	if p.ViewsNullable == nil {
 		views = nil
 	} else {
 		views = *p.ViewsNullable
 	}
+
 	var mediaJSON any
-	if len(media) == 0 {
+	if len(p.Media) == 0 {
 		mediaJSON = nil
 	} else {
-		b, err := json.Marshal(media)
+		b, err := json.Marshal(p.Media)
 		if err != nil {
-			return 0, fmt.Errorf("marshal media: %w", err)
+			return fmt.Errorf("marshal media: %w", err)
 		}
 		mediaJSON = b
 	}
 
-	var id int64
-	err := tx.QueryRow(ctx, `
+	_, err := r.pool.Exec(txCtx, `
 insert into posts (
   source, source_post_id,
   published_at, text, media, likes_count, views_count, comments_count,
@@ -444,18 +429,6 @@ insert into posts (
 ) values (
   $1,$2,
   $3,$4,$5,$6,$7,$8,
-=======
-	_, err := r.pool.Exec(txCtx, `
-insert into posts (
-  source, source_post_id,
-  published_at, text, media,
-  likes_count, views_count, comments_count,
-  updated_at
-) values (
-  $1, $2,
-  $3, $4, $5,
-  $6, $7, $8,
->>>>>>> theirs
   now()
 )
 on conflict (source, source_post_id) do update set
@@ -466,14 +439,12 @@ on conflict (source, source_post_id) do update set
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
   updated_at = now()
-<<<<<<< ours
-returning id
 `,
 		p.Source, p.SourcePostID,
 		p.PublishedAt, nullIfEmpty(p.Text), mediaJSON, p.Likes, views, p.CommentsCount,
-	).Scan(&id)
+	)
 
-	return id, err
+	return err
 }
 
 func nullIfEmpty(s string) any {
@@ -481,19 +452,4 @@ func nullIfEmpty(s string) any {
 		return nil
 	}
 	return s
-}
-=======
-`,
-		p.Source,
-		p.SourcePostID,
-		p.PublishedAt,
-		p.Text,
-		p.Media,
-		p.Likes,
-		p.ViewsNullable,
-		p.CommentsCount,
-	)
->>>>>>> theirs
-
-	return err
 }
