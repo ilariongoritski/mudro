@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-import type { Post } from '@/entities/post/model/types'
+import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
 import { PostCard } from '@/entities/post/ui/post-card/PostCard'
 import { FeedControls } from '@/features/feed-controls/ui/FeedControls'
@@ -15,8 +15,8 @@ interface FeedWidgetInnerProps {
 }
 
 const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
-  const [loadedPages, setLoadedPages] = useState<Record<number, Post[]>>({})
-  const [page, setPage] = useState(1)
+  const [loadedItems, setLoadedItems] = useState<Post[]>([])
+  const [nextCursor, setNextCursor] = useState<FeedCursor | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const {
@@ -29,20 +29,8 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
   const [loadMorePosts, { isFetching: isLoadingMore }] = useLazyGetPostsQuery()
 
   const items = useMemo(() => {
-    const base = [...(frontData?.feed.items ?? [])]
-    const extra = Object.keys(loadedPages)
-      .map((value) => Number(value))
-      .sort((a, b) => a - b)
-      .flatMap((key) => loadedPages[key] ?? [])
-    return base.concat(extra)
-  }, [frontData?.feed.items, loadedPages])
-
-  const hasMore = useMemo(() => {
-    if (page <= 1) {
-      return (frontData?.feed.items.length ?? 0) >= limit
-    }
-    return (loadedPages[page]?.length ?? 0) >= limit
-  }, [frontData?.feed.items.length, limit, loadedPages, page])
+    return [...(frontData?.feed.items ?? []), ...loadedItems]
+  }, [frontData?.feed.items, loadedItems])
 
   const sourceTotals = useMemo(() => {
     const totals = { vk: 0, tg: 0 }
@@ -53,14 +41,23 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
     return totals
   }, [frontData])
 
+  const effectiveCursor = nextCursor ?? frontData?.feed.next_cursor ?? null
+  const hasMore = Boolean(effectiveCursor)
+
   const handleLoadMore = async () => {
-    const nextPage = page + 1
+    if (!effectiveCursor) return
 
     try {
       setLoadError(null)
-      const response = await loadMorePosts({ limit, page: nextPage, source, sort }).unwrap()
-      setLoadedPages((current) => ({ ...current, [nextPage]: response.items }))
-      setPage(nextPage)
+      const response = await loadMorePosts({
+        limit,
+        source,
+        sort,
+        before_ts: effectiveCursor.before_ts,
+        before_id: effectiveCursor.before_id,
+      }).unwrap()
+      setLoadedItems((current) => [...current, ...response.items])
+      setNextCursor(response.next_cursor ?? null)
     } catch {
       setLoadError('Could not load next page. Retry after API check.')
     }

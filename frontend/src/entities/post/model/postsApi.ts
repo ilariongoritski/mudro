@@ -17,12 +17,14 @@ export const postsApi = mudroApi.injectEndpoints({
       providesTags: ['Feed'],
     }),
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
-      query: ({ limit, page, source, sort }) => ({
+      query: ({ limit, page, source, sort, before_ts, before_id }) => ({
         url: '/api/posts',
         params: {
           limit,
-          page,
-          source: toApiSource(source),
+          ...(page ? { page } : {}),
+          ...(before_ts ? { before_ts } : {}),
+          ...(typeof before_id === 'number' ? { before_id } : {}),
+          ...(toApiSource(source) ? { source: toApiSource(source) } : {}),
           sort,
         },
       }),

@@ -40,10 +40,12 @@ export interface FeedResponse {
   page?: number
   limit: number
   items: Post[]
-  next_cursor?: {
-    before_ts: string
-    before_id: number
-  }
+  next_cursor?: FeedCursor
+}
+
+export interface FeedCursor {
+  before_ts: string
+  before_id: number
 }
 
 export interface FrontResponse {
@@ -62,5 +64,7 @@ export interface FeedQueryArgs {
 }
 
 export interface PostsQueryArgs extends FeedQueryArgs {
-  page: number
+  page?: number
+  before_ts?: string
+  before_id?: number
 }

@@ -9,12 +9,14 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,7 +31,20 @@ func NewServer(pool *pgxpool.Pool) *Server {
 }
 
 func (s *Server) Router() http.Handler {
+	mediaRoot := strings.TrimSpace(os.Getenv("MEDIA_ROOT"))
+	if mediaRoot == "" {
+		mediaRoot = filepath.Join(config.RepoRoot(), "data", "nu")
+	}
+
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/feed", http.StatusTemporaryRedirect)
+	})
+	mux.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(mediaRoot))))
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
