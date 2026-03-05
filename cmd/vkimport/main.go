@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -101,8 +100,9 @@ func importFile(ctx context.Context, repo *Repo, path string) (int, error) {
 		post.RawIndex = i
 
 		medias := MapVKAttachmentsToMedia(p.Attachments)
+		post.Media = medias
 
-		if err := repo.UpsertPostWithMedia(ctx, post, medias); err != nil {
+		if err := repo.UpsertPost(ctx, post); err != nil {
 			return 0, fmt.Errorf("post %s[%d] (%d_%d): %w", rawFile, i, p.OwnerID, p.ID, err)
 		}
 	}
@@ -201,6 +201,7 @@ type UnifiedPost struct {
 	ViewsNullable *int32 // nullable in DB
 	CommentsCount int
 	Reposts       int
+	Media         []MediaItem
 
 	RawFile  string
 	RawIndex int
@@ -397,113 +398,41 @@ type Repo struct{ pool *pgxpool.Pool }
 
 func NewRepo(pool *pgxpool.Pool) *Repo { return &Repo{pool: pool} }
 
-func (r *Repo) UpsertPostWithMedia(ctx context.Context, p UnifiedPost, media []MediaItem) error {
+func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 	// per-post transaction timeout
 	txCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	tx, err := r.pool.BeginTx(txCtx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(txCtx)
-
-	postID, err := upsertPost(txCtx, tx, p)
-	if err != nil {
-		return err
-	}
-	if err := replaceMedia(txCtx, tx, postID, media); err != nil {
-		return err
-	}
-
-	return tx.Commit(txCtx)
-}
-
-func upsertPost(ctx context.Context, tx pgx.Tx, p UnifiedPost) (int64, error) {
-	var views any
-	if p.ViewsNullable == nil {
-		views = nil
-	} else {
-		views = *p.ViewsNullable
-	}
-
-	var id int64
-	err := tx.QueryRow(ctx, `
+	_, err := r.pool.Exec(txCtx, `
 insert into posts (
-  source, source_post_id, source_url,
-  published_at, text, likes, views, comments_count, reposts,
-  raw_file, raw_index, updated_at
+  source, source_post_id,
+  published_at, text, media,
+  likes_count, views_count, comments_count,
+  updated_at
 ) values (
-  $1,$2,$3,
-  $4,$5,$6,$7,$8,$9,
-  $10,$11, now()
+  $1, $2,
+  $3, $4, $5,
+  $6, $7, $8,
+  now()
 )
 on conflict (source, source_post_id) do update set
-  source_url = excluded.source_url,
   published_at = excluded.published_at,
   text = excluded.text,
-  likes = excluded.likes,
-  views = excluded.views,
+  media = excluded.media,
+  likes_count = excluded.likes_count,
+  views_count = excluded.views_count,
   comments_count = excluded.comments_count,
-  reposts = excluded.reposts,
-  raw_file = excluded.raw_file,
-  raw_index = excluded.raw_index,
   updated_at = now()
-returning id
 `,
-		p.Source, p.SourcePostID, p.SourceURL,
-		p.PublishedAt, p.Text, p.Likes, views, p.CommentsCount, p.Reposts,
-		p.RawFile, p.RawIndex,
-	).Scan(&id)
+		p.Source,
+		p.SourcePostID,
+		p.PublishedAt,
+		p.Text,
+		p.Media,
+		p.Likes,
+		p.ViewsNullable,
+		p.CommentsCount,
+	)
 
-	return id, err
-}
-
-func replaceMedia(ctx context.Context, tx pgx.Tx, postID int64, media []MediaItem) error {
-	if _, err := tx.Exec(ctx, `delete from media where post_id=$1`, postID); err != nil {
-		return err
-	}
-	if len(media) == 0 {
-		return nil
-	}
-
-	b := &pgx.Batch{}
-	for _, m := range media {
-		b.Queue(`
-insert into media (post_id, kind, url, preview_url, width, height, position)
-values ($1,$2,$3,$4,$5,$6,$7)
-`,
-			postID,
-			m.Kind,
-			nullIfEmpty(m.URL),
-			nullIfEmpty(m.PreviewURL),
-			intOrNull(m.Width),
-			intOrNull(m.Height),
-			m.Position,
-		)
-	}
-
-	br := tx.SendBatch(ctx, b)
-	defer br.Close()
-
-	for range media {
-		if _, err := br.Exec(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func nullIfEmpty(s string) any {
-	if strings.TrimSpace(s) == "" {
-		return nil
-	}
-	return s
-}
-
-func intOrNull(v int) any {
-	if v <= 0 {
-		return nil
-	}
-	return v
+	return err
 }

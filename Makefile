@@ -1,5 +1,5 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
-MIGRATION ?= migrations/001_init.sql
+MIGRATIONS_DIR ?= migrations
 
 up:
 	docker compose up -d
@@ -17,7 +17,10 @@ dbcheck:
 	psql "$(DSN)" -X -v ON_ERROR_STOP=1 -c "select 1;"
 
 migrate:
-	psql "$(DSN)" -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
+	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
+		echo "==> applying $$f"; \
+		psql "$(DSN)" -X -v ON_ERROR_STOP=1 -f "$$f" || exit $$?; \
+	done
 
 tables:
 	psql "$(DSN)" -X -c "\dt"
@@ -36,3 +39,7 @@ health:
 	$(MAKE) tables
 	$(MAKE) test
 	$(MAKE) count-posts
+
+
+selftest:
+	go test ./cmd/vkimport ./cmd/tgimport

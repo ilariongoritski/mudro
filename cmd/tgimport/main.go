@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ===== Input (Telegram export) =====
@@ -97,6 +101,7 @@ func main() {
 	outPath := flag.String("out", "feed_items.json", "output JSON path")
 	collectedAtFlag := flag.String("collected-at", "", "RFC3339 timestamp (default: now UTC)")
 	pretty := flag.Bool("pretty", true, "pretty-print JSON")
+	dsn := flag.String("dsn", "", "optional postgres DSN: when set, upsert normalized items into posts")
 	flag.Parse()
 
 	collectedAt := *collectedAtFlag
@@ -184,7 +189,94 @@ func main() {
 		die("write output: %v", err)
 	}
 
+	if strings.TrimSpace(*dsn) != "" {
+		if err := upsertToDB(*dsn, out); err != nil {
+			die("upsert to db: %v", err)
+		}
+	}
+
 	fmt.Printf("OK: wrote %d items to %s (collected_at=%s)\n", len(out), *outPath, collectedAt)
+}
+
+func upsertToDB(dsn string, items []FeedItem) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return fmt.Errorf("pgxpool.New: %w", err)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("db ping: %w", err)
+	}
+
+	for _, item := range items {
+		publishedAt, err := time.Parse(time.RFC3339, item.PublishedAt)
+		if err != nil {
+			return fmt.Errorf("parse published_at for %s: %w", item.ID, err)
+		}
+
+		_, err = pool.Exec(ctx, `
+insert into posts (
+  source, source_post_id,
+  published_at, text, media,
+  likes_count, views_count, comments_count,
+  updated_at
+) values (
+  $1, $2,
+  $3, $4, $5,
+  $6, $7, $8,
+  now()
+)
+on conflict (source, source_post_id) do update set
+  published_at = excluded.published_at,
+  text = excluded.text,
+  media = excluded.media,
+  likes_count = excluded.likes_count,
+  views_count = excluded.views_count,
+  comments_count = excluded.comments_count,
+  updated_at = now()
+`,
+			item.Source,
+			item.SourcePostID,
+			publishedAt,
+			item.Text,
+			item.Media,
+			ptrIntToValue(item.Stats.Likes),
+			ptrIntToValue(item.Stats.Views),
+			ptrIntToValue(item.Stats.Comments),
+		)
+		if err != nil {
+			return fmt.Errorf("upsert %s: %w", item.ID, err)
+		}
+
+		if _, err := pool.Exec(ctx, `delete from post_reactions where post_id = (select id from posts where source = $1 and source_post_id = $2)`, item.Source, item.SourcePostID); err != nil {
+			return fmt.Errorf("delete reactions %s: %w", item.ID, err)
+		}
+
+		for emoji, count := range item.Stats.Reactions {
+			_, err = pool.Exec(ctx, `
+insert into post_reactions (post_id, emoji, count)
+values ((select id from posts where source = $1 and source_post_id = $2), $3, $4)
+on conflict (post_id, emoji) do update set count = excluded.count
+`, item.Source, item.SourcePostID, emoji, count)
+			if err != nil {
+				return fmt.Errorf("upsert reaction %s/%s: %w", item.ID, emoji, err)
+			}
+		}
+	}
+
+	log.Printf("DB sync complete: %d items", len(items))
+	return nil
+}
+
+func ptrIntToValue(v *int) any {
+	if v == nil {
+		return nil
+	}
+	return *v
 }
 
 func toUTC(unixStr string) (string, bool) {
