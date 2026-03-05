@@ -43,6 +43,9 @@
 - [ ] 2026-02-28 | P1 | area:security | Включить fail2ban и закрыть SSH парольный вход
   - Контекст (2026-03-05): новый VPS установлен, можно выполнять hardening сразу после проверки входа по ключу
   - Следующий шаг: настроить `sshd_config` (`PasswordAuthentication no`, `PermitRootLogin no`) и включить jail для sshd
+- [ ] 2026-03-05 | P1 | area:llm | Поднять локальный LLM-контур на VPS (`Ollama + Open WebUI`) как backup для бота
+  - Контекст: сервер `4 vCPU / 8 GB RAM`; реалистичный профиль для CPU-only — модели 3B (q4), 7B (q4) как опционально медленный режим
+  - Следующий шаг: подготовить docker-compose для `ollama+open-webui`, включить auth и ограничить доступ через reverse proxy/firewall
 
 ## P2 (на неделю)
 - [ ] 2026-02-27 | P2 | area:import | Повторно импортировать TG после догрузки медиафайлов
