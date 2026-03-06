@@ -1,0 +1,29 @@
+services:
+  mullvad:
+    image: qmcgaw/gluetun:latest
+    container_name: mullvad-test
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=mullvad
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=yLSgnRy+UPVFruPu4xbAhSaX/5L94b6KTn1dcrxwiFk=
+      - WIREGUARD_ADDRESSES=10.75.56.38/32
+      - SERVER_COUNTRIES=USA
+      - SERVER_CITIES=Los Angeles CA
+      - FIREWALL=on
+      - DOT=off
+      - TZ=Europe/Moscow
+    restart: unless-stopped
+
+  tester:
+    image: curlimages/curl:8.7.1
+    container_name: mullvad-tester
+    network_mode: service:mullvad
+    user: "1000:1000"
+    depends_on:
+      - mullvad
+    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    restart: unless-stopped

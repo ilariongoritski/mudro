@@ -1,4 +1,4 @@
-# MUDRO — Go backend for a unified VK + Telegram feed
+﻿# MUDRO вЂ” Go backend for a unified VK + Telegram feed
 
 MUDRO is a Go + Postgres backend with importers for VK export data and Telegram export JSON. It also includes a Telegram bot for operational summaries.
 
@@ -9,7 +9,7 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 - Windows: WSL2 + Docker Desktop (WSL integration)
 
 ## Environment Split (by service)
-Для локалки можно использовать один `.env`, но для безопасного запуска лучше разносить переменные по сервисам:
+Р”Р»СЏ Р»РѕРєР°Р»РєРё РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РѕРґРёРЅ `.env`, РЅРѕ РґР»СЏ Р±РµР·РѕРїР°СЃРЅРѕРіРѕ Р·Р°РїСѓСЃРєР° Р»СѓС‡С€Рµ СЂР°Р·РЅРѕСЃРёС‚СЊ РїРµСЂРµРјРµРЅРЅС‹Рµ РїРѕ СЃРµСЂРІРёСЃР°Рј:
 - [env/README.md](env/README.md)
 - `env/common.env.example`
 - `env/api.env.example`
@@ -18,24 +18,20 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 - `env/bot.env.example`
 - `env/db.env.example`
 
-`Makefile` поддерживает такую схему: сначала читает `.env` (backward compatibility), потом `env/common.env`, затем `env/<service>.env`.
+`Makefile` РїРѕРґРґРµСЂР¶РёРІР°РµС‚ С‚Р°РєСѓСЋ СЃС…РµРјСѓ: СЃРЅР°С‡Р°Р»Р° С‡РёС‚Р°РµС‚ `.env` (backward compatibility), РїРѕС‚РѕРј `env/common.env`, Р·Р°С‚РµРј `env/<service>.env`.
 
 ## Quick Start (Local)
 ```bash
 make up
-<<<<<<< ours
 make dbcheck
 make migrate
 make tables
-=======
 make migrate
->>>>>>> theirs
 make test
 make selftest
 make logs
 ```
 
-<<<<<<< ours
 Default DSN for Makefile targets:
 `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
 
@@ -68,7 +64,7 @@ Static HTML concept preview:
 - Media storage: MinIO (S3-compatible), optional at MVP.
 - Access: VS Code Remote-SSH for development and ops.
 - Admin panel: optional later (Cockpit or ISPmanager).
-- Актуальный чеклист переноса на новый VPS (Ubuntu 24.04):
+- РђРєС‚СѓР°Р»СЊРЅС‹Р№ С‡РµРєР»РёСЃС‚ РїРµСЂРµРЅРѕСЃР° РЅР° РЅРѕРІС‹Р№ VPS (Ubuntu 24.04):
   [docs/server-transfer-ubuntu24.md](docs/server-transfer-ubuntu24.md)
 
 ### Step-by-step Plan
@@ -118,14 +114,13 @@ Static HTML concept preview:
    - Log rotation and disk usage alerts.
 
 ## Microservices Roadmap
-Концепция декомпозиции, Kafka-потоков и лимитеров описана в:
+РљРѕРЅС†РµРїС†РёСЏ РґРµРєРѕРјРїРѕР·РёС†РёРё, Kafka-РїРѕС‚РѕРєРѕРІ Рё Р»РёРјРёС‚РµСЂРѕРІ РѕРїРёСЃР°РЅР° РІ:
 - [docs/microservices-architecture.md](docs/microservices-architecture.md)
 
-Коротко:
-- выделяем `feed-api`, `agent-planner`, `agent-worker`, `reporter`, `telegram-bot`, import-сервисы;
-- Kafka как event backbone (`posts/comments/tasks/notifications`);
-- RateLimiter на входящий API-трафик и внешние интеграции.
-=======
+РљРѕСЂРѕС‚РєРѕ:
+- РІС‹РґРµР»СЏРµРј `feed-api`, `agent-planner`, `agent-worker`, `reporter`, `telegram-bot`, import-СЃРµСЂРІРёСЃС‹;
+- Kafka РєР°Рє event backbone (`posts/comments/tasks/notifications`);
+- RateLimiter РЅР° РІС…РѕРґСЏС‰РёР№ API-С‚СЂР°С„РёРє Рё РІРЅРµС€РЅРёРµ РёРЅС‚РµРіСЂР°С†РёРё.
 ## Importers
 
 ### VK -> DB
@@ -140,23 +135,22 @@ go run ./cmd/tgimport -in result.json -out feed_items.json -dsn "postgres://post
 ```
 
 
->>>>>>> theirs
 
 ## Health Loop
 ```bash
 make health
 ```
 
-Для автономного прогона локального работяги (авто-лог + ретраи + запись в `.codex/state.md`):
+Р”Р»СЏ Р°РІС‚РѕРЅРѕРјРЅРѕРіРѕ РїСЂРѕРіРѕРЅР° Р»РѕРєР°Р»СЊРЅРѕРіРѕ СЂР°Р±РѕС‚СЏРіРё (Р°РІС‚Рѕ-Р»РѕРі + СЂРµС‚СЂР°Рё + Р·Р°РїРёСЃСЊ РІ `.codex/state.md`):
 ```bash
 make worker-loop
 ```
-Подробный регламент: [docs/worker-autonomy.md](docs/worker-autonomy.md)
+РџРѕРґСЂРѕР±РЅС‹Р№ СЂРµРіР»Р°РјРµРЅС‚: [docs/worker-autonomy.md](docs/worker-autonomy.md)
 
 ## Agent Queue (MVP)
-Простой каркас автономного агента:
-- planner читает `.codex/todo.md` и ставит задачи в `agent_queue`
-- worker забирает задачи и обрабатывает safe-only типы
+РџСЂРѕСЃС‚РѕР№ РєР°СЂРєР°СЃ Р°РІС‚РѕРЅРѕРјРЅРѕРіРѕ Р°РіРµРЅС‚Р°:
+- planner С‡РёС‚Р°РµС‚ `.codex/todo.md` Рё СЃС‚Р°РІРёС‚ Р·Р°РґР°С‡Рё РІ `agent_queue`
+- worker Р·Р°Р±РёСЂР°РµС‚ Р·Р°РґР°С‡Рё Рё РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ safe-only С‚РёРїС‹
 
 ```bash
 make migrate-agent
@@ -165,19 +159,19 @@ make agent-plan-once
 make agent-work
 ```
 
-Частые safe task kinds в worker:
+Р§Р°СЃС‚С‹Рµ safe task kinds РІ worker:
 - `health_check` -> `make test`
 - `db_check` -> `make dbcheck`
 - `tables_check` -> `make tables`
 - `count_posts` -> `make count-posts`
 
 ## Repo Layout
-- `cmd/api` — HTTP API server (JSON endpoints)
-- `cmd/vkimport` — VK raw export -> Postgres (`posts` + `media`)
-- `cmd/tgimport` — Telegram export JSON -> feed JSON
-- `cmd/bot` — Telegram bot (логи, действия, здоровье за день)
-- `migrations/` — SQL migrations (initial schema in `001_init.sql`)
-- `internal/` — core packages
+- `cmd/api` вЂ” HTTP API server (JSON endpoints)
+- `cmd/vkimport` вЂ” VK raw export -> Postgres (`posts` + `media`)
+- `cmd/tgimport` вЂ” Telegram export JSON -> feed JSON
+- `cmd/bot` вЂ” Telegram bot (Р»РѕРіРё, РґРµР№СЃС‚РІРёСЏ, Р·РґРѕСЂРѕРІСЊРµ Р·Р° РґРµРЅСЊ)
+- `migrations/` вЂ” SQL migrations (initial schema in `001_init.sql`)
+- `internal/` вЂ” core packages
 
 ## Importers
 VK import (default reads `~/vk-export/vk_wall_*.json`):
@@ -207,23 +201,23 @@ export API_BASE_URL="http://127.0.0.1:8080"
 make bot-run
 ```
 
-Текущие команды бота:
+РўРµРєСѓС‰РёРµ РєРѕРјР°РЅРґС‹ Р±РѕС‚Р°:
 - `/start`
 - `/help`
-- `/mudro <вопрос>` (ответ LLM с учетом контекста проекта)
-- `/now` (краткий итог: достижения/изменения/статус с запуска)
-- `/todo` (будущие цели и улучшения)
-- `/todoadd <текст>` (добавить цель/улучшение в TODO)
-- `/top10` (топ-10 наиболее значимых изменений проекта)
-- `/repo` (структура репозитория)
-- `/find` (поиск улучшений по репозиторию + авто-добавление важного в TODO)
-- `/time` (суммарное время работы + время генерации ответов)
-- `/rab` (автовыполнение простых задач из TODO, перенос в DONE, допоиск улучшений)
-- `/memento` (полная синхронизация памяти проекта и снимок структуры)
-- `/tglog` (история управления, что запускалось из Telegram)
-- `/chat on|off|status` (режим обычного чата без команд)
-- `/reportnow` (мгновенно отправить отчет через reporter-бота)
-- `/feed5` (вывод 5 постов из `GET /api/front`)
+- `/mudro <РІРѕРїСЂРѕСЃ>` (РѕС‚РІРµС‚ LLM СЃ СѓС‡РµС‚РѕРј РєРѕРЅС‚РµРєСЃС‚Р° РїСЂРѕРµРєС‚Р°)
+- `/now` (РєСЂР°С‚РєРёР№ РёС‚РѕРі: РґРѕСЃС‚РёР¶РµРЅРёСЏ/РёР·РјРµРЅРµРЅРёСЏ/СЃС‚Р°С‚СѓСЃ СЃ Р·Р°РїСѓСЃРєР°)
+- `/todo` (Р±СѓРґСѓС‰РёРµ С†РµР»Рё Рё СѓР»СѓС‡С€РµРЅРёСЏ)
+- `/todoadd <С‚РµРєСЃС‚>` (РґРѕР±Р°РІРёС‚СЊ С†РµР»СЊ/СѓР»СѓС‡С€РµРЅРёРµ РІ TODO)
+- `/top10` (С‚РѕРї-10 РЅР°РёР±РѕР»РµРµ Р·РЅР°С‡РёРјС‹С… РёР·РјРµРЅРµРЅРёР№ РїСЂРѕРµРєС‚Р°)
+- `/repo` (СЃС‚СЂСѓРєС‚СѓСЂР° СЂРµРїРѕР·РёС‚РѕСЂРёСЏ)
+- `/find` (РїРѕРёСЃРє СѓР»СѓС‡С€РµРЅРёР№ РїРѕ СЂРµРїРѕР·РёС‚РѕСЂРёСЋ + Р°РІС‚Рѕ-РґРѕР±Р°РІР»РµРЅРёРµ РІР°Р¶РЅРѕРіРѕ РІ TODO)
+- `/time` (СЃСѓРјРјР°СЂРЅРѕРµ РІСЂРµРјСЏ СЂР°Р±РѕС‚С‹ + РІСЂРµРјСЏ РіРµРЅРµСЂР°С†РёРё РѕС‚РІРµС‚РѕРІ)
+- `/rab` (Р°РІС‚РѕРІС‹РїРѕР»РЅРµРЅРёРµ РїСЂРѕСЃС‚С‹С… Р·Р°РґР°С‡ РёР· TODO, РїРµСЂРµРЅРѕСЃ РІ DONE, РґРѕРїРѕРёСЃРє СѓР»СѓС‡С€РµРЅРёР№)
+- `/memento` (РїРѕР»РЅР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїР°РјСЏС‚Рё РїСЂРѕРµРєС‚Р° Рё СЃРЅРёРјРѕРє СЃС‚СЂСѓРєС‚СѓСЂС‹)
+- `/tglog` (РёСЃС‚РѕСЂРёСЏ СѓРїСЂР°РІР»РµРЅРёСЏ, С‡С‚Рѕ Р·Р°РїСѓСЃРєР°Р»РѕСЃСЊ РёР· Telegram)
+- `/chat on|off|status` (СЂРµР¶РёРј РѕР±С‹С‡РЅРѕРіРѕ С‡Р°С‚Р° Р±РµР· РєРѕРјР°РЅРґ)
+- `/reportnow` (РјРіРЅРѕРІРµРЅРЅРѕ РѕС‚РїСЂР°РІРёС‚СЊ РѕС‚С‡РµС‚ С‡РµСЂРµР· reporter-Р±РѕС‚Р°)
+- `/feed5` (РІС‹РІРѕРґ 5 РїРѕСЃС‚РѕРІ РёР· `GET /api/front`)
 
 ## Reporter Bot (separate)
 ```bash
@@ -234,7 +228,7 @@ export REPORT_BOT_TOKEN="...second bot token..."
 # export REPORT_INTERVAL_MIN="30"
 make report-run
 ```
-- `/health` (состояние сейчас + поломки/успехи за день + git-итоги за день)
+- `/health` (СЃРѕСЃС‚РѕСЏРЅРёРµ СЃРµР№С‡Р°СЃ + РїРѕР»РѕРјРєРё/СѓСЃРїРµС…Рё Р·Р° РґРµРЅСЊ + git-РёС‚РѕРіРё Р·Р° РґРµРЅСЊ)
 - `/logs`
 - `/actions10`
 - `/actions1h`
@@ -252,20 +246,20 @@ Run the API server:
 API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" go run ./cmd/api
 ```
 
-Rate limiter (входящие запросы):
+Rate limiter (РІС…РѕРґСЏС‰РёРµ Р·Р°РїСЂРѕСЃС‹):
 - `API_RATE_LIMIT_RPS` (default `20`)
 - `API_RATE_LIMIT_BURST` (default `40`)
-- `REDIS_RATE_LIMIT_ENABLED=true` переключает лимитер на Redis backend (`REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB`)
-- если `API_RATE_LIMIT_RPS=0`, лимитер выключен
+- `REDIS_RATE_LIMIT_ENABLED=true` РїРµСЂРµРєР»СЋС‡Р°РµС‚ Р»РёРјРёС‚РµСЂ РЅР° Redis backend (`REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB`)
+- РµСЃР»Рё `API_RATE_LIMIT_RPS=0`, Р»РёРјРёС‚РµСЂ РІС‹РєР»СЋС‡РµРЅ
 
 Kafka events (agent runtime):
-- при `KAFKA_ENABLED=true` `cmd/agent` публикует lifecycle-события задач в `KAFKA_TOPIC_TASKS`
-- брокеры задаются через `KAFKA_BROKERS` (comma-separated)
+- РїСЂРё `KAFKA_ENABLED=true` `cmd/agent` РїСѓР±Р»РёРєСѓРµС‚ lifecycle-СЃРѕР±С‹С‚РёСЏ Р·Р°РґР°С‡ РІ `KAFKA_TOPIC_TASKS`
+- Р±СЂРѕРєРµСЂС‹ Р·Р°РґР°СЋС‚СЃСЏ С‡РµСЂРµР· `KAFKA_BROKERS` (comma-separated)
 
 Endpoints:
-- `GET /healthz` → `{ "status": "ok" }`
-- `GET /feed?limit=20` (простой HTML-шаблон ленты с кнопкой "Загрузить еще")
-- `GET /api/front?limit=50` (одним запросом: мета + лента для фронта)
+- `GET /healthz` в†’ `{ "status": "ok" }`
+- `GET /feed?limit=20` (РїСЂРѕСЃС‚РѕР№ HTML-С€Р°Р±Р»РѕРЅ Р»РµРЅС‚С‹ СЃ РєРЅРѕРїРєРѕР№ "Р—Р°РіСЂСѓР·РёС‚СЊ РµС‰Рµ")
+- `GET /api/front?limit=50` (РѕРґРЅРёРј Р·Р°РїСЂРѕСЃРѕРј: РјРµС‚Р° + Р»РµРЅС‚Р° РґР»СЏ С„СЂРѕРЅС‚Р°)
 - `GET /api/posts?limit=50`
 - `GET /api/posts?page=2` (page-based, 1-indexed)
 - Cursor pagination: `GET /api/posts?before_ts=2026-02-24T12:00:00Z&before_id=123`
@@ -279,8 +273,8 @@ Response wrapper (page-based):
 }
 ```
 ## Notes
-- Для этого проекта лента VK рассматривается как архив: повторные обновления VK не требуются.
-- Подготовлена схема персональных лайков: `accounts` + `post_account_likes` (one-like-per-account-per-post).
+- Р”Р»СЏ СЌС‚РѕРіРѕ РїСЂРѕРµРєС‚Р° Р»РµРЅС‚Р° VK СЂР°СЃСЃРјР°С‚СЂРёРІР°РµС‚СЃСЏ РєР°Рє Р°СЂС…РёРІ: РїРѕРІС‚РѕСЂРЅС‹Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ VK РЅРµ С‚СЂРµР±СѓСЋС‚СЃСЏ.
+- РџРѕРґРіРѕС‚РѕРІР»РµРЅР° СЃС…РµРјР° РїРµСЂСЃРѕРЅР°Р»СЊРЅС‹С… Р»Р°Р№РєРѕРІ: `accounts` + `post_account_likes` (one-like-per-account-per-post).
 
 ## Operations
 - Mission and guardrails: `Mission.md`

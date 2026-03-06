@@ -1,10 +1,10 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
-<<<<<<< ours
-MIGRATION ?= migrations/001_init.sql
-AGENT_MIGRATION ?= migrations/002_agent_queue.sql
-COMMENTS_MIGRATION ?= migrations/003_post_comments.sql
-AGENT_REVIEW_MIGRATION ?= migrations/004_agent_review_gate.sql
-AGENT_EVENTS_MIGRATION ?= migrations/005_agent_task_events.sql
+MIGRATIONS_DIR ?= migrations
+MIGRATION ?= $(MIGRATIONS_DIR)/001_init.sql
+AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002_agent_queue.sql
+COMMENTS_MIGRATION ?= $(MIGRATIONS_DIR)/003_post_comments.sql
+AGENT_REVIEW_MIGRATION ?= $(MIGRATIONS_DIR)/004_agent_review_gate.sql
+AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_task_events.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -22,9 +22,6 @@ PSQL_CMD = docker compose exec -T db psql -U postgres -d gallery
 else
 PSQL_CMD = psql "$(DSN)"
 endif
-=======
-MIGRATIONS_DIR ?= migrations
->>>>>>> theirs
 
 up:
 	docker compose up -d
@@ -42,12 +39,17 @@ dbcheck:
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"
 
 migrate:
-<<<<<<< ours
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
 endif
+
+migrate-all:
+	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
+		echo "==> applying $$f"; \
+		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
+	done
 
 migrate-agent:
 ifeq ($(USE_DOCKER_PSQL),1)
@@ -76,18 +78,15 @@ ifeq ($(USE_DOCKER_PSQL),1)
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_MIGRATION)"
 endif
-=======
-	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
-		echo "==> applying $$f"; \
-		psql "$(DSN)" -X -v ON_ERROR_STOP=1 -f "$$f" || exit $$?; \
-	done
->>>>>>> theirs
 
 tables:
-	$(PSQL_CMD) -X -c "\dt"
+	$(PSQL_CMD) -X -c "\\dt"
 
 test:
 	$(GO) test ./...
+
+selftest:
+	$(GO) test ./cmd/vkimport ./cmd/tgimport
 
 count-posts:
 	$(PSQL_CMD) -X -c "select count(*) from posts;"
@@ -101,7 +100,6 @@ health:
 	$(MAKE) test
 	$(MAKE) count-posts
 
-<<<<<<< ours
 worker-loop:
 	./scripts/worker_autonomy_loop.sh
 
@@ -169,8 +167,3 @@ agent-reject:
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
 	$(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
-=======
-
-selftest:
-	go test ./cmd/vkimport ./cmd/tgimport
->>>>>>> theirs
