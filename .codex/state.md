@@ -660,3 +660,10 @@
   - `npm.ps1 cannot be loaded because running scripts is disabled on this system`
 - Что починил (если было): OCR переведен на Node (`npm.cmd`, `tesseract.js`), секреты в vpn compose обезличены
 - Следующий шаг: выполнить скрипты на VPS в интерактивной SSH-сессии и завершить `openclaw onboard` с Telegram/OAuth данными пользователя
+
+- Дата/время: 2026-03-06T20:29:23+03:00
+- Что запускал: remote-check VPS OpenClaw stack (/root/vpn-test), проверка docker compose, IP через Mullvad, проверка openclaw.json.
+- Что прошло: VPN стабилен (mullvad healthy), исходящий IP контейнеров через US/Los Angeles; onboarding завершен и конфиг сохранен (/srv/openclaw-home/.openclaw/openclaw.json).
+- Что упало (ошибка 5–15 строк): Gateway not detected, curl 127.0.0.1:18789 -> connection refused; контейнер openclaw-app стабилен только в режиме sleep infinity.
+- Что починил (если было): восстановлен стабильный режим контейнера openclaw без рестарт-лупа; подтвержден доступ к VPS по SSH-ключу codex_mudro_vps2.
+- Следующий шаг: поднять OpenClaw gateway как постоянный процесс и проверить Telegram bot end-to-end.

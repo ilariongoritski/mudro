@@ -153,3 +153,6 @@
 - [ ] 2026-03-06 | P1 | area:openclaw | Выполнить подготовленные скрипты OpenClaw на VPS и завершить onboarding
   - Контекст: в репе готовы `scripts/openclaw/*.sh` и runbook `docs/openclaw/openclaw_server_runbook.md`
   - Следующий шаг: на сервере запустить bootstrap/install/checks и пройти OAuth+Telegram pairing
+- [ ] 2026-03-06 | P0 | area:openclaw | Поднять рабочий gateway OpenClaw на VPS (/root/vpn-test) без 1006/connection refused
+  - Контекст: onboarding complete, VPN active (US IP), но порт 18789 не слушает при текущем запуске
+  - Следующий шаг: стабилизировать CLI path/binary, запустить gateway как сервис/daemon и подтвердить openclaw health + ответ Telegram-бота
