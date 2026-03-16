@@ -52,6 +52,15 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
+Server-side static rollout on VPS:
+- build locally or on the server: `cd frontend && npm.cmd run build`
+- deploy static site + reverse proxy on VPS:
+  - `bash scripts/ops/deploy_vps_frontend.sh`
+
+Result:
+- frontend is served by `nginx` on `:80`
+- `/api`, `/media`, `/healthz` are proxied to local `mudro-api` on `127.0.0.1:8080`
+
 Static HTML concept preview:
 - `docs/frontend-preview.html`
 

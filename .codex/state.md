@@ -141,3 +141,9 @@
 - Что упало (ошибка 5–15 строк): `tar | ssh` через PowerShell повредил gzip stream; `docker compose exec ... psql "$DSN"` дал `connection refused`, потому что host DSN был ошибочно передан внутрь контейнера; обычный checkout `main` на Windows невозможен из-за старого invalid path `cmd/bot/ server.go `
 - Что починил (если было): перешел на надежный `WSL scp`; remote import/counts делал через host `psql` и `/usr/bin/go`; обновил `origin/main` напрямую через fast-forward push `codex/testtask:main`
 - Следующий шаг: продолжать product polish сайта уже от актуального `main`; generated `output/frontend-dev.log` и `output/db/*` оставить вне git
+- Дата/время: 2026-03-17 00:15
+- Что запускал: сборка frontend; установка nginx на VPS; загрузка dist и rollout server-side frontend через reverse proxy; внешняя проверка root/healthz/VK API; browser smoke по IP
+- Что прошло: frontend теперь отдается прямо с VPS по http://91.218.113.247/; nginx проксирует /api, /media, /healthz на локальный mudro-api; публичный серверный контур отдает живую ленту с VK=1088 и TG=1101; сохранен screenshot output/playwright/mudro-vps-http-home-20260317.png
+- Что упало (ошибка 5–15 строк): не падало; nginx установился и стартовал с первой попытки
+- Что починил (если было): убрал зависимость MVP frontend от Vercel как обязательной точки входа; добавил воспроизводимый VPS rollout через scripts/ops/deploy_vps_frontend.sh и scripts/ops/mudro.nginx.conf
+- Следующий шаг: при появлении домена закрыть тот же контур под HTTPS (80/443) и затем уже решать, закрывать ли внешний 8080 полностью

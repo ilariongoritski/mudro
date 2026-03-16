@@ -40,6 +40,31 @@
 
 ## Частые сбои и действия
 
+### Frontend на VPS через nginx
+Цель: держать основной MVP frontend прямо на VPS, а не только на внешнем preview-хостинге.
+
+Ожидаемая схема:
+- `nginx` слушает `:80`
+- статика frontend лежит в `/var/www/mudro/frontend`
+- `nginx` проксирует `/api`, `/media`, `/healthz` на `127.0.0.1:8080`
+
+Разовый rollout:
+1. локально собрать frontend:
+   - `cd frontend`
+   - `npm.cmd run build`
+2. загрузить проект на VPS или хотя бы актуальный `frontend/dist`
+3. на VPS запустить:
+   - `bash /root/projects/mudro/scripts/ops/deploy_vps_frontend.sh`
+4. проверить:
+   - `curl -fsS http://127.0.0.1/healthz`
+   - `curl -I http://127.0.0.1/`
+   - `ss -lntp | grep ':80'`
+
+Результат:
+- сайт открывается по `http://<server-ip>/`
+- API и media продолжают жить на том же VPS, но уже за reverse proxy
+- Vercel перестает быть обязательной точкой входа для MVP
+
 ### 0) Hardening Postgres на VPS
 Цель: не держать публично доступный `postgres/postgres` на `0.0.0.0:5433`.
 

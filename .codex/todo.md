@@ -216,3 +216,6 @@
 - [ ] 2026-03-16 | P2 | area:devex | Заполнить `C:\Users\gorit\.codex\secrets\mudro-github-mcp.local.env` и включить `mudro_github` MCP
   - Контекст: локальный wrapper уже есть, но GitHub MCP сейчас падает на старте с `MUDRO_GITHUB_PAT is not set`, поэтому PR/issues/actions через MCP недоступны.
   - Следующий шаг: создать fine-grained read-only PAT для нужных репозиториев (`Contents`, `Pull requests`, `Issues`, `Actions`), записать его в secret-файл и вернуть `enabled = true` в `C:\Users\gorit\.codex\config.toml`.
+- [ ] 2026-03-17 | P1 | area:vps-web | При появлении домена перевести VPS frontend-контур с `http://<server-ip>/` на нормальный HTTPS reverse proxy (`80/443`) и после этого решить судьбу внешнего `:8080`
+  - Контекст: self-hosted MVP уже живет на nginx :80 и проксирует локальный API/media; сейчас не хватает только доменного TLS-слоя и финального закрытия голого API-порта наружу.
+  - Следующий шаг: завести домен/поддомен, выпустить сертификат (Caddy/Nginx+Let's Encrypt), затем проверить, нужен ли внешний 8080 вообще.
