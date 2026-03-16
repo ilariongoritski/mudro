@@ -92,3 +92,9 @@
 - Что упало (ошибка 5–15 строк): server rollout сначала уперся в неверный путь `go` (`/usr/local/go/bin/go`), затем повтор прошел через `/usr/bin/go`; tracked `output/frontend-dev.log` не дал обычный `git restore`
 - Что починил (если было): выровнен VPS backend с локальным контуром и очищен будущий git-шум от `output/import`, `output/doc`, `output/playwright`, `output/frontend-dev.log`
 - Следующий шаг: зафиксировать все в git и переходить в следующий чат уже с чистым серверным MVP-базисом
+- Дата/время: 2026-03-16 19:07
+- Что запускал: чтение `.codex` памяти; `git diff`; `npm.cmd run build`; `wsl.exe sh -lc "cd /mnt/d/mudr/mudro11 && go test ./..."`; публичные health-check `Vercel/VPS`; commit+push media-fix
+- Что прошло: frontend build зеленый; полный `go test ./...` зеленый; `https://frontend-psi-ten-33.vercel.app/healthz` и `http://91.218.113.247:8080/healthz` отвечают `ok`; `source=vk` и `source=tg` публично дают `200`; фикс `Fix media position normalization regression` закоммичен и запушен в `origin/codex/frontend-mudro11-fsd`
+- Что упало (ошибка 5–15 строк): `git restore -- output/frontend-dev.log` -> `error: unable to unlink old 'output/frontend-dev.log': Invalid argument`; файл залочен локальным Windows-процессом, к коду/серверу не относится
+- Что починил (если было): убедился, что media-position regression закрыт тестом и уже в удаленной ветке; публичный контур визуально проверен скриншотом `output/playwright/mudro-public-current.png`
+- Следующий шаг: либо продолжать продуктовый polish сайта, либо отдельно разлочить/очистить `output/frontend-dev.log`, чтобы локальное дерево стало полностью чистым
