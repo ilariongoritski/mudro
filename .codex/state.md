@@ -80,12 +80,25 @@
 - Что упало (ошибка 5–15 строк): server rollout сначала уперся в неверный путь `go` (`/usr/local/go/bin/go`), затем повтор прошел через `/usr/bin/go`
 - Что починил (если было): выровнен VPS backend с локальным контуром и очищен будущий git-шум от `output/import`, `output/doc`, `output/playwright`, `output/frontend-dev.log`
 - Следующий шаг: зафиксировать все в git и переходить в следующий чат уже с чистым серверным MVP-базисом
+
+- Дата/время: 2026-03-16 19:27:10
+- Что запускал: перепроектирование `AGENTS.md`; сверку `Makefile`, `docs/ops-runbook.md`, `docs/worker-autonomy.md`; добавление `.editorconfig` и `.gitattributes`; git diff/status по документации
+- Что прошло: подготовлен новый самодостаточный регламент агента; добавлены правила UTF-8/LF; зафиксированы стартовый чеклист, safety-инварианты, workflow для backend/frontend/agent и чеклист готовности к `main`
+- Что упало (ошибка 5–15 строк): Не падало. В worktree уже были несвязанные правки в `cmd/tgload/*` и `output/frontend-dev.log`, они оставлены нетронутыми
+- Что починил (если было): убраны двусмысленности старого `AGENTS.md`; добавлен явный приоритет источников истины, обязательный `git status --short` в начале сессии и файловые guardrails для кодировки/`eol`
+- Следующий шаг: при необходимости просмотреть итоговый diff и затем коммитить только `AGENTS.md`, `.editorconfig`, `.gitattributes` и обновленные `.codex`-записи
 - Дата/время: 2026-03-16 18:34:42
 - Что запускал: `frontend` build/lint; WSL `go test ./...`; repro-тест `go test ./internal/media -run TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset -count=1`
 - Что прошло: `npm.cmd run build`; `npm.cmd run lint`; после фикса полный `go test ./...`; пакет `internal/media` зеленый
 - Что упало (ошибка 5–15 строк): `--- FAIL: TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset (0.00s)`; `media_test.go:93: items[1].Position = 2, want 3`; `FAIL`; `FAIL github.com/goritskimihail/mudro/internal/media 0.009s`; `FAIL`
 - Что починил (если было): в `internal/media.ParseLegacyJSON` авто-позиции media теперь назначаются как уникальные even after explicit offset/duplicate; добавлен регрессионный тест, чтобы `post_media_links`/`comment_media_links` не затирали вложения по одинаковому `position`
 - Следующий шаг: при желании прогнать импорт на реальном наборе с не подряд идущими `position`, но кодовая регрессия уже закрыта тестом
+- Дата/время: 2026-03-16 19:22:34
+- Что запускал: второй bug-hunt pass; `go vet ./...`; repro-тесты и полный `go test ./...`; анализ `cmd/tgload/buildMediaJSON`
+- Что прошло: `go vet ./...`; `go test ./cmd/tgload -count=1`; полный `go test ./...`
+- Что упало (ошибка 5–15 строк): `--- FAIL: TestBuildMediaJSONAssignsUniqueTrackPositionAfterMedia (0.00s)`; `main_test.go:35: track position = 1, want 2`; `FAIL`; `FAIL github.com/goritskimihail/mudro/cmd/tgload 0.010s`; `FAIL`
+- Что починил (если было): в `cmd/tgload/buildMediaJSON` аудиотреки теперь стартуют после максимального уже занятого `position`, а не от `len(out)`; добавлены два регрессионных теста на обычный и sparse-case (`10 -> 11`)
+- Следующий шаг: можно продолжать третий проход по импортерам/экспортерам, потому что именно там пока больше всего логических edge-case дефектов
 - Дата/время: 2026-03-16 18:22
 - Что запускал: финальная серверная синхронизация, `go test ./...`, очистка generated output из git, подготовка к commit/push
 - Что прошло: полный `go test ./...`; публичный Vercel URL читает уже обновленный VPS API; VK карточка снова есть в браузере; TG views из CSV есть на сервере; `output/` артефакты исключены через `.gitignore`

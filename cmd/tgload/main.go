@@ -196,7 +196,14 @@ func buildMediaJSON(media []mediaItem, tracks []string) ([]byte, error) {
 		out = append(out, row)
 	}
 
-	pos := len(out)
+	pos := 1
+	for _, row := range out {
+		existing, ok := row["position"].(int)
+		if !ok || existing < pos {
+			continue
+		}
+		pos = existing + 1
+	}
 	for _, t := range tracks {
 		track := strings.TrimSpace(t)
 		if track == "" {
