@@ -90,6 +90,12 @@ type tgPostRef struct {
 	PublishedAt time.Time
 }
 
+type tgPostCandidate struct {
+	PostID         int64
+	PublishedAt    time.Time
+	NormalizedText string
+}
+
 var (
 	reMsgStart  = regexp.MustCompile(`<div class="message default clearfix(?: joined)?" id="message(\d+)">`)
 	reDateTitle = regexp.MustCompile(`class="pull_right date details" title="([^"]+)"`)
@@ -149,6 +155,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("load posts map: %v", err)
 	}
+	postCandidates, err := loadTGPostCandidates(ctx, pool)
+	if err != nil {
+		log.Fatalf("load post candidates: %v", err)
+	}
 
 	inserted := 0
 	createdPosts := 0
@@ -165,6 +175,13 @@ func main() {
 			rootID, rootMsg, found := findRootMessage(msgs, msg.ReplyToID)
 			if found {
 				if _, exists := postByTGMsgID[rootID]; !exists {
+					if matched, ok := matchRootPost(rootMsg, postCandidates); ok {
+						postByTGMsgID[rootID] = tgPostRef{PostID: matched.PostID, PublishedAt: matched.PublishedAt}
+						postID, parentCommentID, ok = resolvePostLink(msgs, postByTGMsgID, msg.ReplyToID, msg.PublishedAt)
+						if ok {
+							goto importComment
+						}
+					}
 					created, upsertedPostID, publishedAt, err := upsertRootPost(context.Background(), pool, rootMsg)
 					if err != nil {
 						log.Fatalf("upsert root post msg=%d: %v", rootID, err)
@@ -181,6 +198,7 @@ func main() {
 			skippedNoRoot++
 			continue
 		}
+	importComment:
 		if err := upsertComment(context.Background(), pool, postID, msg, parentCommentID); err != nil {
 			log.Fatalf("upsert comment msg=%d: %v", msg.ID, err)
 		}
@@ -324,6 +342,58 @@ func loadTGPostMap(ctx context.Context, pool *pgxpool.Pool) (map[int64]tgPostRef
 		out[msgID] = tgPostRef{PostID: postID, PublishedAt: publishedAt.UTC()}
 	}
 	return out, rows.Err()
+}
+
+func loadTGPostCandidates(ctx context.Context, pool *pgxpool.Pool) ([]tgPostCandidate, error) {
+	rows, err := pool.Query(ctx, `select id, published_at, text from posts where source='tg'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]tgPostCandidate, 0, 2048)
+	for rows.Next() {
+		var (
+			item tgPostCandidate
+			text *string
+		)
+		if err := rows.Scan(&item.PostID, &item.PublishedAt, &text); err != nil {
+			return nil, err
+		}
+		item.PublishedAt = item.PublishedAt.UTC()
+		item.NormalizedText = normalizeLookupText(textValue(text))
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func matchRootPost(msg htmlMessage, posts []tgPostCandidate) (tgPostCandidate, bool) {
+	normalizedText := normalizeLookupText(msg.Text)
+	bestIdx := -1
+	bestScore := int64(1<<62 - 1)
+
+	for i, post := range posts {
+		if normalizedText != "" && post.NormalizedText != normalizedText {
+			continue
+		}
+		delta := absDurationSeconds(msg.PublishedAt.Sub(post.PublishedAt))
+		if normalizedText != "" {
+			if delta > int64(6*60*60) {
+				continue
+			}
+		} else if delta > int64(30*60) {
+			continue
+		}
+		if bestIdx == -1 || delta < bestScore {
+			bestIdx = i
+			bestScore = delta
+		}
+	}
+
+	if bestIdx == -1 {
+		return tgPostCandidate{}, false
+	}
+	return posts[bestIdx], true
 }
 
 func resolvePostLink(msgs map[int64]htmlMessage, postByTGMsgID map[int64]tgPostRef, replyToID int64, commentPublishedAt time.Time) (postID int64, parentCommentID *string, ok bool) {
@@ -497,6 +567,28 @@ func nullIfEmpty(s string) any {
 		return nil
 	}
 	return s
+}
+
+func normalizeLookupText(raw string) string {
+	text := strings.TrimSpace(strings.ToLower(strings.ReplaceAll(raw, "\r\n", "\n")))
+	for strings.Contains(text, "  ") {
+		text = strings.ReplaceAll(text, "  ", " ")
+	}
+	return text
+}
+
+func textValue(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func absDurationSeconds(d time.Duration) int64 {
+	if d < 0 {
+		d = -d
+	}
+	return int64(d / time.Second)
 }
 
 func parseTGMessageID(sourcePostID string) (int64, bool) {

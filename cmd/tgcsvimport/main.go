@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -147,8 +148,31 @@ func upsertTelegramPost(ctx context.Context, pool *pgxpool.Pool, row csvRow) err
 		}
 	}
 
-	var postID int64
-	err = tx.QueryRow(ctx, `
+	var (
+		postID     int64
+		matchedID  *int64
+		messageAny = anyText(row.Message)
+	)
+	if matched, err := findExistingLogicalPost(ctx, tx, row); err != nil {
+		return err
+	} else {
+		matchedID = matched
+	}
+
+	if matchedID != nil {
+		err = tx.QueryRow(ctx, `
+update posts
+set published_at = $2,
+    text = coalesce($3, text),
+    likes_count = $4,
+    views_count = $5,
+    comments_count = $6,
+    updated_at = now()
+where id = $1
+returning id
+`, *matchedID, row.Date, messageAny, likesCount, row.Views, row.Comments).Scan(&postID)
+	} else {
+		err = tx.QueryRow(ctx, `
 insert into posts (
   source, source_post_id,
   published_at, text,
@@ -168,7 +192,8 @@ on conflict (source, source_post_id) do update set
   comments_count = excluded.comments_count,
   updated_at = now()
 returning id
-`, row.MessageID, row.Date, anyText(row.Message), likesCount, row.Views, row.Comments).Scan(&postID)
+`, row.MessageID, row.Date, messageAny, likesCount, row.Views, row.Comments).Scan(&postID)
+	}
 	if err != nil {
 		return err
 	}
@@ -189,6 +214,31 @@ values ($1, $2, $3)
 	}
 
 	return tx.Commit(ctx)
+}
+
+func findExistingLogicalPost(ctx context.Context, tx pgx.Tx, row csvRow) (*int64, error) {
+	if strings.TrimSpace(row.Message) == "" {
+		return nil, nil
+	}
+
+	var matchedID int64
+	err := tx.QueryRow(ctx, `
+select id
+from posts
+where source = 'tg'
+  and source_post_id <> $1
+  and coalesce(text, '') = $2
+  and abs(extract(epoch from (published_at - $3))) <= 21600
+order by coalesce(comments_count, 0) desc, published_at desc, id desc
+limit 1
+`, row.MessageID, strings.TrimSpace(row.Message), row.Date).Scan(&matchedID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &matchedID, nil
 }
 
 func field(record []string, index map[string]int, key string) string {

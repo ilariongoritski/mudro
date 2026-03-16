@@ -99,9 +99,39 @@
 - Что упало (ошибка 5–15 строк): `--- FAIL: TestBuildMediaJSONAssignsUniqueTrackPositionAfterMedia (0.00s)`; `main_test.go:35: track position = 1, want 2`; `FAIL`; `FAIL github.com/goritskimihail/mudro/cmd/tgload 0.010s`; `FAIL`
 - Что починил (если было): в `cmd/tgload/buildMediaJSON` аудиотреки теперь стартуют после максимального уже занятого `position`, а не от `len(out)`; добавлены два регрессионных теста на обычный и sparse-case (`10 -> 11`)
 - Следующий шаг: можно продолжать третий проход по импортерам/экспортерам, потому что именно там пока больше всего логических edge-case дефектов
+- Дата/время: 2026-03-16 21:19:11
+- Что запускал: аудит TG БД через SQL; новый `cmd/tgdedupe`; dry-run/apply/post-check; патчи `cmd/tgcommentsimport` и `cmd/tgcsvimport`; полный `go test ./...`
+- Что прошло: safe dedupe удалил 95 строк TG `posts`; `tg_posts` уменьшились `1694 -> 1599`; `tg_comments` сохранились `1814`; orphan comments не появились; `post_media_links`/`posts.media` для TG остались согласованными; post-check `go run ./cmd/tgdedupe` показал `groups_to_merge=0`; полный `go test ./...` зеленый
+- Что упало (ошибка 5–15 строк): первая попытка `go run ./cmd/tgdedupe -apply ...` оборвалась `apply plan: merge canonical=185 duplicate=321: conn busy`; причина — `Exec` по тому же `tx` до закрытия `Rows`; после чтения в память и повторного apply ошибка исчезла
+- Что починил (если было): добавлен безопасный dedupe-инструмент для TG-постов; discussion-root importer теперь пытается матчить existing logical post до создания нового root-post; CSV importer для непустого текста сначала ищет existing logical post по тексту/времени и обновляет его вместо создания нового дубля
+- Следующий шаг: отдельно разобрать оставшиеся 19 неоднозначных duplicate-групп (`5` empty pairs + `14` multi-groups) — они в основном пустотекстовые media-кластеры, где без дополнительного source-map уже есть риск слить разные посты
 - Дата/время: 2026-03-16 18:22
 - Что запускал: финальная серверная синхронизация, `go test ./...`, очистка generated output из git, подготовка к commit/push
 - Что прошло: полный `go test ./...`; публичный Vercel URL читает уже обновленный VPS API; VK карточка снова есть в браузере; TG views из CSV есть на сервере; `output/` артефакты исключены через `.gitignore`
 - Что упало (ошибка 5–15 строк): server rollout сначала уперся в неверный путь `go` (`/usr/local/go/bin/go`), затем повтор прошел через `/usr/bin/go`; tracked `output/frontend-dev.log` не дал обычный `git restore`
 - Что починил (если было): выровнен VPS backend с локальным контуром и очищен будущий git-шум от `output/import`, `output/doc`, `output/playwright`, `output/frontend-dev.log`
 - Следующий шаг: зафиксировать все в git и переходить в следующий чат уже с чистым серверным MVP-базисом
+- Дата/время: 2026-03-16 21:25
+- Что запускал: аудит локального Codex toolchain; чтение `C:\Users\gorit\.codex\config.toml`; проверка MCP wrappers и secrets; sparse-checkout `openai/skills`; установка дополнительных skills в `C:\Users\gorit\.codex\skills`
+- Что прошло: подтвержден рабочий старт `@upstash/context7-mcp`; установлены `transcribe`, `speech`, `slides`, `notion-knowledge-capture`, `notion-meeting-intelligence`, `notion-research-documentation`, `notion-spec-to-implementation`; в `config.toml` добавлен `context7`
+- Что упало (ошибка 5–15 строк): локальный `mudro_github` wrapper падает с `MUDRO_GITHUB_PAT is not set`; в `C:\Users\gorit\.codex\secrets\mudro-github-mcp.local.env` файл есть, но PAT не заполнен
+- Что починил (если было): отключен `mudro_github` в `config.toml`, чтобы Codex не пытался поднимать заведомо битый MCP при старте
+- Следующий шаг: при необходимости выдать fine-grained read-only GitHub PAT и потом включить `mudro_github` обратно
+- Дата/время: 2026-03-16 21:35
+- Что запускал: сверочный аудит БД против `output/import/tg_posts_mudro.csv`, `output/import/tg_comments_discussion.csv`, `data/tg-export/result.json`, `data/nu/result.json`; SQL через `docker compose exec -T db psql`
+- Что прошло: подтверждены `1814/1817` TG reply-comments из CSV; comment media `394/394`; comment reactions `186/186`; parent-comment links консистентны; лог сохранен в `.codex/logs/20260316-2135/index.md`
+- Что упало (ошибка 5–15 строк): raw `vk_wall_*.json` не найден ни в workspace, ни рядом с проектом; полноценную source-to-DB сверку VK сделать нельзя
+- Что починил (если было): не чинил код; выявил, что TG posts пока не канонизированы полностью: `77` unresolved rows из актуального TG posts CSV, `506` extra TG posts с discussion-root ID и `421` комментарий на них, exact coverage по post media/reactions слабая
+- Следующий шаг: если цель именно “лучший единый формат БД”, нужен отдельный проход нормализации TG posts к channel-post канону и затем повторная полная сверка; для VK нужен raw export
+- Дата/время: 2026-03-16 21:36
+- Что запускал: диагностика Windows `python`; проверка `where python`, `uv python list`, `python --version`, `python -c`, pipe в stdin; настройка пользовательского shim через `uv`-managed CPython 3.12.13
+- Что прошло: `python` и `python3` теперь запускаются в текущей Codex-сессии и указывают на `C:\Users\gorit\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\python.exe`; `python -`, `python -c` и `--version` проходят
+- Что упало (ошибка 5–15 строк): исходный `python` резолвился в `C:\Users\gorit\AppData\Local\Microsoft\WindowsApps\python.exe` и отдавал только `Python`; `py` отсутствует
+- Что починил (если было): добавлены `python.cmd`/`python3.cmd` в `C:\Users\gorit\bin` и во временный первый PATH-каталог текущей Codex-сессии; user PATH обновлен так, чтобы `C:\Users\gorit\bin` шел раньше `WindowsApps`
+- Следующий шаг: после полного перезапуска Codex/PowerShell постоянный shim в `C:\Users\gorit\bin` должен продолжить работать уже без временного session shim
+- Дата/время: 2026-03-16 19:57
+- Что запускал: поиск канонического VK-export; синхронизацию `~/vk-export` на VPS; one-shot `cmd/vkimport` на сервере; проверку публичного `/api/front?source=vk`; локальный frontend-патч `cache: no-store` для `/api/front` и `/api/posts`; `npm.cmd run build`; `npm.cmd run lint`
+- Что прошло: на VPS импортировано 1087 VK-постов из `/root/vk-export`; серверная БД стала `tg=1694`, `vk=1088`; публичный API Vercel/VPS отдает `total_posts=2189` и `vk=1088`; фронтенд-патч против липкого browser cache собран и lint зеленый
+- Что упало (ошибка 5–15 строк): первая попытка прогнать counts через `docker compose exec ... psql "$DSN"` дала `connection refused`, потому что host DSN `localhost:5433` был ошибочно передан внутрь контейнера; также бинарный `tar | ssh` через PowerShell сломал gzip stream
+- Что починил (если было): перешел на надежный путь `WSL scp` для `vk-export`; remote counts/импорт выполнял через host `psql` и `/usr/bin/go`; в frontend добавил `cache: 'no-store'`, чтобы после серверного импорта страница не держала старый `/api/front`
+- Следующий шаг: при необходимости задеплоить свежий frontend build на Vercel, чтобы no-store фикс оказался и на публичной выдаче, а затем продолжать product polish сайта
