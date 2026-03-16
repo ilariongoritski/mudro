@@ -213,3 +213,6 @@
 - [ ] 2026-03-16 | P1 | area:import-api | Принять второй CSV с чат-комментариями и довести TG comment sync из нового формата
   - Контекст: посты уже синхронизируются через cmd/tgcsvimport; нужен парный importer для комментариев/реплаев с media и parent links
   - Следующий шаг: получить CSV комментариев, зафиксировать его схему и добавить 	gcommentscsvimport без ломки текущего post_comments контура
+- [ ] 2026-03-16 | P2 | area:devex | Заполнить `C:\Users\gorit\.codex\secrets\mudro-github-mcp.local.env` и включить `mudro_github` MCP
+  - Контекст: локальный wrapper уже есть, но GitHub MCP сейчас падает на старте с `MUDRO_GITHUB_PAT is not set`, поэтому PR/issues/actions через MCP недоступны.
+  - Следующий шаг: создать fine-grained read-only PAT для нужных репозиториев (`Contents`, `Pull requests`, `Issues`, `Actions`), записать его в secret-файл и вернуть `enabled = true` в `C:\Users\gorit\.codex\config.toml`.
