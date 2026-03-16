@@ -54,7 +54,8 @@
 .feed-widget__grid {
   margin-top: 1.15rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  grid-template-columns: minmax(0, 820px);
+  justify-content: center;
   gap: 0.95rem;
 }
 

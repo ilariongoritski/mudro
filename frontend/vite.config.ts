@@ -2,6 +2,8 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 import { defineConfig } from 'vite'
 
+const apiProxyTarget = process.env.MUDRO_API_PROXY_TARGET ?? 'http://127.0.0.1:18080'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -12,10 +14,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
-      '/healthz': 'http://127.0.0.1:8080',
-      '/feed': 'http://127.0.0.1:8080',
-      '/media': 'http://127.0.0.1:8080',
+      '/api': apiProxyTarget,
+      '/healthz': apiProxyTarget,
+      '/feed': apiProxyTarget,
+      '/media': apiProxyTarget,
     },
   },
 })

@@ -1,4 +1,4 @@
-import type { FeedSort, FeedSource } from '@/entities/post/model/types'
+﻿import type { FeedSort, FeedSource } from '@/entities/post/model/types'
 import { setLimit, setSort, setSource } from '@/features/feed-controls/model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
@@ -43,10 +43,10 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
     <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
       <div className="feed-toolbar">
         <div className="feed-toolbar__intro">
-          <span className="feed-toolbar__eyebrow">Live feed toolbar</span>
-          <strong className="feed-toolbar__title">Лента источников и быстрые фильтры</strong>
+          <span className="feed-toolbar__eyebrow">Архив</span>
+          <strong className="feed-toolbar__title">Живая лента с реальными постами, вложениями и обсуждениями</strong>
           <p className="feed-toolbar__lead">
-            Визуальный toolbar собран поверх реальных метрик и текущего состояния ленты без декоративных заглушек.
+            Переключай источники, меняй порядок и быстро открывай посты, комментарии и media без ухода со страницы.
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
           </div>
           <div className="feed-toolbar__stat">
             <span>Последний sync</span>
-            <strong>{formatDateTime(lastSyncAt)}</strong>
+            <strong>{lastSyncAt ? formatDateTime(lastSyncAt) : '—'}</strong>
           </div>
         </div>
 

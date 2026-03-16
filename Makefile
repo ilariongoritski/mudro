@@ -113,6 +113,18 @@ media-backfill:
 comment-backfill:
 	$(GO) run ./cmd/commentbackfill
 
+tg-csv-import:
+	@if [ -z "$(CSV)" ]; then echo "CSV is required"; exit 1; fi
+	$(GO) run ./cmd/tgcsvimport -in "$(CSV)" -dsn "$(DSN)"
+
+tg-comments-csv-import:
+	@if [ -z "$(CSV)" ]; then echo "CSV is required"; exit 1; fi
+	$(GO) run ./cmd/tgcommentscsvimport -in "$(CSV)" -dsn "$(DSN)"
+
+tg-comment-media-import:
+	@if [ -z "$(DIR)" ]; then echo "DIR is required"; exit 1; fi
+	$(GO) run ./cmd/tgcommentmediaimport -dir "$(DIR)" -dsn "$(DSN)"
+
 count-posts:
 	$(PSQL_CMD) -X -c "select count(*) from posts;"
 

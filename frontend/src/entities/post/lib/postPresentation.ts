@@ -1,4 +1,4 @@
-﻿import type { MediaItem } from "@/entities/post/model/types";
+import type { MediaItem } from "@/entities/post/model/types";
 import { env } from "@/shared/config/env";
 
 export type MediaKind =
@@ -102,17 +102,17 @@ export const resolveMediaDisplayUrl = (item: MediaItem): string | undefined => {
 export const mediaKindLabel = (kind: MediaKind): string => {
   switch (kind) {
     case "image":
-      return "Image";
+      return "Изображение";
     case "video":
-      return "Video";
+      return "Видео";
     case "audio":
-      return "Audio";
+      return "Аудио";
     case "document":
-      return "Document";
+      return "Файл";
     case "link":
-      return "Link";
+      return "Ссылка";
     default:
-      return "Attachment";
+      return "Вложение";
   }
 };
 
@@ -128,4 +128,26 @@ export const metricLabel = (value?: number | null): string => {
   if (value == null) return "-";
 
   return new Intl.NumberFormat("ru-RU").format(value);
+};
+
+export const metricDisplay = (value?: number | null) => {
+  if (value == null) {
+    return {
+      value: "нет данных",
+      missing: true,
+    };
+  }
+
+  return {
+    value: new Intl.NumberFormat("ru-RU").format(value),
+    missing: false,
+  };
+};
+
+export const reactionLabel = (raw: string): string => {
+  if (!raw) return "•";
+  if (raw.startsWith("emoji:")) return raw.slice("emoji:".length).trim() || "🙂";
+  if (raw.startsWith("custom:")) return "✨";
+  if (raw.startsWith("unknown:")) return "•";
+  return raw;
 };

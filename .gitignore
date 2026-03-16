@@ -27,3 +27,9 @@ output/ssh-check.js
 output/tmp_dbcount.go
 output/get-pip.py
 output/*-smoke.png
+output/frontend-dev.log
+output/import/
+output/doc/
+output/playwright/
+output/*.json
+output/db-comment-media-ids.txt

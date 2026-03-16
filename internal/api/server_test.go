@@ -272,3 +272,29 @@ func TestNormalizePostMediaJSON(t *testing.T) {
 		t.Fatalf("decoded[1].URL = %q, want original https URL", decoded[1].URL)
 	}
 }
+
+func TestBuildPostsVisibilityWhereSkipsTGFilterForVK(t *testing.T) {
+	s := &Server{tgVisiblePostIDs: []string{"1", "2"}}
+
+	where, args := s.buildPostsVisibilityWhere("vk", nil)
+
+	if where != " where source = $1" {
+		t.Fatalf("where = %q, want only source filter", where)
+	}
+	if len(args) != 1 || args[0] != "vk" {
+		t.Fatalf("args = %#v, want only vk source", args)
+	}
+}
+
+func TestBuildPostsVisibilityWhereKeepsTGFilterForTG(t *testing.T) {
+	s := &Server{tgVisiblePostIDs: []string{"1", "2"}}
+
+	where, args := s.buildPostsVisibilityWhere("tg", nil)
+
+	if where != " where source = $1 and source_post_id = any($2)" {
+		t.Fatalf("where = %q", where)
+	}
+	if len(args) != 2 {
+		t.Fatalf("args len = %d, want 2", len(args))
+	}
+}

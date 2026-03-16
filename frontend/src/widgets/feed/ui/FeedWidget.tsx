@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
@@ -103,12 +103,9 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
       {isInitialLoading ? (
         <section className="feed-widget__state-surface feed-widget__state-surface_loading">
           <div className="feed-widget__state-copy">
-            <span className="feed-widget__state-eyebrow">Loading surface</span>
-            <h3>Лента поднимается из API и собирает mixed stream</h3>
-            <p>
-              Пока toolbar уже на месте, карточки готовятся из реальных данных. Это не статический
-              фейк-экран, а ожидание живой выборки.
-            </p>
+            <span className="feed-widget__state-eyebrow">Загрузка</span>
+            <h3>Лента поднимается из API и собирает живую выборку</h3>
+            <p>Карточки уже готовятся из реальных данных. Через пару секунд появятся посты, media и обсуждения.</p>
           </div>
           <FeedLoadingSkeleton />
         </section>
@@ -117,12 +114,9 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
       {isFrontError ? (
         <div className="feed-widget__error">
           <div className="feed-widget__state-copy">
-            <span className="feed-widget__state-eyebrow">Feed error</span>
-            <h3>Не удалось загрузить `/api/front`</h3>
-            <p>
-              Это уже не визуальный баг страницы, а проблема слоя данных. Повтори запрос или
-              проверь backend-контур.
-            </p>
+            <span className="feed-widget__state-eyebrow">Ошибка</span>
+            <h3>Не удалось загрузить ленту</h3>
+            <p>Это уже проблема слоя данных или сети. Повтори запрос или проверь backend-контур.</p>
           </div>
           <button type="button" onClick={() => refetch()}>
             Повторить
@@ -133,12 +127,9 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
       {showEmpty ? (
         <section className="feed-widget__empty">
           <div className="feed-widget__empty-copy">
-            <span className="feed-widget__state-eyebrow">Empty feed</span>
-            <h3>Постов под текущие фильтры пока нет</h3>
-            <p>
-              Это нормальный сценарий для пустой базы, жесткого source-фильтра или еще не
-              синхронизированного архива.
-            </p>
+            <span className="feed-widget__state-eyebrow">Пусто</span>
+            <h3>Под текущими фильтрами постов пока нет</h3>
+            <p>Такое бывает для пустой базы, жесткого source-фильтра или еще не синхронизированного архива.</p>
           </div>
           <div className="feed-widget__empty-actions">
             <button type="button" onClick={() => refetch()}>
@@ -160,7 +151,7 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
 
       {hasMore ? (
         <button type="button" className="feed-widget__load-more" disabled={isLoadingMore} onClick={handleLoadMore}>
-          {isLoadingMore ? 'Загружаю...' : 'Показать еще'}
+          {isLoadingMore ? 'Загружаю…' : 'Показать еще'}
         </button>
       ) : null}
 

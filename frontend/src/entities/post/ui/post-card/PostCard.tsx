@@ -1,9 +1,11 @@
-﻿import type { Post } from "@/entities/post/model/types";
+﻿import type { Post, PostComment } from "@/entities/post/model/types";
 import {
-  resolveMediaDisplayUrl,
   mediaKindLabel,
+  metricDisplay,
   metricLabel,
   normalizeReactions,
+  reactionLabel,
+  resolveMediaDisplayUrl,
   resolveMediaKind,
   resolveMediaTitle,
   resolveMediaUrl,
@@ -16,14 +18,27 @@ interface PostCardProps {
   onOpen?: (post: Post) => void;
 }
 
+const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
+  if (!reactions) return [] as Array<[string, number]>;
+
+  if (Array.isArray(reactions)) {
+    return reactions
+      .filter((reaction) => reaction.count > 0)
+      .map((reaction) => [reaction.raw || reaction.label, reaction.count] as [string, number]);
+  }
+
+  return normalizeReactions(reactions);
+};
+
 export const PostCard = ({ post, onOpen }: PostCardProps) => {
   const reactions = normalizeReactions(post.reactions);
   const mediaItems = post.media ?? [];
   const visibleMedia = mediaItems.slice(0, 3);
   const hiddenMediaCount = Math.max(mediaItems.length - visibleMedia.length, 0);
   const previewComments = (post.comments ?? []).slice(0, 2);
-  const bodyText =
-    post.text?.trim() || "Описание для этого поста пока не подтянулось.";
+  const totalComments = post.comments_count ?? post.comments?.length ?? 0;
+  const bodyText = post.text?.trim() || "Описание для этого поста пока не подтянулось.";
+  const viewsMetric = metricDisplay(post.views_count);
 
   return (
     <article
@@ -34,11 +49,11 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
           <div className={`post-card__source post-card__source_${post.source}`}>
             {post.source.toUpperCase()}
           </div>
-          <div className="post-card__eyebrow">Пост #{post.id}</div>
+          <div className="post-card__eyebrow">
+            {post.source.toUpperCase()} #{post.source_post_id}
+          </div>
         </div>
-        <div className="post-card__meta">
-          {formatDateTime(post.published_at)}
-        </div>
+        <div className="post-card__meta">{formatDateTime(post.published_at)}</div>
       </header>
 
       <div className="post-card__body">
@@ -52,11 +67,13 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
         </span>
         <span className="post-card__stat">
           <small>Просмотры</small>
-          <strong>{metricLabel(post.views_count)}</strong>
+          <strong className={viewsMetric.missing ? "post-card__metric-missing" : undefined}>
+            {viewsMetric.value}
+          </strong>
         </span>
         <span className="post-card__stat">
           <small>Комментарии</small>
-          <strong>{metricLabel(post.comments_count)}</strong>
+          <strong>{metricLabel(totalComments)}</strong>
         </span>
       </div>
 
@@ -64,7 +81,7 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
         <div className="post-card__reactions">
           {reactions.map(([reaction, count]) => (
             <span key={reaction} className="post-reaction" title={reaction}>
-              {reaction.replace("emoji:", "")} {count}
+              {reactionLabel(reaction)} {count}
             </span>
           ))}
         </div>
@@ -77,8 +94,7 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
             const title = resolveMediaTitle(item);
             const mediaUrl = resolveMediaUrl(item.url);
             const displayUrl = resolveMediaDisplayUrl(item);
-            const showOverlay =
-              hiddenMediaCount > 0 && index === visibleMedia.length - 1;
+            const showOverlay = hiddenMediaCount > 0 && index === visibleMedia.length - 1;
 
             return (
               <div
@@ -89,9 +105,7 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
                   <img src={displayUrl} loading="lazy" alt={title} />
                 ) : null}
                 {showOverlay ? (
-                  <span className="post-media-card__more">
-                    +{hiddenMediaCount}
-                  </span>
+                  <span className="post-media-card__more">+{hiddenMediaCount}</span>
                 ) : null}
 
                 <div className="post-media-card__info">
@@ -104,7 +118,7 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
                       rel="noreferrer"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      Open
+                      Открыть оригинал
                     </a>
                   ) : null}
                 </div>
@@ -115,74 +129,83 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
       )}
 
       {previewComments.length > 0 && (
-        <section
-          className="post-card__thread-preview"
-          aria-label="Превью комментариев"
-        >
+        <section className="post-card__thread-preview" aria-label="Превью комментариев">
           <div className="post-card__thread-head">
-            <span>Тред</span>
-            <strong>{metricLabel(post.comments_count)} комментария</strong>
+            <span>Обсуждение</span>
+            <strong>{metricLabel(totalComments)} в треде</strong>
           </div>
           <div className="post-card__thread-list">
-            {previewComments.map((comment) => (
-              <article
-                key={`${comment.source_comment_id}-${comment.parent_comment_id ?? "root"}`}
-                className="post-card__thread-item"
-              >
-                <div className="post-card__thread-meta">
-                  <strong>{comment.author_name || "Без имени"}</strong>
-                  {comment.parent_comment_id ? (
-                    <span>ответ на #{comment.parent_comment_id}</span>
-                  ) : null}
-                </div>
-                <p>{comment.text?.trim() || "Без текста"}</p>
-                {(comment.media ?? []).length > 0 ? (
-                  <div className="post-card__thread-media">
-                    {(comment.media ?? []).slice(0, 2).map((item, index) => {
-                      const kind = resolveMediaKind(item);
-                      const title = resolveMediaTitle(item);
-                      const displayUrl = resolveMediaDisplayUrl(item);
+            {previewComments.map((comment) => {
+              const commentReactions = normalizeCommentReactions(comment.reactions);
 
-                      if (
-                        (kind === "image" || kind === "video") &&
-                        displayUrl
-                      ) {
-                        return (
-                          <img
-                            key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
-                            className="post-card__thread-media-thumb"
-                            src={displayUrl}
-                            loading="lazy"
-                            alt={title}
-                          />
-                        );
-                      }
-
-                      return (
-                        <span
-                          key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
-                          className="post-card__thread-media-badge"
-                          title={title}
-                        >
-                          {mediaKindLabel(kind)}
-                        </span>
-                      );
-                    })}
+              return (
+                <article
+                  key={`${comment.source_comment_id}-${comment.parent_comment_id ?? "root"}`}
+                  className={`post-card__thread-item ${comment.parent_comment_id ? "post-card__thread-item_reply" : ""}`}
+                >
+                  <div className="post-card__thread-meta">
+                    <strong>{comment.author_name || "Без имени"}</strong>
+                    {comment.parent_comment_id ? (
+                      <span>ответ на #{comment.parent_comment_id}</span>
+                    ) : null}
                   </div>
-                ) : null}
-              </article>
-            ))}
+                  <p>{comment.text?.trim() || "Без текста"}</p>
+
+                  {commentReactions.length > 0 ? (
+                    <div className="post-card__thread-reactions">
+                      {commentReactions.map(([reaction, count]) => (
+                        <span
+                          key={`${comment.source_comment_id}-${reaction}`}
+                          className="post-card__thread-reaction"
+                          title={reaction}
+                        >
+                          {reactionLabel(reaction)} {count}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {(comment.media ?? []).length > 0 ? (
+                    <div className="post-card__thread-media">
+                      {(comment.media ?? []).slice(0, 2).map((item, index) => {
+                        const kind = resolveMediaKind(item);
+                        const title = resolveMediaTitle(item);
+                        const displayUrl = resolveMediaDisplayUrl(item);
+
+                        if ((kind === "image" || kind === "video") && displayUrl) {
+                          return (
+                            <img
+                              key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
+                              className="post-card__thread-media-thumb"
+                              src={displayUrl}
+                              loading="lazy"
+                              alt={title}
+                            />
+                          );
+                        }
+
+                        return (
+                          <span
+                            key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
+                            className="post-card__thread-media-badge"
+                            title={title}
+                          >
+                            {mediaKindLabel(kind)}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </section>
       )}
 
       {onOpen ? (
         <footer className="post-card__footer">
-          <button
-            type="button"
-            className="post-card__open"
-            onClick={() => onOpen(post)}
-          >
+          <button type="button" className="post-card__open" onClick={() => onOpen(post)}>
             Открыть пост
           </button>
         </footer>
@@ -190,3 +213,5 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
     </article>
   );
 };
+
+

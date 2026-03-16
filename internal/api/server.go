@@ -342,7 +342,7 @@ func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, [
 		args = append(args, source)
 		conditions = append(conditions, fmt.Sprintf("source = $%d", len(args)))
 	}
-	if len(s.tgVisiblePostIDs) > 0 {
+	if len(s.tgVisiblePostIDs) > 0 && (source == "" || source == "tg") {
 		args = append(args, s.tgVisiblePostIDs)
 		switch source {
 		case "tg":
@@ -477,11 +477,6 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	for i := range posts {
 		comments := commentsByPost[posts[i].ID]
 		posts[i].Comments = comments
-		if posts[i].Source == "tg" {
-			count := len(comments)
-			posts[i].CommentsCount = &count
-			continue
-		}
 		if posts[i].CommentsCount == nil && len(comments) > 0 {
 			count := len(comments)
 			posts[i].CommentsCount = &count
