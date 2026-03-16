@@ -20,10 +20,10 @@ func TestParseLegacyJSONPreservesMediaFields(t *testing.T) {
 	if items[0].Title != "a.jpg" || items[0].Width != 1280 || items[0].Height != 720 || items[0].Position != 2 {
 		t.Fatalf("unexpected first item: %+v", items[0])
 	}
-	if items[1].PreviewURL != "stickers/s_thumb.jpg" || items[1].Position != 2 {
+	if items[1].PreviewURL != "stickers/s_thumb.jpg" || items[1].Position != 3 {
 		t.Fatalf("unexpected second item: %+v", items[1])
 	}
-	if items[2].Title != "Voice note" || items[2].Position != 3 {
+	if items[2].Title != "Voice note" || items[2].Position != 4 {
 		t.Fatalf("unexpected third item: %+v", items[2])
 	}
 }
@@ -71,5 +71,28 @@ func TestAssetKeyStableForSameAsset(t *testing.T) {
 	}
 	if keyA != keyB {
 		t.Fatalf("asset key should ignore position: %s != %s", keyA, keyB)
+	}
+}
+
+func TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset(t *testing.T) {
+	raw := json.RawMessage(`[
+	  {"kind":"photo","url":"photos/a.jpg","position":2},
+	  {"kind":"photo","url":"photos/b.jpg"},
+	  {"kind":"photo","url":"photos/c.jpg"}
+	]`)
+
+	items := ParseLegacyJSON(raw)
+	if len(items) != 3 {
+		t.Fatalf("len(items) = %d, want 3", len(items))
+	}
+
+	if items[0].Position != 2 {
+		t.Fatalf("items[0].Position = %d, want 2", items[0].Position)
+	}
+	if items[1].Position != 3 {
+		t.Fatalf("items[1].Position = %d, want 3", items[1].Position)
+	}
+	if items[2].Position != 4 {
+		t.Fatalf("items[2].Position = %d, want 4", items[2].Position)
 	}
 }

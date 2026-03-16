@@ -40,6 +40,8 @@ func ParseLegacyJSON(raw json.RawMessage) []Item {
 	}
 
 	items := make([]Item, 0, len(decoded))
+	usedPositions := make(map[int]struct{}, len(decoded))
+	nextPosition := 1
 	for _, row := range decoded {
 		extra := anyMap(row, "extra", "Extra")
 		item := Item{
@@ -58,15 +60,32 @@ func ParseLegacyJSON(raw json.RawMessage) []Item {
 		if item.Title == "" {
 			item.Title = guessMediaTitle(item.URL)
 		}
-		if item.Position <= 0 {
-			item.Position = len(items) + 1
-		}
 		if item.Kind == "" && item.URL == "" && item.PreviewURL == "" && item.Title == "" && len(item.Extra) == 0 {
 			continue
 		}
+
+		if item.Position <= 0 || hasPosition(usedPositions, item.Position) {
+			for hasPosition(usedPositions, nextPosition) {
+				nextPosition++
+			}
+			item.Position = nextPosition
+		}
+
 		items = append(items, item)
+		usedPositions[item.Position] = struct{}{}
+		if item.Position >= nextPosition {
+			nextPosition = item.Position + 1
+		}
 	}
 	return items
+}
+
+func hasPosition(used map[int]struct{}, position int) bool {
+	if position <= 0 {
+		return true
+	}
+	_, ok := used[position]
+	return ok
 }
 
 func NormalizeJSON(raw json.RawMessage) json.RawMessage {

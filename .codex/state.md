@@ -62,6 +62,12 @@
 - Что упало (ошибка 5–15 строк): файлы skill-инструкций вне workspace недоступны для прямого чтения; Word COM, LibreOffice и Poppler по-прежнему отсутствуют, поэтому офисная конвертация и штатный визуальный рендер недоступны
 - Что починил (если было): вместо конвертации из `docx` собрал PDF напрямую с вшитыми шрифтами Windows (`Arial`), стилями, milestone-карточками и недельной таблицей; проверку заменил на `pypdf` + `pymupdf`
 - Следующий шаг: отдать пользователю путь к PDF и при необходимости быстро переделать визуальный стиль, плотность текста или титульную страницу
+- Дата/время: 2026-03-16 18:21:34
+- Что запускал: пересборка PDF через `tmp/docs/mudro-6-week-roadmap-2026-03-16.html` и headless Chrome `--print-to-pdf`; повторная проверка текста и PNG-рендера
+- Что прошло: PDF пересобран поверх прежнего файла; `pypdf` извлекает корректную кириллицу (`\u0434\u043e\u0440\u043e\u0436\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430 ...`); сохранены новые рендеры страниц в `tmp/docs/mudro-roadmap-pdf-check-fixed/`
+- Что упало (ошибка 5–15 строк): Playwright browser не стартует в этой среде; проверочные строки в PowerShell консоли по-прежнему отображаются кракозябрами из-за кодировки терминала, но извлеченный текст PDF уже корректный
+- Что починил (если было): отказался от старого broken PDF-пайплайна; ввел HTML-источник с `<meta charset=\"utf-8\">` и печать через системный Chrome, что убрало `????` в самом файле
+- Следующий шаг: отдать пользователю исправленный PDF; при необходимости ужать макет с 5 страниц до 2-3
 - Дата/время: 2026-03-16 18:15
 - Что запускал: SSH-аудит и серверный rollout на VPS; проверка `source=vk`; копирование `server.go`, importer-команд и CSV; `go test`; `tgcsvimport`; `tgcommentscsvimport`; rebuild `mudro-api`; внешняя проверка Vercel
 - Что прошло: на VPS исправлен `/api/front?source=vk`; VK снова виден на публичном сайте; TG views/comments из `Messages_Мудро 100.1.csv` и discussion-комментарии из `Messages_Т.н. комментарии.csv` импортированы в серверную БД; публичный Vercel frontend тянет уже обновленный серверный API
@@ -74,6 +80,12 @@
 - Что упало (ошибка 5–15 строк): server rollout сначала уперся в неверный путь `go` (`/usr/local/go/bin/go`), затем повтор прошел через `/usr/bin/go`
 - Что починил (если было): выровнен VPS backend с локальным контуром и очищен будущий git-шум от `output/import`, `output/doc`, `output/playwright`, `output/frontend-dev.log`
 - Следующий шаг: зафиксировать все в git и переходить в следующий чат уже с чистым серверным MVP-базисом
+- Дата/время: 2026-03-16 18:34:42
+- Что запускал: `frontend` build/lint; WSL `go test ./...`; repro-тест `go test ./internal/media -run TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset -count=1`
+- Что прошло: `npm.cmd run build`; `npm.cmd run lint`; после фикса полный `go test ./...`; пакет `internal/media` зеленый
+- Что упало (ошибка 5–15 строк): `--- FAIL: TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset (0.00s)`; `media_test.go:93: items[1].Position = 2, want 3`; `FAIL`; `FAIL github.com/goritskimihail/mudro/internal/media 0.009s`; `FAIL`
+- Что починил (если было): в `internal/media.ParseLegacyJSON` авто-позиции media теперь назначаются как уникальные even after explicit offset/duplicate; добавлен регрессионный тест, чтобы `post_media_links`/`comment_media_links` не затирали вложения по одинаковому `position`
+- Следующий шаг: при желании прогнать импорт на реальном наборе с не подряд идущими `position`, но кодовая регрессия уже закрыта тестом
 - Дата/время: 2026-03-16 18:22
 - Что запускал: финальная серверная синхронизация, `go test ./...`, очистка generated output из git, подготовка к commit/push
 - Что прошло: полный `go test ./...`; публичный Vercel URL читает уже обновленный VPS API; VK карточка снова есть в браузере; TG views из CSV есть на сервере; `output/` артефакты исключены через `.gitignore`
