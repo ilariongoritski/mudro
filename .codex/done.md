@@ -113,3 +113,5 @@
   - Эффект: локальный и серверный контуры снова совпадают по модели комментариев, комментарийные media/reactions читаются из нормализованного слоя.
 - 2026-03-16 | P1 | area:data-policy | VK snapshot-only policy внесена в docs/ops-runbook.md.
   - Эффект: правило про архивный VK теперь зафиксировано не только в README и памяти, но и в рабочем recovery/runbook контуре.
+- 2026-03-16 | P0 | area:ops | На VPS зафиксирован стабильный auth-контур Postgres: сервисы переведены на `mudro_app`, docker bind БД ограничен loopback, добавлен systemd-managed firewall guard на `tcp/5433`. | Эффект: `mudro-api`, `mudro-bot` и `mudro-reporter` работают одновременно, новые `failed SASL auth` после hardening исчезли, внешний трафик по 5433 режется на хосте.
+- 2026-03-16 | P0 | area:ops | Серверный tree выровнен с актуальной репой по bot/reporter-контуру, из `cmd/bot` удалены stale `.go`-артефакты, reporter получил рабочий `REPORT_CHAT_ID`. | Эффект: `Mudrot_bot` снова авторизуется штатно, reporter перестал жить в crash-loop, а systemd-статус сервера стал предсказуемым.

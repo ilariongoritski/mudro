@@ -840,3 +840,12 @@ pm.cmd run build, визуальная проверка через Playwright
 - Что починил (если было): auth на VPS снова восстановлен через docker exec mudro-db-1 ... ALTER ROLE, после чего rollout повторен по рабочему пути и завершен успешно; ops-runbook обновлен под migrate-media + migrate-comment-model и VK snapshot-only policy.
 - Следующий шаг: найти и устранить корневую причину периодического слета Postgres auth на VPS; затем при необходимости вернуть полный VK snapshot как одноразовый архивный import, без регулярного обновления.
 
+- Дата/время: 2026-03-16T11:05:00+03:00
+- Что запускал: hardening VPS DB auth и сервисного контура: loopback bind в compose, отдельный `mudro_app`, systemd drop-in для `mudro-api`, host firewall guard на `tcp/5433`, выравнивание `cmd/bot`/`cmd/reporter` на сервере.
+- Что прошло: `mudro-api`, `mudro-bot`, `mudro-reporter`, `mudro-db-firewall` в `active`; локально `make dbcheck` и `go test ./internal/api ./internal/commentmodel ./cmd/commentbackfill ./cmd/mediabackfill` проходят; внешний `https://frontend-psi-ten-33.vercel.app/healthz` отвечает `ok`; VPS `/api/front?source=tg&limit=1` отвечает.
+- Что упало (ошибка 5–15 строк):
+  1) `mudro-bot.service` на VPS падал на stale-файле `cmd/bot/gototg.go:6:2: no required module provides package github.com/go-telegram-bot-api/telegram-bot-api`
+  2) первый одноразовый remote-script не передал `MUDRO_DB_APP_PASSWORD` из-за пустой PowerShell-подстановки.
+- Что починил (если было): удалил stale `.go`-артефакты из `/root/projects/mudro/cmd/bot`, досинхронизировал `cmd/bot`, `cmd/reporter`, `internal/bot`, `internal/reporter`, `internal/config`, `go.mod`, `go.sum`; на VPS переключил `.env`/`mudro-api.service` на `mudro_app`, включил `mudro-db-firewall.service`, прописал `REPORT_CHAT_ID` и перезапустил reporter.
+- Следующий шаг: внешний контур доводить уже не по БД, а по reverse proxy/HTTPS для `:8080`, затем при желании почистить серверный рабочий tree от старого несинхронизированного мусора вне git.
+

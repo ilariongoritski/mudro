@@ -99,6 +99,10 @@ Static HTML concept preview:
    - Bucket for media, credentials in `.env`.
    - Expose via reverse proxy or internal only.
 
+Security note for VPS:
+- Postgres must not stay public on `0.0.0.0:5433` with default credentials.
+- On server bind DB to loopback only and run application services under a dedicated non-superuser role (for example `mudro_app`).
+
 7. Email (registration)
    - Use external SMTP provider.
    - Store SMTP creds in `.env`.

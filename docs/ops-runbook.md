@@ -40,6 +40,31 @@
 
 ## Частые сбои и действия
 
+### 0) Hardening Postgres на VPS
+Цель: не держать публично доступный `postgres/postgres` на `0.0.0.0:5433`.
+
+Базовый безопасный контур:
+- БД снаружи слушает только `127.0.0.1:5433`
+- сервисы приложения ходят не под `postgres`, а под отдельным `mudro_app`
+- пароль `postgres` на VPS не должен оставаться дефолтным
+- хост дополнительно режет входящий `tcp/5433` вне loopback через systemd-managed `iptables` rule
+
+Разовый шаг на VPS:
+1. задать секреты в shell:
+   - `export MUDRO_DB_APP_PASSWORD='<strong password>'`
+   - `export MUDRO_DB_SUPERUSER_PASSWORD='<strong password>'`
+2. запустить:
+   - `bash scripts/ops/harden_vps_db_auth.sh`
+3. проверить:
+   - `systemctl status mudro-api --no-pager`
+   - `curl -fsS http://127.0.0.1:8080/healthz`
+   - `ss -lntp | grep 5433`
+
+Ожидаемый результат:
+- `mudro-api` работает
+- `5433` слушает только `127.0.0.1`
+- в journal Postgres больше нет внешнего auth-шума по публичному порту
+
 ### 1) Docker socket permission denied
 Симптом:
 - `permission denied while trying to connect to the Docker daemon socket ...`
