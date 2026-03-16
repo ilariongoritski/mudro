@@ -34,6 +34,35 @@ func TestHandleHealth(t *testing.T) {
 	}
 }
 
+func TestHandleHealthCORS(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:4174")
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want *", got)
+	}
+}
+
+func TestOptionsCORSPreflight(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest("OPTIONS", "/api/front", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:4174")
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != 204 {
+		t.Fatalf("status = %d, want 204", w.Code)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Methods"); got == "" {
+		t.Fatal("expected Access-Control-Allow-Methods header")
+	}
+}
+
 func TestHandlePostsInvalidParams(t *testing.T) {
 	s := &Server{}
 
@@ -167,30 +196,34 @@ func TestParseMediaItemsDetectsKindsAndTitles(t *testing.T) {
 	raw := json.RawMessage(`[
 	  {"kind":"file","url":"photos/video_1.mp4","extra":{"media_type":"video_file","file_name":"video_1.mp4"}},
 	  {"kind":"file","url":"https://cdn.example.com/pic.png"},
+	  {"kind":"gif","url":"stickers/sticker.webp","preview_url":"stickers/sticker.webp_thumb.jpg","extra":{"media_type":"sticker","file_name":"sticker.webp"}},
 	  {"kind":"audio","title":"Artist - Track"},
 	  {"kind":"doc","url":"https://cdn.example.com/file.pdf"},
 	  {"kind":"link","url":"https://example.com/readme"}
 	]`)
 
 	got := parseMediaItems(raw)
-	if len(got) != 5 {
-		t.Fatalf("len=%d, want 5", len(got))
+	if len(got) != 6 {
+		t.Fatalf("len=%d, want 6", len(got))
 	}
 
-	if !got[0].IsVideo || got[0].URL != "" || got[0].Title != "video_1.mp4" {
+	if !got[0].IsVideo || got[0].URL != "/media/photos/video_1.mp4" || got[0].Title != "video_1.mp4" {
 		t.Fatalf("item0 unexpected: %+v", got[0])
 	}
 	if !got[1].IsImage || got[1].URL == "" {
 		t.Fatalf("item1 unexpected: %+v", got[1])
 	}
-	if !got[2].IsAudio || got[2].Title == "" {
+	if !got[2].IsImage || got[2].URL != "/media/stickers/sticker.webp" {
 		t.Fatalf("item2 unexpected: %+v", got[2])
 	}
-	if !got[3].IsDocument {
+	if !got[3].IsAudio || got[3].Title == "" {
 		t.Fatalf("item3 unexpected: %+v", got[3])
 	}
-	if !got[4].IsLink || got[4].URL == "" {
+	if !got[4].IsDocument {
 		t.Fatalf("item4 unexpected: %+v", got[4])
+	}
+	if !got[5].IsLink || got[5].URL == "" {
+		t.Fatalf("item5 unexpected: %+v", got[5])
 	}
 }
 
@@ -202,11 +235,40 @@ func TestNormalizeMediaURL(t *testing.T) {
 		{in: "https://example.com/a.jpg", want: "https://example.com/a.jpg"},
 		{in: "http://example.com/a.jpg", want: "http://example.com/a.jpg"},
 		{in: "missing://file.mp4", want: ""},
-		{in: "photos/file.jpg", want: ""},
+		{in: "photos/file.jpg", want: "/media/photos/file.jpg"},
 	}
 	for _, tc := range cases {
 		if got := normalizeMediaURL(tc.in); got != tc.want {
 			t.Fatalf("normalizeMediaURL(%q)=%q want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+func TestNormalizePostMediaJSON(t *testing.T) {
+	raw := json.RawMessage(`[
+	  {"kind":"photo","url":"photos/file.jpg","extra":{"file_name":"file.jpg"}},
+	  {"kind":"video","url":"https://cdn.example.com/video.mp4"}
+	]`)
+
+	got := normalizePostMediaJSON(raw)
+	if len(got) == 0 {
+		t.Fatal("normalizePostMediaJSON returned empty payload")
+	}
+	if !strings.Contains(string(got), `"url":"/media/photos/file.jpg"`) {
+		t.Fatalf("normalized payload = %s, want lowercase url key", string(got))
+	}
+
+	var decoded []feedMediaItem
+	if err := json.Unmarshal(got, &decoded); err != nil {
+		t.Fatalf("unmarshal normalized media: %v", err)
+	}
+	if len(decoded) != 2 {
+		t.Fatalf("len(decoded) = %d, want 2", len(decoded))
+	}
+	if decoded[0].URL != "/media/photos/file.jpg" {
+		t.Fatalf("decoded[0].URL = %q, want /media/photos/file.jpg", decoded[0].URL)
+	}
+	if decoded[1].URL != "https://cdn.example.com/video.mp4" {
+		t.Fatalf("decoded[1].URL = %q, want original https URL", decoded[1].URL)
 	}
 }

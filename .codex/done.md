@@ -83,3 +83,33 @@
 - [x] 2026-03-06 | P1 | area:openclaw | Подготовлен комплект установки OpenClaw по инструкции из PDF
   - Эффект: есть готовые скрипты root bootstrap, user install, post-checks + runbook + обезличенный VPN compose шаблон
 - 2026-03-06 | Проверен серверный OpenClaw-контур: VPS доступен по SSH-ключу, VPN-туннель Mullvad активен, onboarding/config сохранены | Эффект: подтверждена рабочая база (авторизация+конфиг+US egress), локализован оставшийся блокер только на старте gateway
+- 2026-03-08 | Диагностирован и стабилизирован OpenClaw Telegram-контур на VPS (VPN OK, gateway OK, снижена конкуренция/streaming) | Эффект: бот снова отвечает из контейнера через US VPN, дубли из-за локального параллелизма снижены, причина `server_error` формально локализована как upstream.
+- 2026-03-08 | Переключен VPN-контур OpenClaw stack на новый WireGuard конфиг `us-lax-wg-001 (5).conf` | Эффект: контейнерный трафик снова уходит через US (Los Angeles), egress IP `23.234.72.103` подтвержден.
+- 2026-03-08 | area:openclaw | На VPS стабилизирован запуск OpenClaw gateway в Docker-стеке /root/vpn-test; подтверждены порты 18789/18791, US egress через Mullvad и отправка ответов Telegram-ботом (sendMessage ok).
+- 2026-03-08 | area:openclaw | Включена каноническая файловая память через BOOTSTRAP.md: агент обязан читать .codex/top10.md, .codex/todo.md, .codex/done.md, .codex/state.md, .codex/memory.json и AGENTS.md перед ответом в новой сессии.
+- 2026-03-08 | area:openclaw | На VPS установлен Ollama в docker-стеке, загружена qwen2.5-coder:3b, в OpenClaw добавлен fallback ollama/qwen2.5-coder:3b (primary сохранен openai-codex/gpt-5.3-codex).
+
+- 2026-03-09 | Исправлен учет времени LLM-ответов в Telegram-боте: chat-mode теперь логируется как /mudro_chat, /time показывает отдельный блок LLM runtime | Эффект: суммарное время ответов модели считается корректно, включая обычные текстовые сообщения при /chat on
+- 2026-03-09 | Обновлён учёт времени: /time теперь суммирует base runtime и backfill (чат+кловбот), а запись не затирает внешние секции в .codex/time_runtime.json | Эффект: общий runtime отображается корректно и сохраняется между ответами.
+- 2026-03-13 | Подключен и проверен локальный Magic MCP с реальным API key; hero-варианты проверены через API и адаптированы в `frontend/src/pages/feed-page/ui/FeedPage.tsx` | Эффект: Mudro получил первый Magic-inspired public-facing draft без внедрения чужих runtime-зависимостей
+- 2026-03-13 | Прогнан Magic на карточку поста, фильтры и toolbar; результат адаптирован в `FeedControls` и `PostCard` без новых frontend-зависимостей | Эффект: у Mudro появился первый связный visual UI draft для live-ленты, а не только hero-блок
+- 2026-03-15 | P1 | area:frontend-ui | Доведена страница `feed-page`: появился связный landing/feed surface, а в `FeedWidget` добавлены loading/empty/error states | Эффект: Mudro выглядит как цельный продуктовый экран, а не как набор hero + live grid.
+- 2026-03-15 | P1 | area:frontend-ui | Добавлен detail drawer для раскрытия поста и связанный post-view flow внутри ленты | Эффект: visual MVP закрывает не только сканирование feed, но и просмотр конкретного поста без ухода со страницы.
+- 2026-03-15 | Отделены TG-комментарии от TG-постов на уровне импорта/API и включен рендер локальных TG media через `/media/...` | Эффект: reply-сообщения больше не должны попадать в feed как посты, а комментарии и вложения отображаются отдельным слоем.
+- 2026-03-15 | P1 | area:import-api | Выполнен полный локальный TG-переимпорт и подтверждено отделение reply-комментариев от root-постов на живом API | Эффект: `3107/3108` больше не попадают в ленту как посты, а TG media в JSON API идут корректно через `/media/...`.
+- 2026-03-15 | P1 | area:frontend-ui | Черновой MVP ленты доведен до живого React preview на полном TG-срезе: карточки, media-first блоки, thread-preview комментариев и detail drawer подтверждены браузерной проверкой | Эффект: страницу уже можно открывать локально как продуктовый draft, а reply-комментарии больше не воспринимаются как отдельные посты.
+
+- 2026-03-15 | P1 | area:deploy | Синхронизирован рабочий tree на VPS без Git commit, восстановлен серверный `mudro-api`, выполнен `tgcommentsimport` с media и открыт `8080/tcp` под внешний proxy | Эффект: серверный API снова отдает живую ленту и media комментариев для публичного frontend.
+- 2026-03-15 | P1 | area:vercel | Выполнен deploy `frontend/` на Vercel с rewrites `/api`, `/media`, `/healthz` на VPS origin | Эффект: у проекта появился публичный preview URL `frontend-psi-ten-33.vercel.app` для чернового MVP ленты.
+- 2026-03-16 | P0 | area:data-model | Введен аддитивный нормализованный media-слой: `media_assets`, `post_media_links`, `comment_media_links`, backfill-команда `cmd/mediabackfill`, importers и API переведены на normalized-first чтение с fallback на legacy JSONB.
+  - Эффект: media перестали быть тупо inline-JSON только внутри `posts/post_comments`; появился нормальный фундамент для будущих search/index/FK-расширений без поломки текущего API.
+- 2026-03-16 | P0 | area:test-safety | Убран опасный implicit DSN из `internal/api/server_integration_test.go`.
+  - Эффект: `go test ./...` больше не может по умолчанию truncate-нуть рабочую локальную или серверную БД.
+- 2026-03-16 | P0 | area:comment-model | Добавлены `parent_comment_id` и таблица `comment_reactions`, обновлены `tgcommentsimport` и API на каноническое чтение/запись комментарийной модели.
+  - Эффект: у комментариев появился внутренний FK-граф и симметричная с постами модель реакций, без ломки текущего JSON API.
+- 2026-03-16 | P0 | area:data | Локальная compose-БД восстановлена на полном TG-срезе через WSL `go run`, после чего подтверждены `posts=1102`, `comments=1790`, `comment_reactions=210`.
+  - Эффект: локальный dev-контур снова соответствует реальному TG-архиву и пригоден для дальнейшей работы со схемой/API.
+- 2026-03-16 | P0 | area:comment-model | Новый comment-model (parent_comment_id + comment_reactions) раскатан и подтвержден на VPS, backfill и API-перезапуск выполнены успешно.
+  - Эффект: локальный и серверный контуры снова совпадают по модели комментариев, комментарийные media/reactions читаются из нормализованного слоя.
+- 2026-03-16 | P1 | area:data-policy | VK snapshot-only policy внесена в docs/ops-runbook.md.
+  - Эффект: правило про архивный VK теперь зафиксировано не только в README и памяти, но и в рабочем recovery/runbook контуре.

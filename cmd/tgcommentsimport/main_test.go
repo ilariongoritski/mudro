@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -43,3 +45,52 @@ func TestResolvePostLinkRejectsCommentBeforePost(t *testing.T) {
 	}
 }
 
+func TestMergeJSONMessagesAddsCommentMedia(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "result.json")
+	payload := `{
+	  "messages": [
+	    {
+	      "id": 5,
+	      "type": "message",
+	      "date_unixtime": "1700000000",
+	      "from": "Катя",
+	      "reply_to_message_id": 3,
+	      "text": "",
+	      "media_type": "sticker",
+	      "file": "stickers/sticker.webp",
+	      "thumbnail": "stickers/sticker.webp_thumb.jpg",
+	      "sticker_emoji": "🔥"
+	    }
+	  ]
+	}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
+		t.Fatalf("write result.json: %v", err)
+	}
+
+	msgs, ids, err := mergeJSONMessages(path, map[int64]htmlMessage{}, nil)
+	if err != nil {
+		t.Fatalf("mergeJSONMessages: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != 5 {
+		t.Fatalf("ids = %v, want [5]", ids)
+	}
+	msg, ok := msgs[5]
+	if !ok {
+		t.Fatal("message 5 not found")
+	}
+	if msg.ReplyToID != 3 {
+		t.Fatalf("ReplyToID = %d, want 3", msg.ReplyToID)
+	}
+	if len(msg.Media) != 1 {
+		t.Fatalf("len(media) = %d, want 1", len(msg.Media))
+	}
+	if msg.Media[0].URL != "stickers/sticker.webp" {
+		t.Fatalf("media url = %q, want stickers/sticker.webp", msg.Media[0].URL)
+	}
+	if msg.Media[0].Kind != "gif" {
+		t.Fatalf("media kind = %q, want gif", msg.Media[0].Kind)
+	}
+}

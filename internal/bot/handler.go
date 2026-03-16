@@ -204,13 +204,13 @@ func handleTextFollowup(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 				out, err := r.AskMudro(query)
 				if err != nil {
 					if strings.Contains(err.Error(), "OPENAI_API_KEY") {
-						sendPlain(bot, update, "Режим чата включен, но OPENAI_API_KEY не задан.\nДобавь ключ в .env или выключи режим: /chat off")
+						sendPlainWithCommand(bot, update, "/mudro_chat", "Режим чата включен, но OPENAI_API_KEY не задан.\nДобавь ключ в .env или выключи режим: /chat off")
 						return
 					}
-					sendPlain(bot, update, "Ошибка chat-mode: "+err.Error())
+					sendPlainWithCommand(bot, update, "/mudro_chat", "Ошибка chat-mode: "+err.Error())
 					return
 				}
-				sendPlain(bot, update, string(out))
+				sendPlainWithCommand(bot, update, "/mudro_chat", string(out))
 			}
 		}
 		return
@@ -388,7 +388,10 @@ func sendReply(bot *tgbotapi.BotAPI, update tgbotapi.Update, prefix string, out 
 		log.Printf("send %s: %v", prefix, sendErr)
 	}
 	sendElapsed := time.Since(sendStartedAt)
+	finalizeResponseMetrics(update, prefix, out, err, sendStartedAt, sendElapsed)
+}
 
+func finalizeResponseMetrics(update tgbotapi.Update, prefix string, out []byte, err error, sendStartedAt time.Time, sendElapsed time.Duration) {
 	key := updateKey(update.Message.Chat.ID, update.Message.MessageID)
 	if startedAt, ok := popCommandStart(key); ok {
 		totalElapsed := time.Since(startedAt)
@@ -427,8 +430,15 @@ func sendReply(bot *tgbotapi.BotAPI, update tgbotapi.Update, prefix string, out 
 }
 
 func sendPlain(bot *tgbotapi.BotAPI, update tgbotapi.Update, text string) {
+	sendPlainWithCommand(bot, update, "/chat", text)
+}
+
+func sendPlainWithCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update, command string, text string) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, trimMessage(text, NewRunner().Limit))
+	sendStartedAt := time.Now()
 	if _, sendErr := bot.Send(msg); sendErr != nil {
 		log.Printf("send plain: %v", sendErr)
 	}
+	sendElapsed := time.Since(sendStartedAt)
+	finalizeResponseMetrics(update, command, []byte(text), nil, sendStartedAt, sendElapsed)
 }

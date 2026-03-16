@@ -20,6 +20,8 @@
    - `make migrate`
    - `make migrate-agent`
    - `make migrate-comments`
+   - `make migrate-media`
+   - `make migrate-comment-model`
 5. Проверить таблицы:
    - `make tables`
 6. Проверить тесты:
@@ -29,8 +31,12 @@
 
 Критерий готовности:
 - `dbcheck` OK
-- таблицы `posts`, `post_reactions`, `post_comments`, `agent_queue` существуют
+- таблицы `posts`, `post_comments`, `post_reactions`, `media_assets`, `comment_reactions`, `agent_queue` существуют
 - `make test` проходит
+
+## Политика источников
+- `VK` считать архивным snapshot-источником: повторные регулярные обновления VK не планируются.
+- Живой импорт и актуализация теперь относятся только к `Telegram`-контуру.
 
 ## Частые сбои и действия
 

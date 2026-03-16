@@ -1,112 +1,140 @@
-{
-  "version": 1,
-  "updated_at": "2026-03-05T10:59:47+03:00",
-  "totals": {
-    "responses": 107,
-    "total_ms": 67065
-  },
-  "by_command": {
-    "actions10": {
-      "responses": 3,
-      "total_ms": 232,
-      "max_ms": 82,
-      "last_ms": 76
-    },
-    "actions1h": {
-      "responses": 2,
-      "total_ms": 229,
-      "max_ms": 133,
-      "last_ms": 96
-    },
-    "chat": {
-      "responses": 12,
-      "total_ms": 928,
-      "max_ms": 96,
-      "last_ms": 64
-    },
-    "commits3": {
-      "responses": 3,
-      "total_ms": 193,
-      "max_ms": 90,
-      "last_ms": 90
-    },
-    "feed5": {
-      "responses": 4,
-      "total_ms": 366,
-      "max_ms": 107,
-      "last_ms": 105
-    },
-    "find": {
-      "responses": 9,
-      "total_ms": 20674,
-      "max_ms": 12802,
-      "last_ms": 1367
-    },
-    "health": {
-      "responses": 6,
-      "total_ms": 3281,
-      "max_ms": 626,
-      "last_ms": 563
-    },
-    "logs": {
-      "responses": 1,
-      "total_ms": 249,
-      "max_ms": 249,
-      "last_ms": 249
-    },
-    "memento": {
-      "responses": 7,
-      "total_ms": 941,
-      "max_ms": 257,
-      "last_ms": 81
-    },
-    "now": {
-      "responses": 14,
-      "total_ms": 10086,
-      "max_ms": 1139,
-      "last_ms": 859
-    },
-    "rab": {
-      "responses": 6,
-      "total_ms": 25786,
-      "max_ms": 21320,
-      "last_ms": 21320
-    },
-    "reportnow": {
-      "responses": 3,
-      "total_ms": 619,
-      "max_ms": 208,
-      "last_ms": 208
-    },
-    "tglog": {
-      "responses": 1,
-      "total_ms": 83,
-      "max_ms": 83,
-      "last_ms": 83
-    },
-    "time": {
-      "responses": 13,
-      "total_ms": 1183,
-      "max_ms": 189,
-      "last_ms": 92
-    },
-    "todo": {
-      "responses": 8,
-      "total_ms": 887,
-      "max_ms": 187,
-      "last_ms": 95
-    },
-    "todoadd": {
-      "responses": 12,
-      "total_ms": 1108,
-      "max_ms": 173,
-      "last_ms": 68
-    },
-    "top10": {
-      "responses": 3,
-      "total_ms": 220,
-      "max_ms": 79,
-      "last_ms": 72
-    }
-  }
+﻿{
+    "version":  1,
+    "updated_at":  "2026-03-09T23:13:33+03:00",
+    "totals":  {
+                   "responses":  107,
+                   "total_ms":  67065
+               },
+    "by_command":  {
+                       "actions10":  {
+                                         "responses":  3,
+                                         "total_ms":  232,
+                                         "max_ms":  82,
+                                         "last_ms":  76
+                                     },
+                       "actions1h":  {
+                                         "responses":  2,
+                                         "total_ms":  229,
+                                         "max_ms":  133,
+                                         "last_ms":  96
+                                     },
+                       "chat":  {
+                                    "responses":  12,
+                                    "total_ms":  928,
+                                    "max_ms":  96,
+                                    "last_ms":  64
+                                },
+                       "commits3":  {
+                                        "responses":  3,
+                                        "total_ms":  193,
+                                        "max_ms":  90,
+                                        "last_ms":  90
+                                    },
+                       "feed5":  {
+                                     "responses":  4,
+                                     "total_ms":  366,
+                                     "max_ms":  107,
+                                     "last_ms":  105
+                                 },
+                       "find":  {
+                                    "responses":  9,
+                                    "total_ms":  20674,
+                                    "max_ms":  12802,
+                                    "last_ms":  1367
+                                },
+                       "health":  {
+                                      "responses":  6,
+                                      "total_ms":  3281,
+                                      "max_ms":  626,
+                                      "last_ms":  563
+                                  },
+                       "logs":  {
+                                    "responses":  1,
+                                    "total_ms":  249,
+                                    "max_ms":  249,
+                                    "last_ms":  249
+                                },
+                       "memento":  {
+                                       "responses":  7,
+                                       "total_ms":  941,
+                                       "max_ms":  257,
+                                       "last_ms":  81
+                                   },
+                       "now":  {
+                                   "responses":  14,
+                                   "total_ms":  10086,
+                                   "max_ms":  1139,
+                                   "last_ms":  859
+                               },
+                       "rab":  {
+                                   "responses":  6,
+                                   "total_ms":  25786,
+                                   "max_ms":  21320,
+                                   "last_ms":  21320
+                               },
+                       "reportnow":  {
+                                         "responses":  3,
+                                         "total_ms":  619,
+                                         "max_ms":  208,
+                                         "last_ms":  208
+                                     },
+                       "tglog":  {
+                                     "responses":  1,
+                                     "total_ms":  83,
+                                     "max_ms":  83,
+                                     "last_ms":  83
+                                 },
+                       "time":  {
+                                    "responses":  13,
+                                    "total_ms":  1183,
+                                    "max_ms":  189,
+                                    "last_ms":  92
+                                },
+                       "todo":  {
+                                    "responses":  8,
+                                    "total_ms":  887,
+                                    "max_ms":  187,
+                                    "last_ms":  95
+                                },
+                       "todoadd":  {
+                                       "responses":  12,
+                                       "total_ms":  1108,
+                                       "max_ms":  173,
+                                       "last_ms":  68
+                                   },
+                       "top10":  {
+                                     "responses":  3,
+                                     "total_ms":  220,
+                                     "max_ms":  79,
+                                     "last_ms":  72
+                                 }
+                   },
+    "desktop_dialog_backfill":  {
+                                    "thread_id":  "019cbe2e-65eb-7582-91dc-aec94fe19005",
+                                    "source":  "codex_desktop_session_jsonl",
+                                    "updated_at":  "2026-03-09T22:53:07+03:00",
+                                    "turns":  225,
+                                    "total_ms":  47308237,
+                                    "total_seconds":  47308.237,
+                                    "total_hms":  "13:08:28.2370000",
+                                    "first_turn_utc":  "2026-03-05 13:32:30Z",
+                                    "last_turn_utc":  "2026-03-09 19:48:05Z",
+                                    "notes":  "Includes processing, tool execution, code generation, and response production time per turn."
+                                },
+    "combined_runtime":  {
+                             "updated_at":  "2026-03-09T23:13:33+03:00",
+                             "total_ms":  47375302,
+                             "responses":  332,
+                             "base_total_ms":  67065,
+                             "base_responses":  107,
+                             "external_total_ms":  47308237,
+                             "external_count":  225,
+                             "sources":  [
+                                             {
+                                                 "name":  "desktop_dialog_backfill",
+                                                 "total_ms":  47308237,
+                                                 "count":  225
+                                             }
+                                         ]
+                         }
 }

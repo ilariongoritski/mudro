@@ -2,21 +2,24 @@ package api
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/goritskimihail/mudro/internal/config"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func testDBServer(t *testing.T) *Server {
 	t.Helper()
+	dsn := strings.TrimSpace(os.Getenv("MUDRO_INTEGRATION_TEST_DSN"))
+	if dsn == "" {
+		t.Skip("skip integration test: set MUDRO_INTEGRATION_TEST_DSN to an isolated database")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, config.DSN())
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		t.Skipf("skip integration test: db connect: %v", err)
 	}

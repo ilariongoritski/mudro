@@ -66,7 +66,7 @@ func updateKey(chatID int64, msgID int) string {
 
 func recordRuntimeTime(repoRoot string, command string, process, send, total time.Duration) error {
 	path := filepath.Join(repoRoot, ".codex", "time_runtime.json")
-	mem, _ := readRuntimeTime(path)
+	mem, extras, _ := readRuntimeTimeWithExtras(path)
 	if mem == nil {
 		mem = &runtimeTimeMemory{
 			Version:   1,
@@ -109,11 +109,7 @@ func recordRuntimeTime(repoRoot string, command string, process, send, total tim
 	}
 	mem.ByCommand[command] = cs
 
-	b, err := json.MarshalIndent(mem, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0o644)
+	return writeRuntimeTime(path, mem, extras)
 }
 
 func nonNegativeMS(d time.Duration) int64 {
@@ -125,16 +121,61 @@ func nonNegativeMS(d time.Duration) int64 {
 }
 
 func readRuntimeTime(path string) (*runtimeTimeMemory, error) {
+	mem, _, err := readRuntimeTimeWithExtras(path)
+	return mem, err
+}
+
+func readRuntimeTimeWithExtras(path string) (*runtimeTimeMemory, map[string]json.RawMessage, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	raw := make(map[string]json.RawMessage)
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, nil, err
+	}
+
 	var mem runtimeTimeMemory
 	if err := json.Unmarshal(b, &mem); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if mem.ByCommand == nil {
 		mem.ByCommand = make(map[string]runtimeCommand)
 	}
-	return &mem, nil
+
+	// Preserve any additional top-level sections (for example, desktop/chat backfills).
+	delete(raw, "version")
+	delete(raw, "updated_at")
+	delete(raw, "totals")
+	delete(raw, "by_command")
+	return &mem, raw, nil
+}
+
+func writeRuntimeTime(path string, mem *runtimeTimeMemory, extras map[string]json.RawMessage) error {
+	base, err := json.Marshal(mem)
+	if err != nil {
+		return err
+	}
+	out := make(map[string]any)
+	if err := json.Unmarshal(base, &out); err != nil {
+		return err
+	}
+
+	for k, v := range extras {
+		if _, exists := out[k]; exists {
+			continue
+		}
+		var decoded any
+		if err := json.Unmarshal(v, &decoded); err != nil {
+			continue
+		}
+		out[k] = decoded
+	}
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
 }

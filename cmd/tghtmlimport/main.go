@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/goritskimihail/mudro/internal/tgexport"
 )
 
 type feedItem struct {
@@ -48,6 +50,8 @@ var (
 	reMsgStart  = regexp.MustCompile(`<div class="message default clearfix(?: joined)?" id="message(\d+)">`)
 	reDateTitle = regexp.MustCompile(`class="pull_right date details" title="([^"]+)"`)
 	reTextBlock = regexp.MustCompile(`(?s)<div class="text">\s*(.*?)\s*</div>`)
+	reFromName  = regexp.MustCompile(`(?s)<div class="from_name">\s*(.*?)\s*</div>`)
+	reReplyTo   = regexp.MustCompile(`GoToMessage\((\d+)\)`)
 	reReaction  = regexp.MustCompile(`(?s)<span class="reaction">.*?<span class="emoji">\s*(.*?)\s*</span>.*?<span class="count">\s*(\d+)\s*</span>.*?</span>`)
 	reTags      = regexp.MustCompile(`(?s)<[^>]*>`)
 	reSpaces    = regexp.MustCompile(`[ \t\r\f\v]+`)
@@ -121,6 +125,7 @@ func parseHTMLFile(path, collectedAt string) ([]feedItem, error) {
 	}
 
 	out := make([]feedItem, 0, len(starts))
+	lastFromName := ""
 	for i, st := range starts {
 		blockStart := st[0]
 		blockEnd := len(s)
@@ -143,6 +148,29 @@ func parseHTMLFile(path, collectedAt string) ([]feedItem, error) {
 		if m := reTextBlock.FindStringSubmatch(block); len(m) >= 2 {
 			text = cleanHTMLText(m[1])
 		}
+
+		fromName := ""
+		if m := reFromName.FindStringSubmatch(block); len(m) >= 2 {
+			fromName = cleanHTMLText(m[1])
+			if fromName != "" {
+				lastFromName = fromName
+			}
+		}
+		if fromName == "" {
+			fromName = lastFromName
+		}
+
+		replyTo := int64(0)
+		if m := reReplyTo.FindStringSubmatch(block); len(m) >= 2 {
+			if v, err := strconv.ParseInt(strings.TrimSpace(m[1]), 10, 64); err == nil {
+				replyTo = v
+			}
+		}
+
+		if replyTo != 0 || !tgexport.LooksLikeMudroAuthor(fromName, "") {
+			continue
+		}
+
 		likes, reactions := parseReactions(block)
 
 		out = append(out, feedItem{

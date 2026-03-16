@@ -16,18 +16,28 @@ import (
 	"strings"
 	"time"
 
+	commentdb "github.com/goritskimihail/mudro/internal/commentmodel"
 	"github.com/goritskimihail/mudro/internal/config"
+	mediadb "github.com/goritskimihail/mudro/internal/media"
+	"github.com/goritskimihail/mudro/internal/tgexport"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
-	pool *pgxpool.Pool
+	pool             *pgxpool.Pool
+	tgVisiblePostIDs []string
 }
 
 func NewServer(pool *pgxpool.Pool) *Server {
-	return &Server{pool: pool}
+	server := &Server{pool: pool}
+	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
+		server.tgVisiblePostIDs = ids
+		log.Printf("api: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
+	} else if err != nil {
+		log.Printf("api: telegram visibility filter disabled: %v", err)
+	}
+	return server
 }
 
 func (s *Server) Router() http.Handler {
@@ -49,7 +59,23 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
 	mux.HandleFunc("/feed", s.handleFeed)
-	return mux
+	return withCORS(mux)
+}
+
+func withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.TrimSpace(r.Header.Get("Origin")) != "" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Vary", "Origin")
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +154,7 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 		totalPosts int64
 		lastSync   *time.Time
 	)
-	if err := s.pool.QueryRow(ctx, `select count(*) from posts`).Scan(&totalPosts); err != nil {
+	if err := s.countVisiblePosts(ctx, &totalPosts); err != nil {
 		log.Printf("front count posts: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -200,7 +226,7 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var totalPosts int64
-	if err := s.pool.QueryRow(ctx, `select count(*) from posts`).Scan(&totalPosts); err != nil {
+	if err := s.countVisiblePosts(ctx, &totalPosts); err != nil {
 		log.Printf("feed count posts: %v", err)
 	}
 	sourceStats, err := s.loadSourceStats(ctx)
@@ -280,12 +306,14 @@ func compactText(s *string) string {
 }
 
 func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
+	args := []any{}
+	whereSQL, args := s.buildPostsVisibilityWhere("", args)
 	rows, err := s.pool.Query(ctx, `
 		select source, count(*) as posts
-		from posts
+		from posts`+whereSQL+`
 		group by source
 		order by posts desc, source asc
-	`)
+	`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +328,33 @@ func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 		out = append(out, st)
 	}
 	return out, rows.Err()
+}
+
+func (s *Server) countVisiblePosts(ctx context.Context, out *int64) error {
+	args := []any{}
+	whereSQL, args := s.buildPostsVisibilityWhere("", args)
+	return s.pool.QueryRow(ctx, `select count(*) from posts`+whereSQL, args...).Scan(out)
+}
+
+func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, []any) {
+	conditions := make([]string, 0, 2)
+	if source != "" {
+		args = append(args, source)
+		conditions = append(conditions, fmt.Sprintf("source = $%d", len(args)))
+	}
+	if len(s.tgVisiblePostIDs) > 0 {
+		args = append(args, s.tgVisiblePostIDs)
+		switch source {
+		case "tg":
+			conditions = append(conditions, fmt.Sprintf("source_post_id = any($%d)", len(args)))
+		case "":
+			conditions = append(conditions, fmt.Sprintf("(source <> 'tg' or source_post_id = any($%d))", len(args)))
+		}
+	}
+	if len(conditions) == 0 {
+		return "", args
+	}
+	return " where " + strings.Join(conditions, " and "), args
 }
 
 func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder string) ([]postDTO, *cursor, error) {
@@ -321,10 +376,9 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
 			from posts
 		`
-		if source != "" {
-			args = append(args, source)
-			q += fmt.Sprintf(" where source = $%d", len(args))
-		}
+		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+		args = nextArgs
+		q += whereSQL
 		args = append(args, limit, offset)
 		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
 		rows, err = s.pool.Query(ctx, q, args...)
@@ -336,21 +390,21 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		if beforeTS == nil || beforeID == nil {
 			args := []any{}
 			q := base
-			if source != "" {
-				args = append(args, source)
-				q += fmt.Sprintf(" where source = $%d", len(args))
-			}
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+			args = nextArgs
+			q += whereSQL
 			args = append(args, limit)
 			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
 			rows, err = s.pool.Query(ctx, q, args...)
 		} else {
 			args := []any{}
 			q := base
-			if source != "" {
-				args = append(args, source)
-				q += fmt.Sprintf(" where source = $%d and ", len(args))
-			} else {
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+			args = nextArgs
+			if whereSQL == "" {
 				q += " where "
+			} else {
+				q += whereSQL + " and "
 			}
 			args = append(args, *beforeTS, *beforeID, limit)
 			q += fmt.Sprintf("(published_at, id) %s ($%d, $%d) order by published_at %s, id %s limit $%d", comparator, len(args)-2, len(args)-1, order, order, len(args))
@@ -399,8 +453,39 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		return posts, nil, nil
 	}
 
+	normalizedPostMedia, err := mediadb.LoadPostMediaJSON(ctx, s.pool, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range posts {
+		if raw, ok := normalizedPostMedia[posts[i].ID]; ok && len(raw) > 0 {
+			posts[i].Media = raw
+			continue
+		}
+		if len(posts[i].Media) > 0 {
+			posts[i].Media = normalizePostMediaJSON(posts[i].Media)
+		}
+	}
+
 	if err := s.loadReactions(ctx, posts, ids); err != nil {
 		return nil, nil, err
+	}
+	commentsByPost, err := s.loadPostComments(ctx, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range posts {
+		comments := commentsByPost[posts[i].ID]
+		posts[i].Comments = comments
+		if posts[i].Source == "tg" {
+			count := len(comments)
+			posts[i].CommentsCount = &count
+			continue
+		}
+		if posts[i].CommentsCount == nil && len(comments) > 0 {
+			count := len(comments)
+			posts[i].CommentsCount = &count
+		}
 	}
 
 	var next *cursor
@@ -457,6 +542,7 @@ type postDTO struct {
 	LikesCount    int             `json:"likes_count"`
 	ViewsCount    *int            `json:"views_count,omitempty"`
 	CommentsCount *int            `json:"comments_count,omitempty"`
+	Comments      []feedComment   `json:"comments,omitempty"`
 	Reactions     map[string]int  `json:"reactions"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
@@ -531,27 +617,28 @@ type feedReaction struct {
 }
 
 type feedComment struct {
-	SourceCommentID string
-	ParentCommentID string
-	AuthorName      string
-	PublishedAt     string
-	Text            string
-	Reactions       []feedReaction
+	SourceCommentID string          `json:"source_comment_id"`
+	ParentCommentID string          `json:"parent_comment_id,omitempty"`
+	AuthorName      string          `json:"author_name"`
+	PublishedAt     string          `json:"published_at"`
+	Text            string          `json:"text"`
+	Reactions       []feedReaction  `json:"reactions,omitempty"`
+	Media           []feedMediaItem `json:"media,omitempty"`
 }
 
 type feedMediaItem struct {
-	Kind       string
-	URL        string
-	PreviewURL string
-	Title      string
-	Width      int
-	Height     int
-	Position   int
-	IsImage    bool
-	IsAudio    bool
-	IsVideo    bool
-	IsDocument bool
-	IsLink     bool
+	Kind       string `json:"kind"`
+	URL        string `json:"url"`
+	PreviewURL string `json:"preview_url,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Width      int    `json:"width,omitempty"`
+	Height     int    `json:"height,omitempty"`
+	Position   int    `json:"position,omitempty"`
+	IsImage    bool   `json:"is_image,omitempty"`
+	IsAudio    bool   `json:"is_audio,omitempty"`
+	IsVideo    bool   `json:"is_video,omitempty"`
+	IsDocument bool   `json:"is_document,omitempty"`
+	IsLink     bool   `json:"is_link,omitempty"`
 }
 
 var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
@@ -758,6 +845,27 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
                     {{end}}
                   </div>
                 {{end}}
+                {{if .Media}}
+                  <div class="media">
+                    {{range .Media}}
+                      <div class="media-item">
+                        {{if .IsImage}}
+                          <img src="{{.URL}}" alt="comment media {{.Kind}}" loading="lazy">
+                          <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть изображение</a>
+                        {{else if .IsVideo}}
+                          {{if .PreviewURL}}<img src="{{.PreviewURL}}" alt="comment video preview" loading="lazy">{{end}}
+                          {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть видео</a>{{else}}Видео без URL{{end}}
+                        {{else if .IsDocument}}
+                          {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть вложение</a>{{else}}Документ без URL{{end}}
+                        {{else if .IsLink}}
+                          <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть ссылку</a>
+                        {{else}}
+                          {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer">Открыть вложение</a>{{else}}Вложение {{.Kind}}{{end}}
+                        {{end}}
+                      </div>
+                    {{end}}
+                  </div>
+                {{end}}
               </div>
             {{end}}
           </div>
@@ -898,46 +1006,34 @@ func buildOriginalPostURL(source, sourcePostID string) string {
 }
 
 func parseMediaItems(raw json.RawMessage) []feedMediaItem {
-	if len(raw) == 0 {
+	items := mediadb.ParseLegacyJSON(raw)
+	if len(items) == 0 {
 		return nil
 	}
 
-	var decoded []map[string]any
-	if err := json.Unmarshal(raw, &decoded); err != nil {
-		return nil
-	}
-
-	items := make([]feedMediaItem, 0, len(decoded))
-	for _, m := range decoded {
-		kindRaw := strings.ToLower(strings.TrimSpace(anyString(m, "kind", "Kind")))
-		urlRaw := strings.TrimSpace(anyString(m, "url", "URL"))
-		previewRaw := strings.TrimSpace(anyString(m, "preview_url", "PreviewURL"))
-		width := anyInt(m, "width", "Width")
-		height := anyInt(m, "height", "Height")
-		position := anyInt(m, "position", "Position")
-		title := strings.TrimSpace(anyString(m, "title", "Title"))
+	out := make([]feedMediaItem, 0, len(items))
+	for _, item := range items {
+		kindRaw := strings.ToLower(strings.TrimSpace(item.Kind))
+		title := strings.TrimSpace(item.Title)
 		if title == "" {
-			title = strings.TrimSpace(mediaExtraString(m, "file_name", "filename", "title"))
-		}
-		if title == "" {
-			title = guessMediaTitle(urlRaw)
+			title = guessMediaTitle(item.URL)
 		}
 
-		kind := normalizeMediaKind(kindRaw, mediaExtraString(m, "media_type"), mediaExtraString(m, "mime_type"), urlRaw, title)
-		url := normalizeMediaURL(urlRaw)
-		preview := normalizeMediaURL(previewRaw)
+		kind := normalizeMediaKind(kindRaw, anyString(item.Extra, "media_type"), anyString(item.Extra, "mime_type"), item.URL, title)
+		url := normalizeMediaURL(item.URL)
+		preview := normalizeMediaURL(item.PreviewURL)
 		if kind == "" && url == "" && preview == "" && title == "" {
 			continue
 		}
 
-		items = append(items, feedMediaItem{
+		out = append(out, feedMediaItem{
 			Kind:       kind,
 			URL:        url,
 			PreviewURL: preview,
 			Title:      title,
-			Width:      width,
-			Height:     height,
-			Position:   position,
+			Width:      item.Width,
+			Height:     item.Height,
+			Position:   item.Position,
 			IsImage:    kind == "photo" || kind == "gif" || kind == "image",
 			IsAudio:    kind == "audio",
 			IsVideo:    kind == "video",
@@ -945,7 +1041,19 @@ func parseMediaItems(raw json.RawMessage) []feedMediaItem {
 			IsLink:     kind == "link",
 		})
 	}
-	return items
+	return out
+}
+
+func normalizePostMediaJSON(raw json.RawMessage) json.RawMessage {
+	items := parseMediaItems(raw)
+	if len(items) == 0 {
+		return nil
+	}
+	encoded, err := json.Marshal(items)
+	if err != nil {
+		return raw
+	}
+	return json.RawMessage(encoded)
 }
 
 func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int64][]feedComment, error) {
@@ -954,46 +1062,98 @@ func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int
 		return out, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		select post_id, source_comment_id, source_parent_comment_id, author_name, published_at, text, reactions
+		select id, post_id, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text, reactions, media
 		from post_comments
 		where post_id = any($1)
 		order by post_id asc, published_at asc, id asc
 	`, postIDs)
 	if err != nil {
-		if isUndefinedTableErr(err) {
+		if mediadb.IsUndefinedTableErr(err) {
 			return out, nil
 		}
 		return nil, err
 	}
 	defer rows.Close()
 
+	type commentRow struct {
+		commentID             int64
+		postID                int64
+		sourceCommentID       string
+		sourceParentCommentID *string
+		parentCommentRowID    *int64
+		authorName            *string
+		publishedAt           time.Time
+		text                  *string
+		reactions             map[string]int
+		mediaRaw              json.RawMessage
+	}
+
+	staged := make([]commentRow, 0, len(postIDs))
+	commentIDs := make([]int64, 0, len(postIDs))
 	for rows.Next() {
 		var (
-			postID           int64
-			sourceCommentID  string
-			parentCommentID  *string
-			authorName       *string
-			publishedAt      time.Time
-			text             *string
+			row              commentRow
 			reactionsRawJSON []byte
+			mediaRawJSON     []byte
 		)
-		if err := rows.Scan(&postID, &sourceCommentID, &parentCommentID, &authorName, &publishedAt, &text, &reactionsRawJSON); err != nil {
+		if err := rows.Scan(&row.commentID, &row.postID, &row.sourceCommentID, &row.sourceParentCommentID, &row.parentCommentRowID, &row.authorName, &row.publishedAt, &row.text, &reactionsRawJSON, &mediaRawJSON); err != nil {
 			return nil, err
 		}
-		reactions := parseReactionsJSON(reactionsRawJSON)
-		item := feedComment{
-			SourceCommentID: sourceCommentID,
-			AuthorName:      compactText(authorName),
-			PublishedAt:     publishedAt.Format("2006-01-02 15:04:05"),
-			Text:            compactText(text),
-			Reactions:       buildFeedReactions(reactions),
+		row.reactions = parseReactionsJSON(reactionsRawJSON)
+		if len(mediaRawJSON) > 0 {
+			row.mediaRaw = json.RawMessage(mediaRawJSON)
 		}
-		if parentCommentID != nil {
-			item.ParentCommentID = *parentCommentID
-		}
-		out[postID] = append(out[postID], item)
+		staged = append(staged, row)
+		commentIDs = append(commentIDs, row.commentID)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	normalizedCommentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
+	if err != nil {
+		return nil, err
+	}
+	normalizedCommentReactions, err := commentdb.LoadCommentReactions(ctx, s.pool, commentIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	commentSourceIDs := make(map[int64]string, len(staged))
+	for _, row := range staged {
+		commentSourceIDs[row.commentID] = row.sourceCommentID
+	}
+
+	for _, row := range staged {
+		mediaRaw := row.mediaRaw
+		if normalized, ok := normalizedCommentMedia[row.commentID]; ok && len(normalized) > 0 {
+			mediaRaw = normalized
+		}
+		reactions := row.reactions
+		if normalized, ok := normalizedCommentReactions[row.commentID]; ok && len(normalized) > 0 {
+			reactions = normalized
+		}
+		item := feedComment{
+			SourceCommentID: row.sourceCommentID,
+			AuthorName:      compactText(row.authorName),
+			PublishedAt:     row.publishedAt.Format("2006-01-02 15:04:05"),
+			Text:            compactText(row.text),
+			Reactions:       buildFeedReactions(reactions),
+			Media:           parseMediaItems(mediaRaw),
+		}
+		switch {
+		case row.parentCommentRowID != nil:
+			if sourceID := commentSourceIDs[*row.parentCommentRowID]; sourceID != "" {
+				item.ParentCommentID = sourceID
+			} else if row.sourceParentCommentID != nil {
+				item.ParentCommentID = *row.sourceParentCommentID
+			}
+		case row.sourceParentCommentID != nil:
+			item.ParentCommentID = *row.sourceParentCommentID
+		}
+		out[row.postID] = append(out[row.postID], item)
+	}
+	return out, nil
 }
 
 func parseReactionsJSON(raw []byte) map[string]int {
@@ -1005,11 +1165,6 @@ func parseReactionsJSON(raw []byte) map[string]int {
 		return nil
 	}
 	return out
-}
-
-func isUndefinedTableErr(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "42P01"
 }
 
 func sourceTotals(stats []sourceStat) (vkTotal, tgTotal int64) {
@@ -1118,15 +1273,24 @@ func mediaExtraString(m map[string]any, keys ...string) string {
 }
 
 func normalizeMediaURL(raw string) string {
-	s := strings.TrimSpace(raw)
+	s := strings.TrimSpace(strings.ReplaceAll(raw, "\\", "/"))
 	if s == "" || strings.HasPrefix(s, "missing://") {
 		return ""
 	}
+	if strings.HasPrefix(s, "/media/") {
+		return s
+	}
 	u, err := url.Parse(s)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		return s
+	}
+	if strings.Contains(s, "://") {
 		return ""
 	}
-	return s
+	if strings.HasPrefix(s, "/") {
+		return s
+	}
+	return "/media/" + strings.TrimPrefix(strings.TrimPrefix(s, "./"), "/")
 }
 
 func guessMediaTitle(rawURL string) string {

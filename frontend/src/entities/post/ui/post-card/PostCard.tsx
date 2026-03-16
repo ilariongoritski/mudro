@@ -1,120 +1,192 @@
-import type { MediaItem, Post } from '@/entities/post/model/types'
-import { formatDateTime } from '@/shared/lib/format/date'
-import './PostCard.css'
+﻿import type { Post } from "@/entities/post/model/types";
+import {
+  resolveMediaDisplayUrl,
+  mediaKindLabel,
+  metricLabel,
+  normalizeReactions,
+  resolveMediaKind,
+  resolveMediaTitle,
+  resolveMediaUrl,
+} from "@/entities/post/lib/postPresentation";
+import { formatDateTime } from "@/shared/lib/format/date";
+import "./PostCard.css";
 
 interface PostCardProps {
-  post: Post
+  post: Post;
+  onOpen?: (post: Post) => void;
 }
 
-type MediaKind = 'image' | 'video' | 'audio' | 'document' | 'link' | 'unknown'
-
-const imageExt = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i
-const videoExt = /\.(mp4|mov|avi|mkv|webm)$/i
-const audioExt = /\.(mp3|ogg|wav|m4a|aac|flac)$/i
-const docExt = /\.(pdf|doc|docx|txt|zip|rar|7z)$/i
-
-const resolveMediaKind = (item: MediaItem): MediaKind => {
-  if (item.is_image) return 'image'
-  if (item.is_video) return 'video'
-  if (item.is_audio) return 'audio'
-  if (item.is_document) return 'document'
-  if (item.is_link) return 'link'
-
-  const kind = (item.kind || '').toLowerCase()
-  if (['photo', 'image', 'gif'].includes(kind)) return 'image'
-  if (kind === 'video') return 'video'
-  if (kind === 'audio' || kind === 'voice') return 'audio'
-  if (['doc', 'file', 'document'].includes(kind)) return 'document'
-  if (kind === 'link') return 'link'
-
-  const probe = `${item.url ?? ''} ${item.title ?? ''}`.toLowerCase()
-  if (imageExt.test(probe)) return 'image'
-  if (videoExt.test(probe)) return 'video'
-  if (audioExt.test(probe)) return 'audio'
-  if (docExt.test(probe)) return 'document'
-  if (probe.includes('http://') || probe.includes('https://')) return 'link'
-
-  return 'unknown'
-}
-
-const mediaKindLabel = (kind: MediaKind): string => {
-  switch (kind) {
-    case 'image':
-      return 'Image'
-    case 'video':
-      return 'Video'
-    case 'audio':
-      return 'Audio'
-    case 'document':
-      return 'Document'
-    case 'link':
-      return 'Link'
-    default:
-      return 'Attachment'
-  }
-}
-
-const normalizeReactions = (reactions?: Record<string, number>) => {
-  if (!reactions) return []
-
-  return Object.entries(reactions)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1])
-}
-
-export const PostCard = ({ post }: PostCardProps) => {
-  const reactions = normalizeReactions(post.reactions)
+export const PostCard = ({ post, onOpen }: PostCardProps) => {
+  const reactions = normalizeReactions(post.reactions);
+  const mediaItems = post.media ?? [];
+  const visibleMedia = mediaItems.slice(0, 3);
+  const hiddenMediaCount = Math.max(mediaItems.length - visibleMedia.length, 0);
+  const previewComments = (post.comments ?? []).slice(0, 2);
+  const bodyText =
+    post.text?.trim() || "Описание для этого поста пока не подтянулось.";
 
   return (
-    <article className="post-card mudro-fade-up">
+    <article
+      className={`post-card mudro-fade-up ${onOpen ? "post-card_interactive" : ""}`}
+    >
       <header className="post-card__head">
-        <div className={`post-card__source post-card__source_${post.source}`}>{post.source.toUpperCase()}</div>
-        <div className="post-card__meta">#{post.id} · {formatDateTime(post.published_at)}</div>
+        <div className="post-card__head-main">
+          <div className={`post-card__source post-card__source_${post.source}`}>
+            {post.source.toUpperCase()}
+          </div>
+          <div className="post-card__eyebrow">Пост #{post.id}</div>
+        </div>
+        <div className="post-card__meta">
+          {formatDateTime(post.published_at)}
+        </div>
       </header>
 
-      <p className="post-card__text">{post.text?.trim() || 'No text'}</p>
+      <div className="post-card__body">
+        <p className="post-card__text">{bodyText}</p>
+      </div>
 
       <div className="post-card__stats">
-        <span>Likes: {post.likes_count}</span>
-        <span>Views: {post.views_count ?? '—'}</span>
-        <span>Comments: {post.comments_count ?? '—'}</span>
+        <span className="post-card__stat">
+          <small>Лайки</small>
+          <strong>{metricLabel(post.likes_count)}</strong>
+        </span>
+        <span className="post-card__stat">
+          <small>Просмотры</small>
+          <strong>{metricLabel(post.views_count)}</strong>
+        </span>
+        <span className="post-card__stat">
+          <small>Комментарии</small>
+          <strong>{metricLabel(post.comments_count)}</strong>
+        </span>
       </div>
 
       {reactions.length > 0 && (
         <div className="post-card__reactions">
           {reactions.map(([reaction, count]) => (
             <span key={reaction} className="post-reaction" title={reaction}>
-              {reaction.replace('emoji:', '')} {count}
+              {reaction.replace("emoji:", "")} {count}
             </span>
           ))}
         </div>
       )}
 
-      {post.media && post.media.length > 0 && (
+      {mediaItems.length > 0 && (
         <div className="post-card__media-grid">
-          {post.media.map((item, index) => {
-            const kind = resolveMediaKind(item)
-            const title = item.title || 'Untitled'
+          {visibleMedia.map((item, index) => {
+            const kind = resolveMediaKind(item);
+            const title = resolveMediaTitle(item);
+            const mediaUrl = resolveMediaUrl(item.url);
+            const displayUrl = resolveMediaDisplayUrl(item);
+            const showOverlay =
+              hiddenMediaCount > 0 && index === visibleMedia.length - 1;
 
             return (
-              <div key={`${item.url ?? item.title ?? item.kind}-${index}`} className="post-media-card">
-                {kind === 'image' && item.url ? <img src={item.url} loading="lazy" alt={title} /> : null}
-                {kind === 'video' && item.preview_url ? <img src={item.preview_url} loading="lazy" alt={title} /> : null}
+              <div
+                key={`${item.url ?? item.title ?? item.kind}-${index}`}
+                className="post-media-card"
+              >
+                {(kind === "image" || kind === "video") && displayUrl ? (
+                  <img src={displayUrl} loading="lazy" alt={title} />
+                ) : null}
+                {showOverlay ? (
+                  <span className="post-media-card__more">
+                    +{hiddenMediaCount}
+                  </span>
+                ) : null}
 
                 <div className="post-media-card__info">
                   <strong>{mediaKindLabel(kind)}</strong>
                   <span>{title}</span>
-                  {item.url ? (
-                    <a href={item.url} target="_blank" rel="noreferrer">
+                  {mediaUrl ? (
+                    <a
+                      href={mediaUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       Open
                     </a>
                   ) : null}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       )}
+
+      {previewComments.length > 0 && (
+        <section
+          className="post-card__thread-preview"
+          aria-label="Превью комментариев"
+        >
+          <div className="post-card__thread-head">
+            <span>Тред</span>
+            <strong>{metricLabel(post.comments_count)} комментария</strong>
+          </div>
+          <div className="post-card__thread-list">
+            {previewComments.map((comment) => (
+              <article
+                key={`${comment.source_comment_id}-${comment.parent_comment_id ?? "root"}`}
+                className="post-card__thread-item"
+              >
+                <div className="post-card__thread-meta">
+                  <strong>{comment.author_name || "Без имени"}</strong>
+                  {comment.parent_comment_id ? (
+                    <span>ответ на #{comment.parent_comment_id}</span>
+                  ) : null}
+                </div>
+                <p>{comment.text?.trim() || "Без текста"}</p>
+                {(comment.media ?? []).length > 0 ? (
+                  <div className="post-card__thread-media">
+                    {(comment.media ?? []).slice(0, 2).map((item, index) => {
+                      const kind = resolveMediaKind(item);
+                      const title = resolveMediaTitle(item);
+                      const displayUrl = resolveMediaDisplayUrl(item);
+
+                      if (
+                        (kind === "image" || kind === "video") &&
+                        displayUrl
+                      ) {
+                        return (
+                          <img
+                            key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
+                            className="post-card__thread-media-thumb"
+                            src={displayUrl}
+                            loading="lazy"
+                            alt={title}
+                          />
+                        );
+                      }
+
+                      return (
+                        <span
+                          key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
+                          className="post-card__thread-media-badge"
+                          title={title}
+                        >
+                          {mediaKindLabel(kind)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {onOpen ? (
+        <footer className="post-card__footer">
+          <button
+            type="button"
+            className="post-card__open"
+            onClick={() => onOpen(post)}
+          >
+            Открыть пост
+          </button>
+        </footer>
+      ) : null}
     </article>
-  )
-}
+  );
+};

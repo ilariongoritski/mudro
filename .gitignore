@@ -20,3 +20,10 @@ out/
 reorganize.sh
 .codex/notes/
 .vercel
+output/ssh-tool/
+output/logs/
+output/server_*.sh
+output/ssh-check.js
+output/tmp_dbcount.go
+output/get-pip.py
+output/*-smoke.png

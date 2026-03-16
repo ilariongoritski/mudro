@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"html"
 	"log"
@@ -14,7 +15,10 @@ import (
 	"strings"
 	"time"
 
+	commentdb "github.com/goritskimihail/mudro/internal/commentmodel"
 	"github.com/goritskimihail/mudro/internal/config"
+	mediadb "github.com/goritskimihail/mudro/internal/media"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,6 +29,60 @@ type htmlMessage struct {
 	Text        string
 	PublishedAt time.Time
 	Reactions   map[string]int
+	Media       []MediaItem
+}
+
+type Export struct {
+	Messages []TGMessage `json:"messages"`
+}
+
+type TGMessage struct {
+	ID            int64        `json:"id"`
+	Type          string       `json:"type"`
+	Date          string       `json:"date"`
+	DateUnixtime  string       `json:"date_unixtime"`
+	From          string       `json:"from"`
+	ReplyToID     int64        `json:"reply_to_message_id"`
+	Text          any          `json:"text"`
+	TextEntities  []TGEntity   `json:"text_entities"`
+	Reactions     []TGReaction `json:"reactions"`
+	Photo         string       `json:"photo"`
+	PhotoFileSize *int64       `json:"photo_file_size"`
+	MediaType     string       `json:"media_type"`
+	File          string       `json:"file"`
+	FileName      string       `json:"file_name"`
+	FileSize      *int64       `json:"file_size"`
+	Thumbnail     string       `json:"thumbnail"`
+	MimeType      string       `json:"mime_type"`
+	DurationSec   *int         `json:"duration_seconds"`
+	Width         *int         `json:"width"`
+	Height        *int         `json:"height"`
+	Performer     string       `json:"performer"`
+	Title         string       `json:"title"`
+	StickerEmoji  string       `json:"sticker_emoji"`
+}
+
+type TGEntity struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+	Href string `json:"href"`
+}
+
+type TGReaction struct {
+	Type       string `json:"type"`
+	Count      int    `json:"count"`
+	Emoji      string `json:"emoji"`
+	DocumentID string `json:"document_id"`
+}
+
+type MediaItem struct {
+	Kind       string         `json:"kind"`
+	URL        string         `json:"url"`
+	PreviewURL *string        `json:"preview_url"`
+	Width      *int           `json:"width"`
+	Height     *int           `json:"height"`
+	Position   int            `json:"position"`
+	Extra      map[string]any `json:"extra"`
 }
 
 type tgPostRef struct {
@@ -52,14 +110,26 @@ func main() {
 	if err != nil {
 		log.Fatalf("glob html files: %v", err)
 	}
-	if len(files) == 0 {
-		log.Fatalf("no files matched: %s", filepath.Join(*dir, "messages*.html"))
-	}
 	sort.Strings(files)
 
-	msgs, ids, err := parseHTMLMessages(files)
-	if err != nil {
-		log.Fatalf("parse html: %v", err)
+	resultJSONPath := filepath.Join(*dir, "result.json")
+	if len(files) == 0 && !fileExists(resultJSONPath) {
+		log.Fatalf("no files matched: %s and result.json not found", filepath.Join(*dir, "messages*.html"))
+	}
+
+	msgs := map[int64]htmlMessage{}
+	ids := []int64{}
+	if len(files) > 0 {
+		msgs, ids, err = parseHTMLMessages(files)
+		if err != nil {
+			log.Fatalf("parse html: %v", err)
+		}
+	}
+	if fileExists(resultJSONPath) {
+		msgs, ids, err = mergeJSONMessages(resultJSONPath, msgs, ids)
+		if err != nil {
+			log.Fatalf("merge result.json: %v", err)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -309,6 +379,12 @@ func upsertComment(ctx context.Context, pool *pgxpool.Pool, postID int64, msg ht
 	opCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	tx, err := pool.Begin(opCtx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(opCtx)
+
 	var reactions any
 	if len(msg.Reactions) > 0 {
 		b, err := json.Marshal(msg.Reactions)
@@ -322,24 +398,62 @@ func upsertComment(ctx context.Context, pool *pgxpool.Pool, postID int64, msg ht
 	if strings.TrimSpace(msg.Text) != "" {
 		text = msg.Text
 	}
+	var media any
+	if len(msg.Media) > 0 {
+		media = msg.Media
+	}
 
-	_, err := pool.Exec(opCtx, `
+	var parentRowID any
+	if parentCommentID != nil && strings.TrimSpace(*parentCommentID) != "" {
+		var resolvedParentID int64
+		err := tx.QueryRow(opCtx, `
+select id
+from post_comments
+where source = $1 and post_id = $2 and source_comment_id = $3
+`, "tg", postID, strings.TrimSpace(*parentCommentID)).Scan(&resolvedParentID)
+		if err == nil {
+			parentRowID = resolvedParentID
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+	}
+
+	var commentID int64
+	err = tx.QueryRow(opCtx, `
 insert into post_comments (
-  post_id, source, source_comment_id, source_parent_comment_id, author_name, published_at, text, reactions, media, updated_at
+  post_id, source, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text, reactions, media, updated_at
 ) values (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9, now()
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now()
 )
 on conflict (source, source_comment_id) do update set
   post_id = excluded.post_id,
   source_parent_comment_id = excluded.source_parent_comment_id,
+  parent_comment_id = coalesce(excluded.parent_comment_id, post_comments.parent_comment_id),
   author_name = excluded.author_name,
   published_at = excluded.published_at,
   text = excluded.text,
   reactions = excluded.reactions,
   media = excluded.media,
   updated_at = now()
-`, postID, "tg", strconv.FormatInt(msg.ID, 10), parentCommentID, nullIfEmpty(msg.FromName), msg.PublishedAt, text, reactions, nil)
-	return err
+returning id
+`, postID, "tg", strconv.FormatInt(msg.ID, 10), parentCommentID, parentRowID, nullIfEmpty(msg.FromName), msg.PublishedAt, text, reactions, media).Scan(&commentID)
+	if err != nil {
+		return err
+	}
+
+	if err := commentdb.SyncCommentReactions(opCtx, tx, commentID, msg.Reactions); err != nil {
+		return err
+	}
+
+	rawMedia, err := json.Marshal(msg.Media)
+	if err != nil {
+		return err
+	}
+	if err := mediadb.SyncCommentLinks(opCtx, tx, commentID, "tg", rawMedia); err != nil {
+		return err
+	}
+
+	return tx.Commit(opCtx)
 }
 
 func upsertRootPost(ctx context.Context, pool *pgxpool.Pool, msg htmlMessage) (created bool, postID int64, publishedAt time.Time, err error) {
@@ -403,4 +517,247 @@ func parseTGMessageID(sourcePostID string) (int64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func mergeJSONMessages(path string, msgs map[int64]htmlMessage, ids []int64) (map[int64]htmlMessage, []int64, error) {
+	if msgs == nil {
+		msgs = map[int64]htmlMessage{}
+	}
+	seen := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		seen[id] = struct{}{}
+	}
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var exp Export
+	if err := json.Unmarshal(b, &exp); err != nil {
+		return nil, nil, err
+	}
+
+	for _, msg := range exp.Messages {
+		if msg.Type != "message" {
+			continue
+		}
+
+		publishedAt, ok := toUTCTime(msg.DateUnixtime, msg.Date)
+		if !ok {
+			continue
+		}
+		_, reactions := buildReactions(msg.Reactions)
+		media := buildMedia(msg)
+
+		existing, found := msgs[msg.ID]
+		if !found {
+			msgs[msg.ID] = htmlMessage{
+				ID:          msg.ID,
+				ReplyToID:   msg.ReplyToID,
+				FromName:    strings.TrimSpace(msg.From),
+				Text:        strings.TrimSpace(buildText(msg.TextEntities, msg.Text)),
+				PublishedAt: publishedAt,
+				Reactions:   reactions,
+				Media:       media,
+			}
+			if _, ok := seen[msg.ID]; !ok {
+				ids = append(ids, msg.ID)
+				seen[msg.ID] = struct{}{}
+			}
+			continue
+		}
+
+		if existing.ReplyToID == 0 && msg.ReplyToID != 0 {
+			existing.ReplyToID = msg.ReplyToID
+		}
+		if strings.TrimSpace(existing.FromName) == "" && strings.TrimSpace(msg.From) != "" {
+			existing.FromName = strings.TrimSpace(msg.From)
+		}
+		if strings.TrimSpace(existing.Text) == "" {
+			if text := strings.TrimSpace(buildText(msg.TextEntities, msg.Text)); text != "" {
+				existing.Text = text
+			}
+		}
+		if existing.PublishedAt.IsZero() {
+			existing.PublishedAt = publishedAt
+		}
+		if len(reactions) > 0 {
+			existing.Reactions = reactions
+		}
+		if len(media) > 0 {
+			existing.Media = media
+		}
+		msgs[msg.ID] = existing
+	}
+
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	return msgs, ids, nil
+}
+
+func toUTCTime(unixStr, dateRaw string) (time.Time, bool) {
+	if sec, err := strconv.ParseInt(strings.TrimSpace(unixStr), 10, 64); err == nil {
+		return time.Unix(sec, 0).UTC(), true
+	}
+	if ts, err := time.Parse(time.RFC3339, strings.TrimSpace(dateRaw)); err == nil {
+		return ts.UTC(), true
+	}
+	return time.Time{}, false
+}
+
+func buildText(ents []TGEntity, raw any) string {
+	if len(ents) > 0 {
+		var b strings.Builder
+		for _, e := range ents {
+			b.WriteString(e.Text)
+		}
+		return b.String()
+	}
+
+	if s, ok := raw.(string); ok {
+		return s
+	}
+	arr, ok := raw.([]any)
+	if !ok {
+		return ""
+	}
+	var b strings.Builder
+	for _, seg := range arr {
+		if s, ok := seg.(string); ok {
+			b.WriteString(s)
+			continue
+		}
+		if m, ok := seg.(map[string]any); ok {
+			if txt, ok := m["text"].(string); ok {
+				b.WriteString(txt)
+			}
+		}
+	}
+	return b.String()
+}
+
+func buildReactions(rs []TGReaction) (*int, map[string]int) {
+	sum := 0
+	out := make(map[string]int)
+	for _, r := range rs {
+		sum += r.Count
+
+		var key string
+		switch r.Type {
+		case "emoji":
+			key = "emoji:" + r.Emoji
+		case "custom_emoji":
+			key = "custom:" + r.DocumentID
+		default:
+			key = "unknown:"
+		}
+		out[key] += r.Count
+	}
+	return &sum, out
+}
+
+func buildMedia(m TGMessage) []MediaItem {
+	media := make([]MediaItem, 0, 4)
+	pos := 1
+
+	if m.Photo != "" {
+		media = append(media, MediaItem{
+			Kind:       "photo",
+			URL:        m.Photo,
+			PreviewURL: nil,
+			Width:      m.Width,
+			Height:     m.Height,
+			Position:   pos,
+			Extra: map[string]any{
+				"file_size": m.PhotoFileSize,
+			},
+		})
+		pos++
+	}
+
+	if m.MediaType != "" || m.File != "" {
+		kind := "file"
+		switch m.MediaType {
+		case "video_message", "video_file":
+			kind = "video"
+		case "animation", "sticker":
+			kind = "gif"
+		case "audio_file", "voice_message":
+			kind = "file"
+		}
+
+		url := m.File
+		missing := false
+		if url == "" || strings.HasPrefix(url, "(") {
+			missing = true
+			switch {
+			case strings.TrimSpace(m.FileName) != "":
+				url = "missing://" + m.FileName
+			case strings.TrimSpace(m.MediaType) != "":
+				url = "missing://" + m.MediaType
+			default:
+				url = "missing://unknown"
+			}
+		}
+
+		var preview *string
+		if m.Thumbnail != "" && !strings.HasPrefix(m.Thumbnail, "(") {
+			preview = &m.Thumbnail
+		}
+
+		media = append(media, MediaItem{
+			Kind:       kind,
+			URL:        url,
+			PreviewURL: preview,
+			Width:      m.Width,
+			Height:     m.Height,
+			Position:   pos,
+			Extra: map[string]any{
+				"media_type":    m.MediaType,
+				"mime_type":     m.MimeType,
+				"duration_sec":  m.DurationSec,
+				"file_size":     m.FileSize,
+				"file_name":     m.FileName,
+				"missing":       missing,
+				"sticker_emoji": m.StickerEmoji,
+			},
+		})
+		pos++
+	}
+
+	seenLinks := map[string]bool{}
+	for _, entity := range m.TextEntities {
+		var href string
+		switch entity.Type {
+		case "link":
+			href = entity.Text
+		case "text_link":
+			if entity.Href != "" {
+				href = entity.Href
+			} else {
+				href = entity.Text
+			}
+		default:
+			continue
+		}
+		href = strings.TrimSpace(href)
+		if href == "" || seenLinks[href] {
+			continue
+		}
+		seenLinks[href] = true
+		media = append(media, MediaItem{
+			Kind:       "link",
+			URL:        href,
+			PreviewURL: nil,
+			Position:   pos,
+		})
+		pos++
+	}
+
+	return media
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	mediadb "github.com/goritskimihail/mudro/internal/media"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -410,7 +411,10 @@ func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 		views = *p.ViewsNullable
 	}
 
-	var mediaJSON any
+	var (
+		mediaJSON    any
+		rawMediaJSON json.RawMessage
+	)
 	if len(p.Media) == 0 {
 		mediaJSON = nil
 	} else {
@@ -419,6 +423,7 @@ func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 			return fmt.Errorf("marshal media: %w", err)
 		}
 		mediaJSON = b
+		rawMediaJSON = json.RawMessage(b)
 	}
 
 	_, err := r.pool.Exec(txCtx, `
@@ -443,8 +448,16 @@ on conflict (source, source_post_id) do update set
 		p.Source, p.SourcePostID,
 		p.PublishedAt, nullIfEmpty(p.Text), mediaJSON, p.Likes, views, p.CommentsCount,
 	)
+	if err != nil {
+		return err
+	}
 
-	return err
+	var postID int64
+	if err := r.pool.QueryRow(txCtx, `select id from posts where source = $1 and source_post_id = $2`, p.Source, p.SourcePostID).Scan(&postID); err != nil {
+		return err
+	}
+
+	return mediadb.SyncPostLinks(txCtx, r.pool, postID, p.Source, rawMediaJSON)
 }
 
 func nullIfEmpty(s string) any {

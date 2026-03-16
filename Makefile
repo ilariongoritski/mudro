@@ -5,6 +5,9 @@ AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002_agent_queue.sql
 COMMENTS_MIGRATION ?= $(MIGRATIONS_DIR)/003_post_comments.sql
 AGENT_REVIEW_MIGRATION ?= $(MIGRATIONS_DIR)/004_agent_review_gate.sql
 AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_task_events.sql
+MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
+MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
+COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -79,6 +82,22 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_MIGRATION)"
 endif
 
+migrate-media:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(MEDIA_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+	cat "$(MEDIA_FIX_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MEDIA_MIGRATION)"
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MEDIA_FIX_MIGRATION)"
+endif
+
+migrate-comment-model:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(COMMENT_MODEL_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(COMMENT_MODEL_MIGRATION)"
+endif
+
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
 
@@ -87,6 +106,12 @@ test:
 
 selftest:
 	$(GO) test ./cmd/vkimport ./cmd/tgimport
+
+media-backfill:
+	$(GO) run ./cmd/mediabackfill
+
+comment-backfill:
+	$(GO) run ./cmd/commentbackfill
 
 count-posts:
 	$(PSQL_CMD) -X -c "select count(*) from posts;"

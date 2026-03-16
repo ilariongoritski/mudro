@@ -25,7 +25,8 @@ func TestRebuildMemoryJSONAndTimeSummary(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, ".codex", "time_runtime.json"), []byte(`{
   "version": 1,
   "totals": {"responses": 2, "total_ms": 1200, "process_ms": 1000, "send_ms": 100, "unknown_ms": 100, "max_total_ms": 700, "last_total_ms": 500},
-  "by_command": {"health": {"responses": 2, "total_ms": 1200, "process_ms": 1000, "send_ms": 100, "unknown_ms": 100, "max_total_ms": 700, "last_total_ms": 500}}
+  "by_command": {"health": {"responses": 2, "total_ms": 1200, "process_ms": 1000, "send_ms": 100, "unknown_ms": 100, "max_total_ms": 700, "last_total_ms": 500}},
+  "desktop_dialog_backfill": {"turns": 3, "total_ms": 10000}
 }`), 0o644); err != nil {
 		t.Fatalf("write runtime: %v", err)
 	}
@@ -43,7 +44,10 @@ func TestRebuildMemoryJSONAndTimeSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TimeSummary: %v", err)
 	}
-	if !strings.Contains(string(out), "Время работы:") {
+	if !strings.Contains(string(out), "Р’СЂРµРјСЏ СЂР°Р±РѕС‚С‹:") {
 		t.Fatalf("unexpected summary: %q", string(out))
+	}
+	if !strings.Contains(string(out), "Общий runtime (бот + backfill из чата/кловбота):") {
+		t.Fatalf("expected combined runtime block: %q", string(out))
 	}
 }

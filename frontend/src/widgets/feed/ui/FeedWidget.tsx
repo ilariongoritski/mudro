@@ -3,8 +3,8 @@ import { useMemo, useState } from 'react'
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
 import { PostCard } from '@/entities/post/ui/post-card/PostCard'
+import { PostDetailDrawer } from '@/entities/post/ui/post-detail-drawer/PostDetailDrawer'
 import { FeedControls } from '@/features/feed-controls/ui/FeedControls'
-import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import './FeedWidget.css'
 
@@ -14,10 +14,36 @@ interface FeedWidgetInnerProps {
   limit: number
 }
 
+const initialSkeletonIds = ['a', 'b', 'c', 'd', 'e', 'f']
+
+const FeedLoadingSkeleton = () => {
+  return (
+    <div className="feed-widget__grid feed-widget__grid_loading" aria-hidden="true">
+      {initialSkeletonIds.map((id) => (
+        <article key={id} className="feed-widget__skeleton-card">
+          <div className="feed-widget__skeleton-chip" />
+          <div className="feed-widget__skeleton-lines">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="feed-widget__skeleton-media" />
+          <div className="feed-widget__skeleton-stats">
+            <span />
+            <span />
+            <span />
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
 const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
   const [loadedItems, setLoadedItems] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<FeedCursor | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
 
   const {
     data: frontData,
@@ -43,6 +69,8 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
 
   const effectiveCursor = nextCursor ?? frontData?.feed.next_cursor ?? null
   const hasMore = Boolean(effectiveCursor)
+  const isInitialLoading = isFrontFetching && items.length === 0
+  const showEmpty = !isInitialLoading && !isFrontError && items.length === 0
 
   const handleLoadMore = async () => {
     if (!effectiveCursor) return
@@ -59,63 +87,84 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
       setLoadedItems((current) => [...current, ...response.items])
       setNextCursor(response.next_cursor ?? null)
     } catch {
-      setLoadError('Could not load next page. Retry after API check.')
+      setLoadError('Не удалось подгрузить следующую страницу. Проверь API и повтори запрос.')
     }
   }
 
   return (
     <section className="feed-widget">
-      <div className="feed-widget__meta mudro-fade-up">
-        <div>
-          <div className="feed-widget__meta-label">Total posts</div>
-          <div className="feed-widget__meta-value">{frontData?.meta.total_posts ?? '0'}</div>
-        </div>
-        <div>
-          <div className="feed-widget__meta-label">VK</div>
-          <div className="feed-widget__meta-value">{sourceTotals.vk}</div>
-        </div>
-        <div>
-          <div className="feed-widget__meta-label">Telegram</div>
-          <div className="feed-widget__meta-value">{sourceTotals.tg}</div>
-        </div>
-        <div>
-          <div className="feed-widget__meta-label">Last sync</div>
-          <div className="feed-widget__meta-value feed-widget__meta-value_small">
-            {formatDateTime(frontData?.meta.last_sync_at)}
+      <FeedControls
+        totalPosts={frontData?.meta.total_posts ?? 0}
+        vkPosts={sourceTotals.vk}
+        tgPosts={sourceTotals.tg}
+        lastSyncAt={frontData?.meta.last_sync_at}
+      />
+
+      {isInitialLoading ? (
+        <section className="feed-widget__state-surface feed-widget__state-surface_loading">
+          <div className="feed-widget__state-copy">
+            <span className="feed-widget__state-eyebrow">Loading surface</span>
+            <h3>Лента поднимается из API и собирает mixed stream</h3>
+            <p>
+              Пока toolbar уже на месте, карточки готовятся из реальных данных. Это не статический
+              фейк-экран, а ожидание живой выборки.
+            </p>
           </div>
-        </div>
-      </div>
-
-      <FeedControls />
-
-      {isFrontFetching && items.length === 0 ? <p className="feed-widget__status">Loading feed...</p> : null}
+          <FeedLoadingSkeleton />
+        </section>
+      ) : null}
 
       {isFrontError ? (
         <div className="feed-widget__error">
-          <p>Failed to load `/api/front`.</p>
+          <div className="feed-widget__state-copy">
+            <span className="feed-widget__state-eyebrow">Feed error</span>
+            <h3>Не удалось загрузить `/api/front`</h3>
+            <p>
+              Это уже не визуальный баг страницы, а проблема слоя данных. Повтори запрос или
+              проверь backend-контур.
+            </p>
+          </div>
           <button type="button" onClick={() => refetch()}>
-            Retry
+            Повторить
           </button>
         </div>
       ) : null}
 
-      {!isFrontFetching && !isFrontError && items.length === 0 ? (
-        <p className="feed-widget__status">No data in posts yet.</p>
+      {showEmpty ? (
+        <section className="feed-widget__empty">
+          <div className="feed-widget__empty-copy">
+            <span className="feed-widget__state-eyebrow">Empty feed</span>
+            <h3>Постов под текущие фильтры пока нет</h3>
+            <p>
+              Это нормальный сценарий для пустой базы, жесткого source-фильтра или еще не
+              синхронизированного архива.
+            </p>
+          </div>
+          <div className="feed-widget__empty-actions">
+            <button type="button" onClick={() => refetch()}>
+              Обновить ленту
+            </button>
+          </div>
+        </section>
       ) : null}
 
-      <div className="feed-widget__grid">
-        {items.map((post) => (
-          <PostCard key={`${post.source}-${post.id}-${post.source_post_id}`} post={post} />
-        ))}
-      </div>
+      {!isInitialLoading && !showEmpty ? (
+        <div className="feed-widget__grid">
+          {items.map((post) => (
+            <PostCard key={`${post.source}-${post.id}-${post.source_post_id}`} post={post} onOpen={setSelectedPost} />
+          ))}
+        </div>
+      ) : null}
 
       {loadError ? <p className="feed-widget__error-text">{loadError}</p> : null}
 
       {hasMore ? (
         <button type="button" className="feed-widget__load-more" disabled={isLoadingMore} onClick={handleLoadMore}>
-          {isLoadingMore ? 'Loading...' : 'Load more'}
+          {isLoadingMore ? 'Загружаю...' : 'Показать еще'}
         </button>
       ) : null}
+
+      <PostDetailDrawer post={selectedPost} onClose={() => setSelectedPost(null)} />
     </section>
   )
 }

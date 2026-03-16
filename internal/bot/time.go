@@ -51,32 +51,50 @@ func (r *Runner) TimeSummary() ([]byte, error) {
 	todayStat := mem.Days[today]
 
 	var out strings.Builder
-	out.WriteString("Время работы:\n")
-	out.WriteString(fmt.Sprintf("- Сегодня: %s (%d мин, %d сек), прогонов: %d\n",
+	out.WriteString("Р’СЂРµРјСЏ СЂР°Р±РѕС‚С‹:\n")
+	out.WriteString(fmt.Sprintf("- РЎРµРіРѕРґРЅСЏ: %s (%d РјРёРЅ, %d СЃРµРє), РїСЂРѕРіРѕРЅРѕРІ: %d\n",
 		fmtDuration(todayStat.TotalSeconds), todayStat.TotalSeconds/60, todayStat.TotalSeconds, todayStat.Runs))
-	out.WriteString(fmt.Sprintf("- Всего: %s (%d мин, %d сек), прогонов: %d\n",
+	out.WriteString(fmt.Sprintf("- Р’СЃРµРіРѕ: %s (%d РјРёРЅ, %d СЃРµРє), РїСЂРѕРіРѕРЅРѕРІ: %d\n",
 		fmtDuration(mem.Totals.TotalSeconds), mem.Totals.TotalSeconds/60, mem.Totals.TotalSeconds, mem.Totals.Runs))
 
-	if rt, err := readRuntimeTime(filepath.Join(r.RepoRoot, ".codex", "time_runtime.json")); err == nil && rt != nil && rt.Totals.Responses > 0 {
+	runtimePath := filepath.Join(r.RepoRoot, ".codex", "time_runtime.json")
+	if rt, err := readRuntimeTime(runtimePath); err == nil && rt != nil && rt.Totals.Responses > 0 {
 		avgMS := rt.Totals.TotalMS / int64(rt.Totals.Responses)
 		thinkSec := rt.Totals.ProcessMS / 1000
 		evapProcessMl := estimateEvaporationML(thinkSec)
 		evapTotalMl := estimateEvaporationML(rt.Totals.TotalMS / 1000)
-		out.WriteString("- Учет runtime ответов бота (факт):\n")
-		out.WriteString(fmt.Sprintf("  - total: %s (%d мс), ответов: %d, среднее: %d мс, max: %d мс\n",
+		out.WriteString("- РЈС‡РµС‚ runtime РѕС‚РІРµС‚РѕРІ Р±РѕС‚Р° (С„Р°РєС‚):\n")
+		out.WriteString(fmt.Sprintf("  - total: %s (%d РјСЃ), РѕС‚РІРµС‚РѕРІ: %d, СЃСЂРµРґРЅРµРµ: %d РјСЃ, max: %d РјСЃ\n",
 			fmtDuration(rt.Totals.TotalMS/1000), rt.Totals.TotalMS, rt.Totals.Responses, avgMS, rt.Totals.MaxTotalMS))
-		out.WriteString(fmt.Sprintf("  - process: %s (%d мс)\n", fmtDuration(rt.Totals.ProcessMS/1000), rt.Totals.ProcessMS))
-		out.WriteString(fmt.Sprintf("  - send: %s (%d мс)\n", fmtDuration(rt.Totals.SendMS/1000), rt.Totals.SendMS))
-		out.WriteString(fmt.Sprintf("  - unknown: %s (%d мс)\n", fmtDuration(rt.Totals.UnknownMS/1000), rt.Totals.UnknownMS))
-		out.WriteString(fmt.Sprintf("- Потрачено на обдумывание/обработку (process): %s.\n", formatHoursMinutes(thinkSec)))
-		out.WriteString(fmt.Sprintf("- Вода (оценка): process=%d мл, total=%d мл.\n", evapProcessMl, evapTotalMl))
-		out.WriteString("- Модель воды: 50 мл/час, расчет оценочный.\n")
-		out.WriteString("- Детализация по командам (top 5 по total):\n")
+		out.WriteString(fmt.Sprintf("  - process: %s (%d РјСЃ)\n", fmtDuration(rt.Totals.ProcessMS/1000), rt.Totals.ProcessMS))
+		out.WriteString(fmt.Sprintf("  - send: %s (%d РјСЃ)\n", fmtDuration(rt.Totals.SendMS/1000), rt.Totals.SendMS))
+		out.WriteString(fmt.Sprintf("  - unknown: %s (%d РјСЃ)\n", fmtDuration(rt.Totals.UnknownMS/1000), rt.Totals.UnknownMS))
+		out.WriteString(fmt.Sprintf("- РџРѕС‚СЂР°С‡РµРЅРѕ РЅР° РѕР±РґСѓРјС‹РІР°РЅРёРµ/РѕР±СЂР°Р±РѕС‚РєСѓ (process): %s.\n", formatHoursMinutes(thinkSec)))
+		out.WriteString(fmt.Sprintf("- Р’РѕРґР° (РѕС†РµРЅРєР°): process=%d РјР», total=%d РјР».\n", evapProcessMl, evapTotalMl))
+		out.WriteString("- РњРѕРґРµР»СЊ РІРѕРґС‹: 50 РјР»/С‡Р°СЃ, СЂР°СЃС‡РµС‚ РѕС†РµРЅРѕС‡РЅС‹Р№.\n")
+		out.WriteString("- Р”РµС‚Р°Р»РёР·Р°С†РёСЏ РїРѕ РєРѕРјР°РЅРґР°Рј (top 5 РїРѕ total):\n")
 		for _, line := range topRuntimeCommands(rt, 5) {
 			out.WriteString("  - " + line + "\n")
 		}
+		llmTotalMS, llmProcessMS, llmResponses := llmRuntimeTotals(rt)
+		if llmResponses > 0 {
+			llmAvgMS := llmTotalMS / int64(llmResponses)
+			out.WriteString("- LLM runtime (С‚РѕР»СЊРєРѕ РѕС‚РІРµС‚С‹ РјРѕРґРµР»Рё /mudro + chat-mode):\n")
+			out.WriteString(fmt.Sprintf("  - total: %s (%d РјСЃ), РѕС‚РІРµС‚РѕРІ: %d, СЃСЂРµРґРЅРµРµ: %d РјСЃ\n",
+				fmtDuration(llmTotalMS/1000), llmTotalMS, llmResponses, llmAvgMS))
+			out.WriteString(fmt.Sprintf("  - process: %s (%d РјСЃ)\n", fmtDuration(llmProcessMS/1000), llmProcessMS))
+		}
 	}
-	out.WriteString("- Память JSON: .codex/memory.json, .codex/time_runtime.json")
+	if agg, err := buildRuntimeAggregate(runtimePath); err == nil && agg.HasExternal {
+		out.WriteString("- Общий runtime (бот + backfill из чата/кловбота):\n")
+		out.WriteString(fmt.Sprintf("  - total: %s (%d мс), ответов/итераций: %d\n",
+			fmtDuration(agg.TotalMS/1000), agg.TotalMS, agg.Responses))
+		for _, src := range agg.External {
+			out.WriteString(fmt.Sprintf("  - source %s: %s (%d мс), count=%d\n",
+				src.Name, fmtDuration(src.TotalMS/1000), src.TotalMS, src.Responses))
+		}
+	}
+	out.WriteString("- РџР°РјСЏС‚СЊ JSON: .codex/memory.json, .codex/time_runtime.json")
 	return []byte(out.String()), nil
 }
 
@@ -105,6 +123,61 @@ func topRuntimeCommands(rt *runtimeTimeMemory, n int) []string {
 			items[i].cmd, st.TotalMS, st.ProcessMS, st.SendMS, st.Responses))
 	}
 	return out
+}
+
+type runtimeExternalSource struct {
+	Name      string
+	TotalMS   int64
+	Responses int
+}
+
+type runtimeAggregate struct {
+	TotalMS     int64
+	Responses   int
+	External    []runtimeExternalSource
+	HasExternal bool
+}
+
+func buildRuntimeAggregate(path string) (*runtimeAggregate, error) {
+	rt, extras, err := readRuntimeTimeWithExtras(path)
+	if err != nil || rt == nil {
+		return nil, err
+	}
+	agg := &runtimeAggregate{
+		TotalMS:   rt.Totals.TotalMS,
+		Responses: rt.Totals.Responses,
+	}
+
+	for name, raw := range extras {
+		meta := struct {
+			TotalMS   *int64 `json:"total_ms"`
+			Responses *int   `json:"responses"`
+			Turns     *int   `json:"turns"`
+		}{}
+		if err := json.Unmarshal(raw, &meta); err != nil || meta.TotalMS == nil || *meta.TotalMS <= 0 {
+			continue
+		}
+
+		count := 0
+		switch {
+		case meta.Responses != nil:
+			count = *meta.Responses
+		case meta.Turns != nil:
+			count = *meta.Turns
+		}
+
+		agg.External = append(agg.External, runtimeExternalSource{
+			Name:      name,
+			TotalMS:   *meta.TotalMS,
+			Responses: count,
+		})
+		agg.TotalMS += *meta.TotalMS
+		agg.Responses += count
+	}
+
+	sort.Slice(agg.External, func(i, j int) bool { return agg.External[i].TotalMS > agg.External[j].TotalMS })
+	agg.HasExternal = len(agg.External) > 0
+	return agg, nil
 }
 
 func (r *Runner) rebuildMemoryJSON() (*memoryJSON, error) {
@@ -199,7 +272,7 @@ func formatHoursMinutes(sec int64) string {
 	}
 	h := sec / 3600
 	m := (sec % 3600) / 60
-	return fmt.Sprintf("%d часов %d минут", h, m)
+	return fmt.Sprintf("%d С‡Р°СЃРѕРІ %d РјРёРЅСѓС‚", h, m)
 }
 
 func estimateEvaporationML(sec int64) int64 {
@@ -210,4 +283,15 @@ func estimateEvaporationML(sec int64) int64 {
 		return 0
 	}
 	return int64(math.Round(ml))
+}
+
+func llmRuntimeTotals(rt *runtimeTimeMemory) (totalMS int64, processMS int64, responses int) {
+	for cmd, st := range rt.ByCommand {
+		if cmd == "mudro" || cmd == "mudro_chat" {
+			totalMS += st.TotalMS
+			processMS += st.ProcessMS
+			responses += st.Responses
+		}
+	}
+	return totalMS, processMS, responses
 }

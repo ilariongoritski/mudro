@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	mediadb "github.com/goritskimihail/mudro/internal/media"
+	"github.com/goritskimihail/mudro/internal/tgexport"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -29,6 +31,9 @@ type TGMessage struct {
 	Type         string       `json:"type"` // "message" | "service"
 	Date         string       `json:"date"`
 	DateUnixtime string       `json:"date_unixtime"`
+	From         string       `json:"from"`
+	FromID       string       `json:"from_id"`
+	ReplyToID    int64        `json:"reply_to_message_id"`
 	Text         any          `json:"text"` // string | []any
 	TextEntities []TGEntity   `json:"text_entities"`
 	Reactions    []TGReaction `json:"reactions"`
@@ -126,8 +131,13 @@ func main() {
 	out := make([]FeedItem, 0, len(exp.Messages))
 
 	for _, m := range exp.Messages {
-		// 1) service не нужны
-		if m.Type != "message" {
+		if !tgexport.IsVisiblePost(tgexport.Message{
+			ID:               m.ID,
+			Type:             m.Type,
+			From:             m.From,
+			FromID:           m.FromID,
+			ReplyToMessageID: m.ReplyToID,
+		}) {
 			continue
 		}
 
@@ -218,7 +228,13 @@ func upsertToDB(dsn string, items []FeedItem) error {
 			return fmt.Errorf("parse published_at for %s: %w", item.ID, err)
 		}
 
-		_, err = pool.Exec(ctx, `
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("begin tx for %s: %w", item.ID, err)
+		}
+
+		var postID int64
+		if err := tx.QueryRow(ctx, `
 insert into posts (
   source, source_post_id,
   published_at, text, media,
@@ -238,6 +254,7 @@ on conflict (source, source_post_id) do update set
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
   updated_at = now()
+returning id
 `,
 			item.Source,
 			item.SourcePostID,
@@ -247,24 +264,40 @@ on conflict (source, source_post_id) do update set
 			ptrIntToValue(item.Stats.Likes),
 			ptrIntToValue(item.Stats.Views),
 			ptrIntToValue(item.Stats.Comments),
-		)
-		if err != nil {
+		).Scan(&postID); err != nil {
+			tx.Rollback(ctx)
 			return fmt.Errorf("upsert %s: %w", item.ID, err)
 		}
 
-		if _, err := pool.Exec(ctx, `delete from post_reactions where post_id = (select id from posts where source = $1 and source_post_id = $2)`, item.Source, item.SourcePostID); err != nil {
+		if _, err := tx.Exec(ctx, `delete from post_reactions where post_id = $1`, postID); err != nil {
+			tx.Rollback(ctx)
 			return fmt.Errorf("delete reactions %s: %w", item.ID, err)
 		}
 
 		for emoji, count := range item.Stats.Reactions {
-			_, err = pool.Exec(ctx, `
+			_, err = tx.Exec(ctx, `
 insert into post_reactions (post_id, emoji, count)
-values ((select id from posts where source = $1 and source_post_id = $2), $3, $4)
+values ($1, $2, $3)
 on conflict (post_id, emoji) do update set count = excluded.count
-`, item.Source, item.SourcePostID, emoji, count)
+`, postID, emoji, count)
 			if err != nil {
+				tx.Rollback(ctx)
 				return fmt.Errorf("upsert reaction %s/%s: %w", item.ID, emoji, err)
 			}
+		}
+
+		rawMedia, err := json.Marshal(item.Media)
+		if err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("marshal media %s: %w", item.ID, err)
+		}
+		if err := mediadb.SyncPostLinks(ctx, tx, postID, item.Source, rawMedia); err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("sync media %s: %w", item.ID, err)
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit %s: %w", item.ID, err)
 		}
 	}
 

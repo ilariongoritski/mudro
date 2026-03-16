@@ -1,5 +1,6 @@
 import type { FeedSort, FeedSource } from '@/entities/post/model/types'
 import { setLimit, setSort, setSource } from '@/features/feed-controls/model/feedFiltersSlice'
+import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import './FeedControls.css'
 
@@ -16,12 +17,76 @@ const sortOptions: Array<{ value: FeedSort; label: string }> = [
 
 const limits = [12, 24, 48]
 
-export const FeedControls = () => {
+interface FeedControlsProps {
+  totalPosts?: number
+  vkPosts?: number
+  tgPosts?: number
+  lastSyncAt?: string
+}
+
+const sourceStateLabel: Record<FeedSource, string> = {
+  all: 'Все источники',
+  vk: 'Только VK',
+  tg: 'Только Telegram',
+}
+
+const sortStateLabel: Record<FeedSort, string> = {
+  desc: 'Сначала новые',
+  asc: 'Сначала старые',
+}
+
+export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyncAt }: FeedControlsProps) => {
   const dispatch = useAppDispatch()
   const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
 
   return (
     <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
+      <div className="feed-toolbar">
+        <div className="feed-toolbar__intro">
+          <span className="feed-toolbar__eyebrow">Live feed toolbar</span>
+          <strong className="feed-toolbar__title">Лента источников и быстрые фильтры</strong>
+          <p className="feed-toolbar__lead">
+            Визуальный toolbar собран поверх реальных метрик и текущего состояния ленты без декоративных заглушек.
+          </p>
+        </div>
+
+        <div className="feed-toolbar__stats" aria-label="Сводка ленты">
+          <div className="feed-toolbar__stat">
+            <span>Всего постов</span>
+            <strong>{totalPosts}</strong>
+          </div>
+          <div className="feed-toolbar__stat">
+            <span>VK</span>
+            <strong>{vkPosts}</strong>
+          </div>
+          <div className="feed-toolbar__stat">
+            <span>Telegram</span>
+            <strong>{tgPosts}</strong>
+          </div>
+          <div className="feed-toolbar__stat">
+            <span>Последний sync</span>
+            <strong>{formatDateTime(lastSyncAt)}</strong>
+          </div>
+        </div>
+
+        <div className="feed-toolbar__status">
+          <span className="feed-toolbar__signal">Источник: {sourceStateLabel[source]}</span>
+          <span className="feed-toolbar__signal">Порядок: {sortStateLabel[sort]}</span>
+          <span className="feed-toolbar__signal">На экран: {limit}</span>
+          <button
+            type="button"
+            className="feed-toolbar__reset"
+            onClick={() => {
+              dispatch(setSource('all'))
+              dispatch(setSort('desc'))
+              dispatch(setLimit(12))
+            }}
+          >
+            Сбросить фильтры
+          </button>
+        </div>
+      </div>
+
       <div className="feed-controls__group">
         <span className="feed-controls__label">Источник</span>
         <div className="feed-controls__row">

@@ -667,3 +667,176 @@
 - Что упало (ошибка 5–15 строк): Gateway not detected, curl 127.0.0.1:18789 -> connection refused; контейнер openclaw-app стабилен только в режиме sleep infinity.
 - Что починил (если было): восстановлен стабильный режим контейнера openclaw без рестарт-лупа; подтвержден доступ к VPS по SSH-ключу codex_mudro_vps2.
 - Следующий шаг: поднять OpenClaw gateway как постоянный процесс и проверить Telegram bot end-to-end.
+
+- Дата/время: 2026-03-08 03:18 MSK
+- Что запускал: SSH-диагностика OpenClaw/VPN на VPS, анализ `docker compose logs`, проверка gateway и конфига.
+- Что прошло: контейнеры `mullvad/openclaw` активны; VPN egress у openclaw в US; `openclaw-gateway` слушает `127.0.0.1:18789`; web UI открывается.
+- Что упало (ошибка 5–15 строк): в истории зафиксированы 3 upstream `Codex server_error` подряд (request IDs в run-log), локальных падений Docker/VPN в этот момент нет.
+- Что починил (если было): снизил конкуренцию (`maxConcurrent=1`), увеличил timeout до 3600, отключил telegram streaming (`off`), перезапустил openclaw.
+- Следующий шаг: Telegram smoke-test после правки; при повторении внешних ошибок — включить управляемый retry/backoff.
+
+- Дата/время: 2026-03-08 20:26 MSK
+- Что запускал: ротация VPN на сервере под `us-lax-wg-001 (5).conf` и перезапуск `mullvad/tester/openclaw`.
+- Что прошло: WireGuard применен, `mullvad` healthy, egress IP: `23.234.72.103` (US/Los Angeles).
+- Что упало (ошибка 5–15 строк): нет критичных ошибок VPN; был transient WARN от iptables во время старта, после чего health стал green.
+- Что починил (если было): обновлены WG-параметры в compose и выполнен force-recreate сервисов.
+- Следующий шаг: (опционально) отдельной задачей добить стабильный старт gateway на 18789.
+- Дата/время: 2026-03-08 21:51 MSK
+- Что запускал: SSH-аудит /root/vpn-test, проверку VPN egress, фиксы команды запуска OpenClaw gateway, recreate openclaw.
+- Что прошло: Mullvad healthy; egress openclaw в US; gateway поднялся (127.0.0.1:18789 и 127.0.0.1:18791); Telegram provider стартует и отправляет ответы (sendMessage ok).
+- Что упало (ошибка 5–15 строк): не падение, а долгий cold-start openclaw-gateway (CPU ~70% и порт не сразу доступен).
+- Что починил (если было): заменил команду на openclaw gateway run --port 18789 --verbose, убрал «слепой» редирект в файл, добавил очистку временных lock-файлов перед стартом.
+- Следующий шаг: мониторить 24ч на повторы server_error upstream и при необходимости добавить retry/backoff policy в OpenClaw.
+- Дата/время: 2026-03-08 22:47 MSK
+- Что запускал: настройку файловой памяти OpenClaw через BOOTSTRAP.md в workspace /root/projects/mudro + рестарт openclaw.
+- Что прошло: bootstrap заменен на рабочую инструкцию preflight чтения .codex/* и AGENTS.md; gateway после рестарта слушает 18789/18791.
+- Что упало (ошибка 5–15 строк): критичных ошибок нет.
+- Что починил (если было): убран шаблонный hello-world bootstrap, который не соответствовал рабочему режиму проекта.
+- Следующий шаг: выполнить Telegram smoke-test (1-2 сообщения) и подтвердить контекстный ответ по новой файловой памяти.
+- Дата/время: 2026-03-08 23:20 MSK
+- Что запускал: установку Ollama в /root/vpn-test и подключение локальной модели qwen2.5-coder:3b к OpenClaw.
+- Что прошло: сервис ollama-app поднят; модель загружена (1.9GB); OLLAMA_BASE_URL подключен; fallback ollama/qwen2.5-coder:3b записан в openclaw.json.
+- Что упало (ошибка 5–15 строк): критичных падений нет; загрузка модели заняла длительное время.
+- Что починил (если было): не требовалось.
+- Следующий шаг: при желании сделать отдельного локального агента (primary=ollama) для принудительного режима «дешевые мелкие задачи».
+
+- Дата/время: 2026-03-09 00:32:06 +03:00
+- Что запускал: проверка/ремонт нового VPN-сервера 89.125.3.74 и перепривязка /root/vpn-test на 91.218.113.247 к custom WireGuard.
+- Что прошло: wg0 на новом VPS active (UDP 51820 слушает); на основном сервере docker-stack поднят; egress внутри tester/openclaw = 89.125.3.74; OpenClaw видит Ollama tags (qwen2.5-coder:3b).
+- Что упало (ошибка 5–15 строк): изначально wg0.conf был битый (PrivateKey/PublicKey пустые), gluetun restart-loop по healthcheck.
+- Что починил (если было): переписан wg0.conf корректным файлом, включен IP forward/NAT на новом VPS, обновлен docker-compose.yml в /root/vpn-test под custom WG endpoint 89.125.3.74:51820.
+- Следующий шаг: при необходимости сменить геолокацию VPN (сейчас FI), затем сделать smoke Telegram-бота и проверить ответы OpenClaw в чате.
+
+
+- Дата/время: 2026-03-09 01:06:35 +03:00
+- Что запускал: возврат OpenClaw из sandbox-runtime в рабочий контейнерный режим с доступом к проекту и памяти.
+- Что прошло: openclaw-app/mullvad/ollama up; workspace=/home/node/work/mudro11; .codex внутри контейнера виден; memory status --deep: Embeddings ready (local).
+- Что упало (ошибка 5–15 строк): конфиг был invalid из-за agents.defaults.sandbox.mode=none (допустимо только off/non-main/all).
+- Что починил (если было): исправил sandbox.mode=off, добавил workspace/model для агента main, перезапустил openclaw-app, удалил старый sbx-контейнер.
+- Следующий шаг: Telegram smoke-test и проверка, что ответы идут уже из project container, а не из пустого sandbox.
+
+- Дата/время: 2026-03-09 20:39 +03:00
+- Что запускал: подготовка параллельных фоновых задач OpenClaw (cron), фиксация runtime без sandbox-перескоков.
+- Что прошло: повышена параллельность agents.defaults.maxConcurrent=3, subagents.maxConcurrent=4; создано и включено 4 cron-job; проверен ручной run job bg-runtime-health-main (успешно, логи в .codex/state.md и .codex/logs/<run>/index.md); контейнеры openclaw-sbx не создаются.
+- Что упало (ошибка 5–15 строк): openclaw cron list без флага --all показывал пусто; openclaw cron enable/rm периодически таймаутятся на CLI, но операции применяются на gateway.
+- Что починил (если было): работа с cron переведена на явный gateway endpoint (--url ws://127.0.0.1:18789 --token ...), добавлен --all для корректного листинга.
+- Следующий шаг: ты даешь конкретные product-задачи/приоритеты, я обновляю payload cron под твой roadmap (web/app/backend).
+
+- Дата/время: 2026-03-09 22:35:15 +03:00
+- Что запускал: фиксация учета runtime для всех LLM-ответов (включая chat-mode) + деплой на VPS.
+- Что прошло: chat-mode ответы теперь пишутся в .codex/time_runtime.json как /mudro_chat; /time показывает отдельный блок LLM runtime; mudro-bot.service перезапущен и авторизован на сервере.
+- Что упало (ошибка 5–15 строк): полный go test ./internal/bot содержит старые падения в time-тестах (несовпадение ожидаемых строк/кодировок), не блокирует текущий фикс.
+- Что починил (если было): добавил sendPlainWithCommand + общий inalizeResponseMetrics, добавил llmRuntimeTotals и тест TestLLMRuntimeTotals.
+- Следующий шаг: проверить в Telegram сценарий /chat on + обычный текст + /time, затем при необходимости обновить устаревшие time-тесты под текущий формат вывода.
+
+- Дата/время: 2026-03-09 23:12:48 +03:00
+- Что запускал: правка runtime-учета времени в internal/bot + тесты internal/bot через Docker.
+- Что прошло: go test ./internal/bot (через golang:1.23-bookworm) — успешно.
+- Что упало (ошибка 5–15 строк): локально go/gofmt отсутствуют в PATH; решено прогоном через Docker.
+- Что починил (если было):
+  - time_runtime.json больше не теряет desktop_dialog_backfill/другие backfill-секции при каждом новом ответе.
+  - /time теперь показывает общий runtime (base bot + backfill из чата/кловбота).
+- Следующий шаг: при необходимости добавить авто-backfill из JSONL в отдельную команду/скрипт обновления.
+
+- Дата/время: 2026-03-13 Europe/Moscow
+- Что запускал: подготовка MCP-базиса для mudro (local Codex + VPS/OpenClaw bundle)
+- Что прошло: добавлены wrapper-скрипты scripts/mcp/local и scripts/mcp/vps; собран local docker image mudro-mcp-git:2026.1.14; обновлен C:\Users\gorit\.codex\config.toml; созданы user-level secret templates; bundle скопирован на VPS и /root/.openclaw/mcp-secrets создан
+- Что упало (ошибка 5–15 строк): openclaw service на VPS не запущен; docker compose ps в /root/vpn-test показывает только mullvad/tester/ollama без openclaw
+- Что починил (если было): исправлен локальный helper Get-MudroRepoRoot, из-за которого git MCP сначала монтировал не корень репозитория, а scripts/
+- Следующий шаг: после возврата openclaw service на VPS подключить wrapper-скрипты в runtime-конфиг OpenClaw и отдельно включить mudro_github после заполнения PAT
+
+- Дата/время: 2026-03-13 Europe/Moscow
+- Что запускал: локальная интеграция Magic MCP для frontend mudro
+- Что прошло: добавлен scripts/mcp/local/mudro-mcp-magic.ps1; создан C:\Users\gorit\.codex\secrets\magic-21st.local.env; Magic MCP зарегистрирован в C:\Users\gorit\.codex\config.toml; wrapper стартует и поднимает stdio server
+- Что упало (ошибка 5–15 строк): https://magic.21st.dev/api/fetch-ui возвращает 401 Unauthorized без TWENTY_FIRST_API_KEY, поэтому create/fetch/refine UI сейчас нерабочие без секрета
+- Что починил (если было): ничего не чинил, блокер именно в отсутствии ключа 21st.dev
+- Следующий шаг: либо пользователь добавляет TWENTY_FIRST_API_KEY, либо внешний вид frontend дорабатывается вручную без Magic
+- Дата/время: 2026-03-13 16:19:59 +03:00
+- Что запускал: проверка Magic MCP с валидным API key, адаптация hero-блока для rontend/src/pages/feed-page/ui/FeedPage.tsx, 
+pm.cmd run build, визуальная проверка через Playwright
+- Что прошло: Magic API вернул UI-варианты; hero-черновик встроен; build успешен; страница рендерится корректно
+- Что упало: первичная запись FeedPage.tsx через PowerShell дала битую кодировку; исправлено повторной записью в UTF-8
+- Что починил: добавлен FeedPage.css, обновлен hero/intro-блок страницы, подтвержден рабочий визуальный draft
+- Следующий шаг: либо масштабировать стиль на карточки/контролы, либо остановиться на этом уровне и перейти к Vercel/SSR задачам
+
+- Дата/время: 2026-03-13 22:09:00 +03:00
+- Что запускал: прогон Magic-референсов на карточку поста, фильтр-бар и toolbar; адаптация frontend; build и visual smoke
+- Что прошло: Magic API вернул релевантные social/feed UI snippets; toolbar и PostCard переработаны; `npm.cmd run build` успешен; screenshot сохранен в `C:\Users\gorit\AppData\Local\Temp\mudro-magic-feed-ui-desktop-wide.png`
+- Что упало (ошибка 5–15 строк): встроенный browser-MCP по-прежнему не поднимает Chrome persistent context; для visual smoke использован Playwright CLI
+- Что починил (если было): вместо дублирующей meta-панели в ленте теперь единый toolbar с live-метриками; карточка поста получила более сильную media/metrics подачу
+- Следующий шаг: при желании добить отдельный landing page и затем отдельно прогнать Magic на empty/loading states
+- Дата/время: 2026-03-15 14:33 +03:00
+- Что запускал: доводку visual UI страницы feed-page (landing/feed surface + loading/empty/error states), затем `npm.cmd run build` и visual smoke через Playwright CLI.
+- Что прошло: страница перестроена в связный public-facing экран; `FeedWidget` получил skeleton/empty/error states; сборка успешна; screenshot сохранен в `C:\Users\gorit\AppData\Local\Temp\mudro-page-v2-full.png`.
+- Что упало (ошибка 5–15 строк): критичных падений нет; первый patch по `FeedPage.tsx` не применился из-за расхождения контекста.
+- Что починил (если было): `FeedPage.tsx` и `FeedWidget.css/ts` переписаны точечно без лишних зависимостей и без отката предыдущего Magic-inspired draft.
+- Следующий шаг: добить `detail drawer` для карточки поста и при необходимости вынести landing в отдельный route поверх того же визуального языка.
+- Дата/время: 2026-03-15 14:46 +03:00
+- Что запускал: финальную UI-итерацию страницы: detail drawer для поста, доработка карточек под раскрытие, build и visual smoke.
+- Что прошло: добавлен `postPresentation` helper, реализован `PostDetailDrawer`, карточки получили `Открыть пост`, страница собирается; screenshot сохранен в `C:\Users\gorit\AppData\Local\Temp\mudro-page-v3-full.png`.
+- Что упало (ошибка 5–15 строк): отдельный автоскрин открытого drawer не снят из-за локального browser/runtime инструмента, не из-за ошибки frontend-кода.
+- Что починил (если было): лента стала не только красивой, но и usable — теперь пост можно раскрыть в детальном слое без перехода на другую страницу.
+- Следующий шаг: если понадобится, уже не перепридумывать MVP, а делать только polish: mobile-tuning, drawer-анимации, отдельный landing route.
+- Дата/время: 2026-03-15 15:19:28 +03:00
+- Что запускал: диагностика TG-импорта/ленты, правки импортеров `tgimport`/`tghtmlimport`, фильтрацию TG-постов в API, нормализацию local TG media URL, проверку `go test ./internal/tgexport ./cmd/tgimport ./cmd/tghtmlimport ./internal/api`, `npm.cmd run build`, SQL-проверки локальной БД.
+- Что прошло: кодовые фиксы собраны; backend-тесты по затронутым пакетам зелёные; frontend build зелёный; API/импортеры теперь считают TG-постом только root-message от автора `мудро`, а комментарии/реплаи должны идти отдельно через `post_comments`.
+- Что упало (ошибка 5–15 строк): критичных падений нет; ограничение только в данных локальной БД — `tg=1`, `vk=1`, `post_comments=0`, поэтому те конкретные TG-посты со скринов на локальном DSN сейчас отсутствуют.
+- Что починил (если было): убрал попадание TG reply-сообщений в `posts` на уровне импорта/API; включил нормализацию локальных media путей в `/media/...`; вывел комментарии в detail drawer как комментарии, а не как карточки постов.
+- Следующий шаг: при подтверждении пользователя переимпортировать полный TG-срез в локальную БД `5433` и проверить визуально на реальных сообщениях со скринов.
+
+- Дата/время: 2026-03-15 15:40:36 +03:00
+- Что запускал: полный локальный TG-переимпорт/проверку на реальных данных и живую верификацию API на отдельном порту `:18080`.
+- Что прошло: в БД подтвержден полный TG-срез (`tg=1102`, `vk=1`, `post_comments=1785`); свежий API на `:18080` стартует; `3107/3108` больше не попадают в `posts`; `3106` приходит с двумя комментариями; TG media в JSON API нормализованы в `/media/...`; `go test ./internal/api` зелёный.
+- Что упало (ошибка 5–15 строк): критичных падений нет; технический хвост только в том, что старый локальный процесс на `:8080` живёт отдельно и может отдавать устаревшую выдачу.
+- Что починил (если было): добил нормализацию `posts.media` в JSON API (раньше `/api/front` отдавал сырой `photos/...` и uppercase-ключи после промежуточного фикса).
+- Следующий шаг: либо переключить/перезапустить канонический локальный API на `:8080` из текущего кода, либо сразу подключать фронт к проверенному процессу и показывать итоговый UI на реальных TG-данных.
+- Дата/время: 2026-03-15 16:00 +03:00
+- Что запускал: финальную доводку чернового MVP ленты на живом React preview (`:4174`) поверх API `:18080`: фикc media-origin, thread-preview в карточках, повторную browser-проверку grid + drawer.
+- Что прошло: frontend собран с `VITE_API_BASE_URL=http://127.0.0.1:18080`; toolbar показывает реальные метрики (`1102/1/1101`); TG-медиа грузится из API origin без console errors; пост `3106` отображает `3107/3108` как комментарии в карточке и в drawer.
+- Что упало (ошибка 5–15 строк): критичных падений нет; единственный оставшийся техдолг — старый локальный API на `:8080` все еще не канонизирован под текущий код.
+- Что починил (если было): устранил разрыв между static preview и `/media/...`; добавил thread-preview для постов с reply-комментариями, чтобы комментарии не воспринимались как отдельные посты.
+- Следующий шаг: перевести канонический локальный API на `:8080` и затем решать уже только polish/выкладку, а не функциональные баги ленты.
+
+- Дата/время: 2026-03-15T17:30:00+03:00
+- Что запускал: точечный sync рабочего tree на VPS, восстановление auth к Postgres на сервере, импорт `tgcommentsimport` с media, пересборка `mudro-api`, открытие `8080/tcp`, deploy `frontend/` в Vercel.
+- Что прошло: локальный comment-media smoke уже был green; на VPS `mudro-api` снова active, `healthz` отвечает локально и извне, `post_comments` с media = 394, Vercel frontend preview собран и выдан.
+- Что упало (ошибка 5–15 строк):
+  1) full-sync через `output/ssh-tool/sync-dir.js` упёрся в таймаут stdout (`EPIPE: broken pipe, write`) при долгом SFTP.
+  2) первый серверный импорт `tgimport` на VPS упёрся в собственный 30-секундный context (`upsert to db ... context deadline exceeded`).
+- Что починил (если было): вместо полного sync перешёл на точечный upload изменённых файлов; вместо полного `tgimport` запустил только `tgcommentsimport`, потому что root TG-посты на сервере уже были, а нужен был именно media слой комментариев. Отдельно восстановил пароль роли `postgres` и symlink `data/nu` на полный export.
+- Следующий шаг: открыть `https://frontend-psi-ten-33.vercel.app`, проверить MVP-ленту визуально и решить, нужен ли следующий шаг — reverse proxy/HTTPS на VPS или только финальный UI polish.
+
+- Дата/время: 2026-03-16T08:27:39+03:00
+- Что запускал: повторную верификацию VPS API/media/Vercel preview и точечное восстановление DB auth на сервере.
+- Что прошло: mudro-api снова отдает /api/front; media доступны и напрямую с VPS, и через Vercel preview; подтверждены серверные счетчики posts=4050, post_comments=1790, comment_media=394.
+- Что упало (ошибка 5–15 строк): loadPosts(front): failed SASL auth (FATAL: password authentication failed for user "postgres") на VPS после вчерашней починки.
+- Что починил (если было): повторно выполнил ALTER ROLE postgres WITH PASSWORD 'postgres'; внутри контейнера БД и перезапустил mudro-api.service.
+- Следующий шаг: выяснить, почему пароль роли postgres на VPS снова слетает, и закрепить это в docker/systemd контуре, чтобы API не отваливался самопроизвольно.
+
+- Дата/время: 2026-03-16T08:40:00+03:00
+- Что запускал: проверку схемы Postgres (`\dt+`, `\d+ posts`, `\d+ post_comments`) и контентной статистики локальной БД; дополнительную верификацию серверного API/DB auth.
+- Что прошло: подтверждена текущая модель `posts + post_comments + post_reactions`; media хранятся как JSONB-метаданные с путями к файлам на диске, а не в отдельной БД/таблице blob.
+- Что упало (ошибка 5–15 строк): на VPS снова проявился auth-сбой к Postgres (`FATAL: password authentication failed for user "postgres"`), из-за чего серверный `/api/front` периодически падает в `500 internal error`.
+- Что починил (если было): отдельно подтвердил, что после ручного `ALTER ROLE ...` API снова отвечает, но проблема не закреплена системно.
+- Следующий шаг: согласовать целевую контентную схему (normalization media/reactions/comments threading) и отдельно стабилизировать серверный Postgres auth как инфраструктурный блокер.
+- Дата/время: 2026-03-16T08:53:00+03:00
+- Что запускал: аддитивную нормализацию media-слоя (новые миграции, backfill, обновление import/API), полную проверку `go test ./...`, серверный backfill/restore TG на VPS и попытку восстановить локальную compose-БД из `data/nu`.
+- Что прошло: добавлены таблицы `media_assets`, `post_media_links`, `comment_media_links`; importers теперь пишут в нормализованный media-слой; API читает нормализованные media c fallback на legacy JSONB; `go test ./...` проходит; на VPS TG-данные восстановлены после повреждения тестом, подтверждены счетчики `posts=1102`, `comments=1790`, `media_assets=2052`, `post_links=581`, `comment_links=394`.
+- Что упало (ошибка 5–15 строк):
+  1) `docker run --rm --network mudro11_default -v D:\mudr\mudro11:/app -w /app golang:1.25 sh -lc "go run ..."` -> `sh: 1: go: not found`
+  2) `docker run --rm --network mudro11_default -v D:\mudr\mudro11:/app -w /app golang:1.25-bookworm sh -lc "go version && go run ..."` -> `command timed out after 184033 milliseconds`
+- Что починил (если было): убрал опасный implicit DSN из `internal/api/server_integration_test.go` — integration test теперь не трогает рабочую БД без явного `MUDRO_INTEGRATION_TEST_DSN`; на VPS после этого заново прогнал `tgimport/tgload/tgcommentsimport` и восстановил TG-контур.
+- Следующий шаг: отдельно восстановить локальную compose-БД из TG-export без третьего слепого повтора текущей команды и закрепить на VPS стабильный Postgres auth; VK считать фиксированным snapshot-слоем без регулярных обновлений.
+- Дата/время: 2026-03-16T10:10:00+03:00
+- Что запускал: проверку фактического состояния локальной compose-БД после перезапуска Codex, новую комментарийную модель (`008_comment_model.sql`, `cmd/commentbackfill`) и повторный `go test ./...`.
+- Что прошло: `go test ./...` зеленый; локальная compose-БД уже восстановлена на полном TG-срезе (`posts=1102`, `comments=1790`, `media_assets=958`, `post_links=581`, `comment_links=394`, `comment_reactions=210`); `parent_comment_id` заполнен для `529` комментариев; новые skills-фолдеры на диске найдены.
+- Что упало (ошибка 5–15 строк): новых падений не было; выяснилось, что предыдущий WSL-реимпорт успел завершиться, просто сессия Codex оборвалась до фиксации результата.
+- Что починил (если было): добавил `008_comment_model.sql`, новый `cmd/commentbackfill`, перевел `tgcommentsimport` и API на canonical comment model с fallback на legacy поля; обновил память проекта под актуальный статус.
+- Следующий шаг: синхронизировать новый comment-model слой на VPS и отдельно закрепить Postgres auth; VK держать как snapshot-only источник без регулярного реимпорта.
+- Дата/время: 2026-03-16T10:22:00+03:00
+- Что запускал: проверку локального и серверного статуса после перезапуска Codex; rollout 008_comment_model на VPS; локальный health loop (make dbcheck, make tables, go test ./...); проверку новых skills.
+- Что прошло: на VPS применена 008_comment_model.sql, выполнены commentbackfill и mediabackfill, пересобран и перезапущен mudro-api; подтверждены comment_reactions=210, comments_with_parent_fk=529, comment_media_links=394; локальный health loop зеленый; новые skill-папки (spreadsheet, linear, sentry, security-ownership-map, playwright-interactive) после перезапуска уже активны в текущем runtime.
+- Что упало (ошибка 5–15 строк): первый rollout через docker compose exec снова уперся в db ping: failed SASL auth (FATAL: password authentication failed for user "postgres").
+- Что починил (если было): auth на VPS снова восстановлен через docker exec mudro-db-1 ... ALTER ROLE, после чего rollout повторен по рабочему пути и завершен успешно; ops-runbook обновлен под migrate-media + migrate-comment-model и VK snapshot-only policy.
+- Следующий шаг: найти и устранить корневую причину периодического слета Postgres auth на VPS; затем при необходимости вернуть полный VK snapshot как одноразовый архивный import, без регулярного обновления.
+

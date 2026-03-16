@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/config"
+	mediadb "github.com/goritskimihail/mudro/internal/media"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -137,6 +138,10 @@ returning id
 		it.Stats.Comments,
 	).Scan(&postID); err != nil {
 		return err
+	}
+
+	if err := mediadb.SyncPostLinks(txCtx, tx, postID, "tg", mediaJSON); err != nil {
+		return fmt.Errorf("sync normalized media: %w", err)
 	}
 
 	if _, err := tx.Exec(txCtx, `delete from post_reactions where post_id = $1`, postID); err != nil {
