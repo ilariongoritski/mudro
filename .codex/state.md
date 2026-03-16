@@ -135,3 +135,9 @@
 - Что упало (ошибка 5–15 строк): первая попытка прогнать counts через `docker compose exec ... psql "$DSN"` дала `connection refused`, потому что host DSN `localhost:5433` был ошибочно передан внутрь контейнера; также бинарный `tar | ssh` через PowerShell сломал gzip stream
 - Что починил (если было): перешел на надежный путь `WSL scp` для `vk-export`; remote counts/импорт выполнял через host `psql` и `/usr/bin/go`; в frontend добавил `cache: 'no-store'`, чтобы после серверного импорта страница не держала старый `/api/front`
 - Следующий шаг: при необходимости задеплоить свежий frontend build на Vercel, чтобы no-store фикс оказался и на публичной выдаче, а затем продолжать product polish сайта
+- Дата/время: 2026-03-16 22:02
+- Что запускал: аудит публичного `VK`-контура; поиск сырого `~/vk-export`; синхронизацию архива на VPS; one-shot `cmd/vkimport`; frontend no-cache patch; `npm.cmd run build`; `npm.cmd run lint`; push ветки `codex/testtask`; fast-forward `origin/main`
+- Что прошло: на VPS восстановлен полный VK snapshot (`vk=1088`), публичный `/api/front?source=vk` снова отдает архив; в frontend добавлен `cache: 'no-store'` для `/api/front` и `/api/posts`; ветка `codex/testtask` запушена (`38f5f11`), `origin/main` fast-forward на тот же commit
+- Что упало (ошибка 5–15 строк): `tar | ssh` через PowerShell повредил gzip stream; `docker compose exec ... psql "$DSN"` дал `connection refused`, потому что host DSN был ошибочно передан внутрь контейнера; обычный checkout `main` на Windows невозможен из-за старого invalid path `cmd/bot/ server.go `
+- Что починил (если было): перешел на надежный `WSL scp`; remote import/counts делал через host `psql` и `/usr/bin/go`; обновил `origin/main` напрямую через fast-forward push `codex/testtask:main`
+- Следующий шаг: продолжать product polish сайта уже от актуального `main`; generated `output/frontend-dev.log` и `output/db/*` оставить вне git

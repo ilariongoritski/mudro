@@ -12,3 +12,38 @@
 [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
 [2m18:01:13[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
 [2m18:01:13[22m [36m[1m[vite][22m[39m server restarted.
+[2m14:42:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m14:42:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m14:42:53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.css[22m
+[2m14:43:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/widgets/feed/ui/FeedWidget.tsx[22m
+[2m14:44:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/widgets/feed/ui/FeedWidget.tsx[22m
+[2m15:07:05[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx, /src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m15:07:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m15:13:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx, /src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m15:13:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m15:14:03[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.css[22m
+[2m15:59:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m15:59:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.css[22m
+[2m15:59:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx, /src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:17:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:18:13[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.css[22m
+[2m16:18:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m16:18:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.css[22m
+[2m16:19:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m16:19:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.css[22m
+[2m16:19:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:19:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.css[22m
+[2m16:24:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx, /src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:25:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m16:26:38[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:26:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx, /src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m16:26:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.tsx[22m
+[2m16:26:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m17:20:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-card/PostCard.css[22m
+[2m01:21:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/entities/post/ui/post-detail-drawer/PostDetailDrawer.tsx[22m
+[2m13:35:35[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m13:35:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m13:35:35[22m [36m[1m[vite][22m[39m server restarted.
+[2m13:43:02[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m13:43:02[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m13:43:02[22m [36m[1m[vite][22m[39m server restarted.
