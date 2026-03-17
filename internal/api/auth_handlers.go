@@ -33,15 +33,16 @@ func NewAuthHandlers(svc *auth.Service) *AuthHandlers {
 }
 
 type authRequest struct {
-	Email    string `json:"email"`
+	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
 type meResponse struct {
-	ID        int64  `json:"id"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	IsPremium bool   `json:"is_premium"`
+	ID        int64   `json:"id"`
+	Username  string  `json:"username"`
+	Email     *string `json:"email,omitempty"`
+	Role      string  `json:"role"`
+	IsPremium bool    `json:"is_premium"`
 }
 
 type tokenResponse struct {
@@ -49,7 +50,7 @@ type tokenResponse struct {
 	User  meResponse `json:"user"`
 }
 
-// HandleRegister registers a new user with email and password.
+// HandleRegister registers a new user with username and password.
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -60,16 +61,16 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	email := strings.TrimSpace(strings.ToLower(req.Email))
-	if email == "" || !strings.Contains(email, "@") || len(req.Password) < 6 {
-		http.Error(w, "invalid email or password too short", http.StatusBadRequest)
+	username := strings.TrimSpace(req.Login)
+	if username == "" || len(req.Password) < 6 {
+		http.Error(w, "invalid username or password too short", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.authSvc.Register(r.Context(), email, req.Password)
+	user, err := h.authSvc.Register(r.Context(), username, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrUserExists) {
-			http.Error(w, "user already exists", http.StatusConflict)
+			http.Error(w, "username already taken", http.StatusConflict)
 			return
 		}
 		log.Printf("auth register: %v", err)
@@ -83,6 +84,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"user": meResponse{
 			ID:        user.ID,
+			Username:  user.Username,
 			Email:     user.Email,
 			Role:      user.Role,
 			IsPremium: user.IsPremium,
@@ -102,7 +104,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, token, err := h.authSvc.Login(r.Context(), req.Email, req.Password)
+	user, token, err := h.authSvc.Login(r.Context(), req.Login, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
@@ -118,6 +120,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Token: token,
 		User: meResponse{
 			ID:        user.ID,
+			Username:  user.Username,
 			Email:     user.Email,
 			Role:      user.Role,
 			IsPremium: user.IsPremium,
@@ -136,6 +139,7 @@ func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(meResponse{
 		ID:        user.ID,
+		Username:  user.Username,
 		Email:     user.Email,
 		Role:      user.Role,
 		IsPremium: user.IsPremium,

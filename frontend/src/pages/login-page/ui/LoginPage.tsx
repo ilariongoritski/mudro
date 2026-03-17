@@ -6,16 +6,16 @@ import { setCredentials } from '@/entities/session/model/sessionSlice'
 import '@/pages/login-page/ui/Auth.css'
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [login, { isLoading, error }] = useLoginMutation()
+  const [loginMutation, { isLoading, error }] = useLoginMutation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const result = await login({ email, password }).unwrap()
+      const result = await loginMutation({ login, password }).unwrap()
       dispatch(setCredentials(result))
       navigate('/')
     } catch (err) {
@@ -30,10 +30,10 @@ export const LoginPage = () => {
         <p className="auth-subtitle">Premium curation platform</p>
         <form onSubmit={handleSubmit} className="auth-form">
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Логин"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
             required
             className="auth-input"
           />
@@ -45,7 +45,7 @@ export const LoginPage = () => {
             required
             className="auth-input"
           />
-          {error && <div className="auth-error">Ошибка авторизации. Проверьте данные.</div>}
+          {error && <div className="auth-error">Ошибка авторизации. Проверьте логин и пароль.</div>}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Вход...' : 'Войти'}
           </button>

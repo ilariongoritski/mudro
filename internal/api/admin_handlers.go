@@ -17,9 +17,10 @@ func NewAdminHandlers(authSvc *auth.Service) *AdminHandlers {
 }
 
 type userListItem struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	ID       int64   `json:"id"`
+	Username string  `json:"username"`
+	Email    *string `json:"email"`
+	Role     string  `json:"role"`
 }
 
 // HandleGetUsers returns a list of all users.
@@ -34,9 +35,10 @@ func (h *AdminHandlers) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 	items := make([]userListItem, 0, len(users))
 	for _, u := range users {
 		items = append(items, userListItem{
-			ID:    u.ID,
-			Email: u.Email,
-			Role:  u.Role,
+			ID:       u.ID,
+			Username: u.Username,
+			Email:    u.Email,
+			Role:     u.Role,
 		})
 	}
 

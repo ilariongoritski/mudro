@@ -4,7 +4,7 @@ import { useRegisterMutation } from '@/entities/session/api/authApi'
 import '@/pages/login-page/ui/Auth.css'
 
 export const RegisterPage = () => {
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [register, { isLoading, error }] = useRegisterMutation()
   const navigate = useNavigate()
@@ -12,7 +12,7 @@ export const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await register({ email, password }).unwrap()
+      await register({ login, password }).unwrap()
       // Redirect to login after successful register
       navigate('/login', { replace: true })
     } catch (err) {
@@ -27,10 +27,10 @@ export const RegisterPage = () => {
         <p className="auth-subtitle">Присоединяйтесь к Mudro</p>
         <form onSubmit={handleSubmit} className="auth-form">
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Логин"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
             required
             className="auth-input"
           />
@@ -42,7 +42,7 @@ export const RegisterPage = () => {
             required
             className="auth-input"
           />
-          {error && <div className="auth-error">Ошибка регистрации. Возможно, email уже занят.</div>}
+          {error && <div className="auth-error">Ошибка регистрации. Возможно, логин уже занят.</div>}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Создание...' : 'Зарегистрироваться'}
           </button>

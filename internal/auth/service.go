@@ -20,7 +20,8 @@ var (
 
 type User struct {
 	ID           int64
-	Email        string
+	Username     string
+	Email        *string
 	PasswordHash string
 	Role         string
 	IsPremium    bool
@@ -40,7 +41,7 @@ func NewService(pool *pgxpool.Pool, secret string) *Service {
 }
 
 // Register creates a new user.
-func (s *Service) Register(ctx context.Context, email, password string) (*User, error) {
+func (s *Service) Register(ctx context.Context, username, password string) (*User, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -48,14 +49,13 @@ func (s *Service) Register(ctx context.Context, email, password string) (*User, 
 
 	var user User
 	err = s.pool.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, role, created_at)
+		INSERT INTO users (username, password_hash, role, created_at)
 		VALUES ($1, $2, 'user', NOW())
-		RETURNING id, email, role, created_at
-	`, email, string(hash)).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt)
+		RETURNING id, username, role, created_at
+	`, username, string(hash)).Scan(&user.ID, &user.Username, &user.Role, &user.CreatedAt)
 
 	if err != nil {
-		// Basic check for unique violation
-		if err.Error() == "ERROR: duplicate key value violates unique constraint \"users_email_key\" (SQLSTATE 23505)" {
+		if strings.Contains(err.Error(), "users_username_key") {
 			return nil, ErrUserExists
 		}
 		return nil, err
@@ -65,12 +65,12 @@ func (s *Service) Register(ctx context.Context, email, password string) (*User, 
 }
 
 // Login validates credentials and returns a user and token.
-func (s *Service) Login(ctx context.Context, email, password string) (*User, string, error) {
+func (s *Service) Login(ctx context.Context, login, password string) (*User, string, error) {
 	var user User
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, role, created_at
-		FROM users WHERE email = $1
-	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+		SELECT id, username, password_hash, role, created_at
+		FROM users WHERE username = $1 OR email = $1
+	`, login).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -122,9 +122,9 @@ func (s *Service) ValidateToken(tokenString string) (jwt.MapClaims, error) {
 func (s *Service) GetUserByID(ctx context.Context, id int64) (*User, error) {
 	var user User
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, email, role, created_at
+		SELECT id, username, role, created_at
 		FROM users WHERE id = $1
-	`, id).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt)
+	`, id).Scan(&user.ID, &user.Username, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
