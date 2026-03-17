@@ -134,3 +134,22 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (*User, error) {
 
 	return &user, nil
 }
+
+// ListUsers returns all users in the system.
+func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := s.pool.Query(ctx, `SELECT id, email, role, created_at FROM users ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}

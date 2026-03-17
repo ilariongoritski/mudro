@@ -81,7 +81,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${API_PORT:-8080}:8080"
+      - "127.0.0.1:${API_PORT:-8081}:8080"
     volumes:
       - ./:/app
     healthcheck:
@@ -121,7 +121,7 @@ services:
     image: golang:1.23
     restart: unless-stopped
     working_dir: /app
-    command: sh -lc "go run ./cmd/reporter"
+    command: sh -c "go run ./cmd/reporter"
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app

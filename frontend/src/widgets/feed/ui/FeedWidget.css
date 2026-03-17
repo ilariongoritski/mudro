@@ -52,11 +52,13 @@
 }
 
 .feed-widget__grid {
-  margin-top: 1.15rem;
-  display: grid;
-  grid-template-columns: minmax(0, 820px);
-  justify-content: center;
-  gap: 0.95rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .feed-widget__grid_loading {

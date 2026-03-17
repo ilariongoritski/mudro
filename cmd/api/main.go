@@ -42,8 +42,9 @@ func main() {
 	}
 	authSvc := auth.NewService(pool, jwtSecret)
 	authHandlers := api.NewAuthHandlers(authSvc)
+	adminHandlers := api.NewAdminHandlers(authSvc)
 
-	baseHandler := api.NewServer(pool, authHandlers).Router()
+	baseHandler := api.NewServer(pool, authHandlers, adminHandlers).Router()
 	handler, closeLimiter := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
 	defer closeLimiter()
 

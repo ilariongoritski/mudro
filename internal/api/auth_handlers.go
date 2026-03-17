@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"strings"
 
-	"strings"
-
 	"github.com/goritskimihail/mudro/internal/auth"
 )
 
@@ -179,6 +177,18 @@ func (h *AuthHandlers) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(r.Context(), userContextKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
+}
+
+// AuthAdminMiddleware wraps an http.HandlerFunc to require a valid JWT token and 'admin' role.
+func (h *AuthHandlers) AuthAdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return h.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		user := UserFromContext(r.Context())
+		if user == nil || user.Role != "admin" {
+			http.Error(w, "forbidden - admin access required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func extractToken(r *http.Request) string {

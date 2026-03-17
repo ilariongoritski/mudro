@@ -25,13 +25,17 @@ import (
 )
 
 type Server struct {
-	pool             *pgxpool.Pool
 	tgVisiblePostIDs []string
 	authHandlers     *AuthHandlers
+	adminHandlers    *AdminHandlers
 }
 
-func NewServer(pool *pgxpool.Pool, authHandlers *AuthHandlers) *Server {
-	server := &Server{pool: pool, authHandlers: authHandlers}
+func NewServer(pool *pgxpool.Pool, authHandlers *AuthHandlers, adminHandlers *AdminHandlers) *Server {
+	server := &Server{
+		pool:          pool,
+		authHandlers:  authHandlers,
+		adminHandlers: adminHandlers,
+	}
 	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
 		server.tgVisiblePostIDs = ids
 		log.Printf("api: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
@@ -67,6 +71,11 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/auth/login", s.authHandlers.HandleLogin)
 		mux.HandleFunc("/api/auth/logout", s.authHandlers.HandleLogout)
 		mux.HandleFunc("/api/auth/me", s.authHandlers.AuthMiddleware(s.authHandlers.HandleMe))
+
+		if s.adminHandlers != nil {
+			mux.HandleFunc("/api/admin/users", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetUsers))
+			mux.HandleFunc("/api/admin/stats", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetStats))
+		}
 	}
 
 	return withCORS(mux)
