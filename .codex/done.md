@@ -149,3 +149,4 @@
 - 2026-03-16 | P0 | area:release | Ветка `codex/testtask` запушена и собрана в `origin/main` через fast-forward (`38f5f11`) | Эффект: весь актуальный продуктовый код проекта теперь лежит не только в рабочих ветках, но и в `main`; следующий чат может стартовать уже от канонического main.
 - 2026-03-17 | P0 | area:vps-web | Frontend MVP поднят прямо на VPS через nginx: статика раздается с /var/www/mudro/frontend, а /api, /media, /healthz проксируются на локальный mudro-api.
   - Эффект: сайт больше не зависит от Vercel как обязательной точки входа и открывается напрямую по IP сервера с актуальными данными.
+- 2026-03-17 | P1 | area:devex-skaro | В automation-worktree собран рабочий Skaro cockpit: выровнены VS Code tasks и порт `4700`, добавлены `milestones/tasks`, `docs/imported`, ADR-пакет и git-guardrails для `.skaro` секретов. | Эффект: `skaro status` теперь видит 3 milestone и 8 task-спеков, а контур process/devex перестал быть пустой заготовкой.

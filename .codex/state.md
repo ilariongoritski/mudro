@@ -147,3 +147,10 @@
 - Что упало (ошибка 5–15 строк): не падало; nginx установился и стартовал с первой попытки
 - Что починил (если было): убрал зависимость MVP frontend от Vercel как обязательной точки входа; добавил воспроизводимый VPS rollout через scripts/ops/deploy_vps_frontend.sh и scripts/ops/mudro.nginx.conf
 - Следующий шаг: при появлении домена закрыть тот же контур под HTTPS (80/443) и затем уже решать, закрывать ли внешний 8080 полностью
+
+- Дата/время: 2026-03-17 13:35
+- Что запускал: настройку Skaro-контура в automation-worktree; правки `.vscode/tasks.json`, `.skaro/config.yaml`, `.skaro/devplan.md`, `.skaro/ops/local-run.md`, `.gitignore`; создание `docs/imported`, ADR и milestone/task-структуры; `skaro status`
+- Что прошло: `skaro status` теперь видит `01-project-cockpit (3 tasks)`, `02-public-mvp-release (2 tasks)`, `03-vps-runtime (3 tasks)`; порт UI унифицирован на `4700`; добавлен VS Code task `Skaro: Validate`; `.skaro/secrets.yaml` и usage-файлы защищены от случайного commit
+- Что упало (ошибка 5–15 строк): большой `apply_patch` один раз уперся в Windows limit `Имя файла или его расширение имеет слишком большую длину`; правки были разбиты на несколько меньших patch без потери результата
+- Что починил (если было): убрана пустота Skaro-cockpit; devplan теперь соответствует реальным milestone; добавлены imported summary из `.codex` и ADR по уже принятым решениям
+- Следующий шаг: при желании добить следующий слой — task-level `verify.yaml`, worktree-политику для параллельной работы и отдельный doc/шаблон для review checklist

@@ -1,0 +1,129 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Skaro: UI",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+        "ui",
+        "--port",
+        "4700",
+        "--no-browser"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false,
+        "clear": false
+      },
+      "isBackground": true
+    },
+    {
+      "label": "Skaro: Open Dashboard",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Start-Process 'http://127.0.0.1:4700/dashboard'"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "shared",
+        "reveal": "never"
+      }
+    },
+    {
+      "label": "Skaro: Stop UI",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-NetTCPConnection -LocalPort 4700 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_.ToString() -Force }"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false,
+        "clear": true
+      }
+    },
+    {
+      "label": "Skaro: Status",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+        "status"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false,
+        "clear": true
+      }
+    },
+    {
+      "label": "Skaro: Validate",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+        "validate",
+        "${input:skaroTaskName}"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false,
+        "clear": true
+      }
+    },
+    {
+      "label": "Skaro: Config",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+        "config",
+        "--show"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": false,
+        "clear": true
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "skaroTaskName",
+      "type": "promptString",
+      "description": "Task slug from .skaro/milestones/<milestone>/<task>",
+      "default": "skaro-workflow-hardening"
+    }
+  ]
+}
