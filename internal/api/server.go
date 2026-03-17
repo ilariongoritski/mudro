@@ -419,10 +419,6 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			args = append(args, limit)
 			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
 			rows, err = s.pool.Query(ctx, q, args...)
-			from posts
-		`
-		if beforeTS == nil || beforeID == nil {
-			// (already handled above)
 		} else {
 			args := []any{}
 			q := base
