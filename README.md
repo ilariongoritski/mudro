@@ -8,6 +8,15 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 - `psql` client (used by Makefile targets)
 - Windows: WSL2 + Docker Desktop (WSL integration)
 
+## Repository Layout
+- Runtime code: `cmd/`, `internal/`, `frontend/`, `api/`
+- SQL and config examples: `migrations/`, `env/`
+- Stable docs: `docs/`
+- Local raw imports: `data/`
+- Local generated artifacts only: `output/`, `tmp/`, `out/`
+
+Короткое правило: если файл не является исходным кодом, миграцией, env-примером или постоянной документацией, он должен жить в `output/` или `tmp/`, а не в корне репозитория. Подробности: [docs/repo-layout.md](docs/repo-layout.md)
+
 ## Environment Split (by service)
 Р”Р»СЏ Р»РѕРєР°Р»РєРё РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РѕРґРёРЅ `.env`, РЅРѕ РґР»СЏ Р±РµР·РѕРїР°СЃРЅРѕРіРѕ Р·Р°РїСѓСЃРєР° Р»СѓС‡С€Рµ СЂР°Р·РЅРѕСЃРёС‚СЊ РїРµСЂРµРјРµРЅРЅС‹Рµ РїРѕ СЃРµСЂРІРёСЃР°Рј:
 - [env/README.md](env/README.md)
@@ -19,6 +28,11 @@ MUDRO is a Go + Postgres backend with importers for VK export data and Telegram 
 - `env/db.env.example`
 
 `Makefile` РїРѕРґРґРµСЂР¶РёРІР°РµС‚ С‚Р°РєСѓСЋ СЃС…РµРјСѓ: СЃРЅР°С‡Р°Р»Р° С‡РёС‚Р°РµС‚ `.env` (backward compatibility), РїРѕС‚РѕРј `env/common.env`, Р·Р°С‚РµРј `env/<service>.env`.
+
+Minimal runtime config rules:
+- `MUDRO_ENV=development` for local runs; `production` or `staging` for server/runtime services.
+- `REPORT_CHAT_ID` is mandatory for `make report-run` and `cmd/reporter`.
+- Superuser DSN (`user=postgres`) is allowed only for local dev hosts (`localhost`, `127.0.0.1`, `db`); production/staging must use a separate app role.
 
 ## Quick Start (Local)
 ```bash
@@ -160,6 +174,12 @@ make worker-loop
 ```
 РџРѕРґСЂРѕР±РЅС‹Р№ СЂРµРіР»Р°РјРµРЅС‚: [docs/worker-autonomy.md](docs/worker-autonomy.md)
 
+## Spec-Driven Workflow
+Repo-native adaptation of the Skaro article for `mudro`:
+- [docs/skaro-mudro-adaptation.md](docs/skaro-mudro-adaptation.md)
+- [docs/adr/README.md](docs/adr/README.md)
+- [.codex/templates/task-spec.md](.codex/templates/task-spec.md)
+
 ## Agent Queue (MVP)
 РџСЂРѕСЃС‚РѕР№ РєР°СЂРєР°СЃ Р°РІС‚РѕРЅРѕРјРЅРѕРіРѕ Р°РіРµРЅС‚Р°:
 - planner С‡РёС‚Р°РµС‚ `.codex/todo.md` Рё СЃС‚Р°РІРёС‚ Р·Р°РґР°С‡Рё РІ `agent_queue`
@@ -235,8 +255,7 @@ make bot-run
 ## Reporter Bot (separate)
 ```bash
 export REPORT_BOT_TOKEN="...second bot token..."
-# optional if fallback should not be used:
-# export REPORT_CHAT_ID="123456789"
+export REPORT_CHAT_ID="123456789"
 # optional:
 # export REPORT_INTERVAL_MIN="30"
 make report-run
@@ -256,7 +275,7 @@ DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" make d
 ## HTTP API
 Run the API server:
 ```bash
-API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" go run ./cmd/api
+MUDRO_ENV="development" API_ADDR=":8080" DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" go run ./cmd/api
 ```
 
 Rate limiter (РІС…РѕРґСЏС‰РёРµ Р·Р°РїСЂРѕСЃС‹):

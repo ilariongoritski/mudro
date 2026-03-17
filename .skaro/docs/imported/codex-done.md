@@ -149,24 +149,26 @@
 - 2026-03-16 | P0 | area:vps-sync | На VPS восстановлен полный VK snapshot через `cmd/vkimport` из канонического сырого архива `~/vk-export` (1087 файловых постов + тестовый `VK #100` уже в БД) | Эффект: публичный API снова отдает `vk=1088`, а внешний сайт может показывать не один демо-пост, а весь архив VK.
 - 2026-03-16 | P1 | area:frontend-cache | Во frontend для `/api/front` и `/api/posts` выставлен `cache: 'no-store'` | Эффект: после серверных one-shot импортов браузер не должен продолжать держать старый срез ленты без hard refresh.
 - 2026-03-16 | P0 | area:release | Ветка `codex/testtask` запушена и собрана в `origin/main` через fast-forward (`38f5f11`) | Эффект: весь актуальный продуктовый код проекта теперь лежит не только в рабочих ветках, но и в `main`; следующий чат может стартовать уже от канонического main.
+<<<<<<< ours
+<<<<<<< ours
 - 2026-03-17 | P0 | area:vps-web | Frontend MVP поднят прямо на VPS через nginx: статика раздается с /var/www/mudro/frontend, а /api, /media, /healthz проксируются на локальный mudro-api.
   - Эффект: сайт больше не зависит от Vercel как обязательной точки входа и открывается напрямую по IP сервера с актуальными данными.
 - 2026-03-17 | area:process | Подготовлена repo-native адаптация статьи про Skaro: добавлены `docs/skaro-mudro-adaptation.md`, `docs/adr/README.md` и `.codex/templates/task-spec.md`.
   - Эффект: spec-driven workflow привязан к реальным артефактам `mudro` без внедрения отдельного orchestration-слоя.
 - 2026-03-17 | area:toolchain | Локально поднят bootstrap `Skaro` для `mudro`, а новый `uv`/`skaro` toolchain перенесен на `D:\\mudr\\toolchain` с запуском через `scripts/skaro-local.ps1`.
   - Эффект: локальный spec-driven контур `Skaro` уже инициализирован в `.skaro/`, не раздувает `C:` и штатно стартует через wrapper; для LLM-фаз осталось только добавить `OPENAI_API_KEY` или локальный provider.
-- 2026-03-17 | area:skaro-process | `Skaro` доведен до базово полезного состояния: импортированы `.codex` snapshots в `.skaro/docs/imported/`, созданы milestone/task-артефакты, зафиксированы публичные MVP links и собран PDF-гайд `output/pdf/skaro-mudro-guide.pdf`.
-  - Эффект: dashboard `Skaro` больше не пустой, показывает реальные milestones/tasks для `mudro`, а у проекта появился краткий рабочий гайд по ежедневному использованию `Skaro`.
 - 2026-03-17 | P1 | area:frontend-ui | Выполнен product UI pass для self-hosted MVP: header стал компактнее и чище, control surface ушел от dark-hero паттерна в светлый editorial layout, карточка поста получила ровный single-column rhythm и исправленную русскую типографику без кракозябр | Эффект: http://91.218.113.247/#feed уже выглядит как цельный продуктовый экран, который можно внешне рецензировать, а не как технический демо-срез.
+=======
 - 2026-03-16 | P1 | area:ops-audit | Выполнен обзор логов и подготовлен структурированный план улучшений (security/reliability/tests) в `docs/log-improvements-20260316.md`.
   - Эффект: есть приоритизированный backlog из 8 пунктов с метриками готовности и быстрыми шагами на 1 спринт.
+>>>>>>> theirs
+=======
+- 2026-03-16 | P1 | area:ops-audit | Выполнен обзор логов и подготовлен структурированный план улучшений (security/reliability/tests) в `docs/log-improvements-20260316.md`.
+  - Эффект: есть приоритизированный backlog из 8 пунктов с метриками готовности и быстрыми шагами на 1 спринт.
+>>>>>>> theirs
 - 2026-03-17 | P1 | area:frontend-ui | Доведены product-правки карточек и drawer: media рендерятся как полноформатные изображения `contain`, CTA ведут на оригинальный пост в соцсети, а discussion-comments восстанавливают реальные имена авторов из Telegram `result.json` на локалке и на VPS.
   - Эффект: runtime на `http://91.218.113.247/#feed` уже показывает не анонимные `Участник #...`, а реальные имена там, где они доступны в полном export, и больше не выглядит как raw-media viewer.
 - 2026-03-17 | P1 | area:repo-worktrees | Подготовлен раздельный multi-worktree контур для одного проекта: `D:\mudr\mudro11-main`, `D:\mudr\mudro11-automation`, `D:\mudr\mudro11-bugs`, `D:\mudr\mudro11-devops`; глобальный `Codex` MCP переведен на базовую копию `mudro11-main`, собраны `D:\mudr\mudro.code-workspace` и `D:\mudr\mudro-worktrees.md`.
   - Эффект: дальнейшие параллельные чаты можно разводить по отдельным папкам/веткам без смешивания `git diff`, `output/*`, временных файлов и MCP-скриптов в одной грязной рабочей копии.
 - 2026-03-17 | P1 | area:skaro-local | Локальный `Skaro` разложен по всем 4 worktree: в каждую папку скопированы `.skaro` и `scripts/skaro-local.ps1`, сгенерированы `.vscode/tasks.json`, а общий launcher `D:\mudr\start-mudro-skaro.ps1` закрепил порты dashboard `4700..4703`.
   - Эффект: `Skaro status/config/ui` теперь можно запускать независимо в `main`, `automation`, `bugs` и `devops` без ручной донастройки и без пересечения dashboard-портов.
-- 2026-03-17 | area:skaro-docs | Полностью переписан русский guide по `Skaro` для `MUDRO`, добавлены живые скриншоты dashboard/tasks/settings/task-detail и пересобран PDF `output/pdf/skaro-mudro-guide.pdf`.
-  - Эффект: у проекта теперь есть подробная понятная инструкция для пользователя, который раньше не работал со `Skaro`, с локальным workflow через `VS Code`, `.codex` и dashboard.
-- 2026-03-17 | area:session-memory | Зафиксированы `.codex` и `Skaro`-артефакты текущих сессий: очищены merge-маркеры в памяти проекта, сохранены summary/milestones/guides и подготовлен отдельный коммит без продуктового кода.
-  - Эффект: следующий чат может стартовать от чисто сохраненного контекста сессий, не смешанного с незавершенными backend/frontend-правками.

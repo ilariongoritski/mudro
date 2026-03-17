@@ -1,0 +1,50 @@
+import:
+  max_file_size: 100000
+  token_limit: 200000
+lang: ru
+llm:
+  api_key_env: GEMINI_API_KEY
+  base_url: null
+  max_tokens: 16384
+  model: gemini-2.5-flash
+  provider: google
+  temperature: 0.2
+project_description: Unified VK + Telegram feed platform with Go backend, PostgreSQL,
+  React frontend, importers, bots, and local/VPS ops workflows.
+project_name: MUDRO
+roles:
+  architect:
+    api_key_env: GEMINI_API_KEY
+    base_url: null
+    max_tokens: 16384
+    model: gemini-2.5-flash
+    provider: google
+    temperature: 0.15
+  coder:
+    api_key_env: GEMINI_API_KEY
+    base_url: null
+    max_tokens: 16384
+    model: gemini-2.5-flash
+    provider: google
+    temperature: 0.1
+  reviewer:
+    api_key_env: GEMINI_API_KEY
+    base_url: null
+    max_tokens: 12000
+    model: gemini-2.5-flash
+    provider: google
+    temperature: 0.1
+theme: dark
+ui:
+  auto_open_browser: true
+verify_commands:
+- command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && make dbcheck"
+  name: dbcheck
+- command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && make tables"
+  name: tables
+- command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && go test $(go list ./... | grep -v '/tmp$')"
+  name: go-test
+- command: npm.cmd --prefix frontend run build
+  name: frontend-build
+- command: npm.cmd --prefix frontend run lint
+  name: frontend-lint
