@@ -7,7 +7,7 @@ export const postsApi = mudroApi.injectEndpoints({
   endpoints: (build) => ({
     getFront: build.query<FrontResponse, FeedQueryArgs>({
       query: ({ limit, source, sort, q }) => ({
-        url: '/api/front',
+        url: '/front',
         cache: 'no-store',
         params: {
           limit,
@@ -20,7 +20,7 @@ export const postsApi = mudroApi.injectEndpoints({
     }),
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
       query: ({ limit, page, source, sort, before_ts, before_id, q }) => ({
-        url: '/api/posts',
+        url: '/posts',
         cache: 'no-store',
         params: {
           limit,
