@@ -25,6 +25,7 @@ import (
 )
 
 type Server struct {
+	pool             *pgxpool.Pool
 	tgVisiblePostIDs []string
 	authHandlers     *AuthHandlers
 	adminHandlers    *AdminHandlers
