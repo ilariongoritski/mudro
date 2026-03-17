@@ -242,7 +242,8 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, _, err := s.loadPosts(ctx, nil, nil, page, limit, source, sortOrder)
+	q := r.URL.Query().Get("q")
+	posts, _, err := s.loadPosts(ctx, nil, nil, page, limit, source, sortOrder, q)
 	if err != nil {
 		log.Printf("loadPosts(feed): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -356,15 +357,19 @@ func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 
 func (s *Server) countVisiblePosts(ctx context.Context, out *int64) error {
 	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", args)
+	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
 	return s.pool.QueryRow(ctx, `select count(*) from posts`+whereSQL, args...).Scan(out)
 }
 
-func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, []any) {
-	conditions := make([]string, 0, 2)
+func (s *Server) buildPostsVisibilityWhere(source, query string, args []any) (string, []any) {
+	conditions := make([]string, 0, 3)
 	if source != "" {
 		args = append(args, source)
 		conditions = append(conditions, fmt.Sprintf("source = $%d", len(args)))
+	}
+	if query != "" {
+		args = append(args, "%"+strings.ToLower(query)+"%")
+		conditions = append(conditions, fmt.Sprintf("LOWER(text) LIKE $%d", len(args)))
 	}
 	if len(s.tgVisiblePostIDs) > 0 && (source == "" || source == "tg") {
 		args = append(args, s.tgVisiblePostIDs)
