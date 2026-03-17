@@ -1,5 +1,5 @@
 import type { FeedSort, FeedSource } from '@/entities/post/model/types'
-import { setLimit, setSort, setSource, setQuery } from '@/features/feed-controls/model/feedFiltersSlice'
+import { setLimit, setSort, setSource, setQuery } from '../model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import './FeedControls.css'
