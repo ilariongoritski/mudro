@@ -1,4 +1,4 @@
-﻿.feed-page-header,
+.feed-page-header,
 .feed-page-next__panel,
 .feed-page-next__card {
   margin-top: 1rem;
@@ -81,6 +81,34 @@
   letter-spacing: 0.08em;
   text-decoration: none;
   text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.feed-page-header__auth {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.feed-page-header__link_auth {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 105, 180, 0.3);
+  text-transform: none;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.feed-page-header__link_auth:hover {
+  background: #fff;
+  border-color: rgba(255, 105, 180, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.12);
+}
+
+.feed-page-header__link_register {
+  background: linear-gradient(135deg, rgba(255, 105, 180, 0.18), rgba(255, 251, 254, 0.8));
+  border-color: rgba(255, 105, 180, 0.5);
+  font-weight: 800;
 }
 
 .feed-page-live {

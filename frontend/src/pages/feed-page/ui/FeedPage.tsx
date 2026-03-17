@@ -1,5 +1,7 @@
-﻿import './FeedPage.css'
+import './FeedPage.css'
 import { FeedWidget } from '@/widgets/feed/ui/FeedWidget'
+import { Link } from 'react-router-dom'
+import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 
 const sectionLinks = [
   { href: '#feed', label: 'Лента' },
@@ -8,6 +10,8 @@ const sectionLinks = [
 ]
 
 export const FeedPage = () => {
+  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
+
   return (
     <main className="mudro-shell">
       <header className="feed-page-header mudro-fade-up" aria-label="Навигация Mudro">
@@ -25,6 +29,17 @@ export const FeedPage = () => {
               {section.label}
             </a>
           ))}
+          {!isAuthenticated && (
+            <div className="feed-page-header__auth">
+              <Link to="/login" className="feed-page-header__link feed-page-header__link_auth">Вход</Link>
+              <Link to="/register" className="feed-page-header__link feed-page-header__link_auth feed-page-header__link_register">Регистрация</Link>
+            </div>
+          )}
+          {isAuthenticated && (
+             <div className="feed-page-header__auth">
+                <Link to="/admin" className="feed-page-header__link feed-page-header__link_auth">Админ</Link>
+             </div>
+          )}
         </nav>
       </header>
 

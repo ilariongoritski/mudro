@@ -5,14 +5,6 @@ import { FeedPage } from '@/pages/feed-page/ui/FeedPage'
 import { LoginPage } from '@/pages/login-page/ui/LoginPage'
 import { RegisterPage } from '@/pages/register-page/ui/RegisterPage'
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-  return <>{children}</>
-}
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
@@ -53,11 +45,7 @@ export const AppRouterProvider = () => {
     },
     {
       path: '/',
-      element: (
-        <ProtectedRoute>
-          <FeedPage />
-        </ProtectedRoute>
-      ),
+      element: <FeedPage />,
     },
     {
       path: '/admin',
