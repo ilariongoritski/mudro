@@ -1,6 +1,6 @@
 module github.com/goritskimihail/mudro
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
@@ -34,8 +34,16 @@ require (
 	github.com/tinylib/msgp v1.6.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+)
+
+replace (
+	golang.org/x/crypto => golang.org/x/crypto v0.21.0
+	golang.org/x/net => golang.org/x/net v0.21.0
+	golang.org/x/sync => golang.org/x/sync v0.6.0
+	golang.org/x/sys => golang.org/x/sys v0.17.0
+	golang.org/x/text => golang.org/x/text v0.14.0
 )

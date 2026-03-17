@@ -61,7 +61,7 @@ services:
       retries: 20
 
   api:
-    image: golang:1.23
+    image: golang:1.24
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/api"
@@ -91,7 +91,7 @@ services:
       retries: 12
 
   agent:
-    image: golang:1.23
+    image: golang:1.24
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/agent --mode worker --interval 15s"
@@ -118,7 +118,7 @@ services:
       retries: 5
 
   reporter:
-    image: golang:1.23
+    image: golang:1.24
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/reporter"

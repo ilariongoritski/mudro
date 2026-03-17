@@ -81,9 +81,10 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"user": meResponse{
-			ID:    user.ID,
-			Email: user.Email,
-			Role:  user.Role,
+			ID:        user.ID,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
 		},
 	})
 }
@@ -115,9 +116,10 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(tokenResponse{
 		Token: token,
 		User: meResponse{
-			ID:    user.ID,
-			Email: user.Email,
-			Role:  user.Role,
+			ID:        user.ID,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
 		},
 	})
 }
@@ -132,9 +134,10 @@ func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(meResponse{
-		ID:    user.ID,
-		Email: user.Email,
-		Role:  user.Role,
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		IsPremium: user.IsPremium,
 	})
 }
 
