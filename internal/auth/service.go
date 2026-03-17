@@ -23,6 +23,7 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Role         string
+	IsPremium    bool
 	CreatedAt    time.Time
 }
 
@@ -131,6 +132,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (*User, error) {
 		}
 		return nil, err
 	}
+	s.fillPremiumStatus(ctx, &user)
 
 	return &user, nil
 }
@@ -152,4 +154,38 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+// AddSubscription creates or updates a subscription for a user.
+func (s *Service) AddSubscription(ctx context.Context, userID int64, planID string, duration time.Duration) error {
+	expiresAt := time.Now().Add(duration)
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO user_subscriptions (user_id, plan_id, expires_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id) DO UPDATE SET
+			plan_id = EXCLUDED.plan_id,
+			expires_at = EXCLUDED.expires_at,
+			status = 'active',
+			updated_at = NOW()
+	`, userID, planID, expiresAt)
+	return err
+}
+
+// HasActiveSubscription checks if a user has a valid active subscription.
+func (s *Service) HasActiveSubscription(ctx context.Context, userID int64) (bool, error) {
+	var exists bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM user_subscriptions
+			WHERE user_id = $1 AND status = 'active' AND expires_at > NOW()
+		)
+	`, userID).Scan(&exists)
+	return exists, err
+}
+
+func (s *Service) fillPremiumStatus(ctx context.Context, user *User) {
+	if user == nil {
+		return
+	}
+	premium, _ := s.HasActiveSubscription(ctx, user.ID)
+	user.IsPremium = premium
 }

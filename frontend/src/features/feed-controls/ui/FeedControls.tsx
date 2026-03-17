@@ -1,5 +1,5 @@
-﻿import type { FeedSort, FeedSource } from '@/entities/post/model/types'
-import { setLimit, setSort, setSource } from '@/features/feed-controls/model/feedFiltersSlice'
+import type { FeedSort, FeedSource } from '@/entities/post/model/types'
+import { setLimit, setSort, setSource, setQuery } from '@/features/feed-controls/model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import './FeedControls.css'
@@ -84,6 +84,19 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
           >
             Сбросить фильтры
           </button>
+        </div>
+      </div>
+
+      <div className="feed-controls__group">
+        <span className="feed-controls__label">Поиск по тексту</span>
+        <div className="feed-controls__search-box">
+          <input
+            type="text"
+            placeholder="Что ищем?.."
+            value={useAppSelector((state) => state.feedFilters.query ?? '')}
+            onChange={(e) => dispatch(setQuery(e.target.value))}
+            className="feed-controls__search-input"
+          />
         </div>
       </div>
 

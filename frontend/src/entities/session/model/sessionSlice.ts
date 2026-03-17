@@ -5,6 +5,7 @@ export interface User {
   id: number
   email: string
   role: string
+  isPremium: boolean
 }
 
 export interface SessionState {

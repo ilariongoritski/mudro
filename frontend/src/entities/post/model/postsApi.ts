@@ -6,19 +6,20 @@ const toApiSource = (source: FeedSource) => (source === 'all' ? undefined : sour
 export const postsApi = mudroApi.injectEndpoints({
   endpoints: (build) => ({
     getFront: build.query<FrontResponse, FeedQueryArgs>({
-      query: ({ limit, source, sort }) => ({
+      query: ({ limit, source, sort, q }) => ({
         url: '/api/front',
         cache: 'no-store',
         params: {
           limit,
           source: toApiSource(source),
           sort,
+          q,
         },
       }),
       providesTags: ['Feed'],
     }),
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
-      query: ({ limit, page, source, sort, before_ts, before_id }) => ({
+      query: ({ limit, page, source, sort, before_ts, before_id, q }) => ({
         url: '/api/posts',
         cache: 'no-store',
         params: {
@@ -28,6 +29,7 @@ export const postsApi = mudroApi.injectEndpoints({
           ...(typeof before_id === 'number' ? { before_id } : {}),
           ...(toApiSource(source) ? { source: toApiSource(source) } : {}),
           sort,
+          q,
         },
       }),
       providesTags: ['Feed'],

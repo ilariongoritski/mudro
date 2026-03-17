@@ -37,9 +37,10 @@ type authRequest struct {
 }
 
 type meResponse struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	IsPremium bool   `json:"is_premium"`
 }
 
 type tokenResponse struct {

@@ -12,6 +12,7 @@ interface FeedWidgetInnerProps {
   source: 'all' | 'vk' | 'tg'
   sort: 'desc' | 'asc'
   limit: number
+  query?: string
 }
 
 const initialSkeletonIds = ['a', 'b', 'c', 'd', 'e', 'f']
@@ -39,7 +40,7 @@ const FeedLoadingSkeleton = () => {
   )
 }
 
-const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
+const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) => {
   const [loadedItems, setLoadedItems] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<FeedCursor | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -50,7 +51,7 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
     isFetching: isFrontFetching,
     isError: isFrontError,
     refetch,
-  } = useGetFrontQuery({ limit, source, sort })
+  } = useGetFrontQuery({ limit, source, sort, q: query })
 
   const [loadMorePosts, { isFetching: isLoadingMore }] = useLazyGetPostsQuery()
 
@@ -177,8 +178,8 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
 }
 
 export const FeedWidget = () => {
-  const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
-  const feedKey = `${source}-${sort}-${limit}`
+  const { source, sort, limit, query } = useAppSelector((state) => state.feedFilters)
+  const feedKey = `${source}-${sort}-${limit}-${query ?? ''}`
 
-  return <FeedWidgetInner key={feedKey} source={source} sort={sort} limit={limit} />
+  return <FeedWidgetInner key={feedKey} source={source} sort={sort} limit={limit} query={query} />
 }

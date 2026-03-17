@@ -128,7 +128,9 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit, source, sortOrder)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit, source, sortOrder, query)
 	if err != nil {
 		log.Printf("loadPosts: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -162,7 +164,9 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit, source, sortOrder)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit, source, sortOrder, query)
 	if err != nil {
 		log.Printf("loadPosts(front): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -376,7 +380,7 @@ func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, [
 	return " where " + strings.Join(conditions, " and "), args
 }
 
-func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder string) ([]postDTO, *cursor, error) {
+func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder, query string) ([]postDTO, *cursor, error) {
 	var (
 		rows pgx.Rows
 		err  error
@@ -395,7 +399,7 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
 			from posts
 		`
-		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
 		args = nextArgs
 		q += whereSQL
 		args = append(args, limit, offset)
@@ -409,16 +413,20 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		if beforeTS == nil || beforeID == nil {
 			args := []any{}
 			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
 			args = nextArgs
 			q += whereSQL
 			args = append(args, limit)
 			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
 			rows, err = s.pool.Query(ctx, q, args...)
+			from posts
+		`
+		if beforeTS == nil || beforeID == nil {
+			// (already handled above)
 		} else {
 			args := []any{}
 			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
 			args = nextArgs
 			if whereSQL == "" {
 				q += " where "

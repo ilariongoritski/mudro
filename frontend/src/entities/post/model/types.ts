@@ -74,6 +74,7 @@ export interface FeedQueryArgs {
   limit: number;
   source: FeedSource;
   sort: FeedSort;
+  q?: string;
 }
 
 export interface PostsQueryArgs extends FeedQueryArgs {
