@@ -43,7 +43,19 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
     <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
       <div className="feed-toolbar">
         <div className="feed-toolbar__intro">
-          <span className="feed-toolbar__eyebrow">Архив</span>
+          <div className="feed-toolbar__user-status">
+            {useAppSelector((state) => state.session.user) ? (
+              <div className="feed-user-badge">
+                <span className="feed-user-badge__email">{useAppSelector((state) => state.session.user?.email)}</span>
+                {useAppSelector((state) => state.session.user?.isPremium) && (
+                  <span className="feed-user-badge__premium">PREMIUM</span>
+                )}
+                <span className="feed-user-badge__role">{useAppSelector((state) => state.session.user?.role?.toUpperCase())}</span>
+              </div>
+            ) : (
+              <span className="feed-toolbar__eyebrow">Архив</span>
+            )}
+          </div>
           <strong className="feed-toolbar__title">Живая лента с реальными постами, вложениями и обсуждениями</strong>
           <p className="feed-toolbar__lead">
             Переключай источники, меняй порядок и быстро открывай посты, комментарии и media без ухода со страницы.
