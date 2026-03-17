@@ -8,6 +8,7 @@ AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_task_events.sql
 MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
+USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -44,8 +45,10 @@ dbcheck:
 migrate:
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
 endif
 
 migrate-all:
@@ -98,11 +101,24 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(COMMENT_MODEL_MIGRATION)"
 endif
 
+migrate-users-auth:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
+endif
+
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
 
 test:
 	$(GO) test ./...
+
+lint:
+	golangci-lint run ./...
+	cd frontend && npm run lint
+
+check: lint test
 
 selftest:
 	$(GO) test ./cmd/vkimport ./cmd/tgimport

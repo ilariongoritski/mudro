@@ -11,6 +11,10 @@
     {
       "source": "/healthz",
       "destination": "http://91.218.113.247:8080/healthz"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

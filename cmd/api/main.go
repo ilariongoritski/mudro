@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/goritskimihail/mudro/internal/api"
+	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/ratelimit"
 )
@@ -33,7 +34,16 @@ func main() {
 	}
 	defer pool.Close()
 
-	baseHandler := api.NewServer(pool).Router()
+	// Initialize auth service.
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "super-secret-default-key-mudro"
+		log.Println("auth: using default JWT_SECRET. Please set it in production!")
+	}
+	authSvc := auth.NewService(pool, jwtSecret)
+	authHandlers := api.NewAuthHandlers(authSvc)
+
+	baseHandler := api.NewServer(pool, authHandlers).Router()
 	handler, closeLimiter := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
 	defer closeLimiter()
 

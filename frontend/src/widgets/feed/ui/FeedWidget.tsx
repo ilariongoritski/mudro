@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
@@ -144,14 +144,30 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
           {items.map((post) => (
             <PostCard key={`${post.source}-${post.id}-${post.source_post_id}`} post={post} onOpen={setSelectedPost} />
           ))}
+          {isLoadingMore ? Array.from({ length: 3 }).map((_, i) => (
+             <article key={`skeleton-append-${i}`} className="feed-widget__skeleton-card">
+              <div className="feed-widget__skeleton-chip" />
+              <div className="feed-widget__skeleton-lines">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="feed-widget__skeleton-media" />
+              <div className="feed-widget__skeleton-stats">
+                <span />
+                <span />
+                <span />
+              </div>
+            </article>
+          )) : null}
         </div>
       ) : null}
 
       {loadError ? <p className="feed-widget__error-text">{loadError}</p> : null}
 
-      {hasMore ? (
-        <button type="button" className="feed-widget__load-more" disabled={isLoadingMore} onClick={handleLoadMore}>
-          {isLoadingMore ? 'Загружаю…' : 'Показать еще'}
+      {hasMore && !isLoadingMore ? (
+        <button type="button" className="feed-widget__load-more" onClick={handleLoadMore}>
+          Показать еще
         </button>
       ) : null}
 

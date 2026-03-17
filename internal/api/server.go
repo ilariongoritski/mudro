@@ -27,10 +27,11 @@ import (
 type Server struct {
 	pool             *pgxpool.Pool
 	tgVisiblePostIDs []string
+	authHandlers     *AuthHandlers
 }
 
-func NewServer(pool *pgxpool.Pool) *Server {
-	server := &Server{pool: pool}
+func NewServer(pool *pgxpool.Pool, authHandlers *AuthHandlers) *Server {
+	server := &Server{pool: pool, authHandlers: authHandlers}
 	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
 		server.tgVisiblePostIDs = ids
 		log.Printf("api: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
@@ -59,6 +60,15 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
 	mux.HandleFunc("/feed", s.handleFeed)
+
+	// Auth routes.
+	if s.authHandlers != nil {
+		mux.HandleFunc("/api/auth/register", s.authHandlers.HandleRegister)
+		mux.HandleFunc("/api/auth/login", s.authHandlers.HandleLogin)
+		mux.HandleFunc("/api/auth/logout", s.authHandlers.HandleLogout)
+		mux.HandleFunc("/api/auth/me", s.authHandlers.AuthMiddleware(s.authHandlers.HandleMe))
+	}
+
 	return withCORS(mux)
 }
 
@@ -1272,7 +1282,18 @@ func normalizeMediaURL(raw string) string {
 	if s == "" || strings.HasPrefix(s, "missing://") {
 		return ""
 	}
+	
+	baseURL := os.Getenv("MEDIA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "/media/"
+	} else if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
+	}
+
 	if strings.HasPrefix(s, "/media/") {
+		if baseURL != "/media/" {
+			return baseURL + strings.TrimPrefix(s, "/media/")
+		}
 		return s
 	}
 	u, err := url.Parse(s)
@@ -1285,7 +1306,7 @@ func normalizeMediaURL(raw string) string {
 	if strings.HasPrefix(s, "/") {
 		return s
 	}
-	return "/media/" + strings.TrimPrefix(strings.TrimPrefix(s, "./"), "/")
+	return baseURL + strings.TrimPrefix(strings.TrimPrefix(s, "./"), "/")
 }
 
 func guessMediaTitle(rawURL string) string {

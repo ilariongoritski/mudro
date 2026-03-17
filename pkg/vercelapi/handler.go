@@ -20,5 +20,5 @@ func NewHandler() (http.Handler, error) {
 		return nil, err
 	}
 
-	return internalapi.NewServer(pool).Router(), nil
+	return internalapi.NewServer(pool, nil).Router(), nil
 }

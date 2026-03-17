@@ -12,6 +12,7 @@ import {
   resolveMediaTitle,
   resolveMediaUrl,
 } from "@/entities/post/lib/postPresentation";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDateTime } from "@/shared/lib/format/date";
 import "./PostDetailDrawer.css";
 
@@ -60,23 +61,44 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
   const viewsMetric = metricDisplay(post.views_count);
 
   return (
-    <div
-      className="post-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="post-drawer-title"
-    >
-      <button
-        type="button"
-        className="post-drawer__backdrop"
-        aria-label="Закрыть карточку поста"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {post && (
+        <div
+          className="post-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="post-drawer-title"
+        >
+          <motion.button
+            type="button"
+            className="post-drawer__backdrop"
+            aria-label="Закрыть карточку поста"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
 
-      <aside className="post-drawer__panel">
-        <header className="post-drawer__head">
-          <div className="post-drawer__head-main">
-            <div className={`post-drawer__source post-drawer__source_${post.source}`}>
+          <motion.aside 
+            className="post-drawer__panel"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
+          >
+            <div className="post-drawer__drag-handle" />
+            <header className="post-drawer__head">
+              <div className="post-drawer__head-main">
+                <div className={`post-drawer__source post-drawer__source_${post.source}`}>
               {post.source.toUpperCase()}
             </div>
             <div className="post-drawer__eyebrow">
@@ -234,7 +256,9 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
             </div>
           </section>
         ) : null}
-      </aside>
+      </motion.aside>
     </div>
+      )}
+    </AnimatePresence>
   );
 };

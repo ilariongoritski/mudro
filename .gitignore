@@ -33,3 +33,5 @@ output/doc/
 output/playwright/
 output/*.json
 output/db-comment-media-ids.txt
+
+.vercel

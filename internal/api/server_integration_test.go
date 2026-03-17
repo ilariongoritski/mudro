@@ -48,7 +48,7 @@ func testDBServer(t *testing.T) *Server {
 		t.Fatalf("seed reactions: %v", err)
 	}
 
-	return NewServer(pool)
+	return NewServer(pool, nil)
 }
 
 func TestLoadPostsAndFrontHandlersIntegration(t *testing.T) {

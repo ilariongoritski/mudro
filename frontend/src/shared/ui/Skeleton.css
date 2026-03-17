@@ -1,0 +1,36 @@
+.skeleton {
+  background: linear-gradient(-90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%);
+  background-size: 400% 400%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: 4px;
+  width: 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -135% 0%;
+  }
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+}
+
+.skeleton-title {
+  height: 24px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.skeleton-rect {
+  border-radius: 12px;
+}

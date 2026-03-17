@@ -1,5 +1,11 @@
-import { FeedPage } from '@/pages/feed-page/ui/FeedPage'
+import { AppRouterProvider } from '@/app/providers/RouterProvider'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+import '@/shared/ui/ErrorBoundary.css'
 
 export const App = () => {
-  return <FeedPage />
+  return (
+    <ErrorBoundary>
+      <AppRouterProvider />
+    </ErrorBoundary>
+  )
 }
