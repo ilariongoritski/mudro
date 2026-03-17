@@ -37,20 +37,21 @@ const sortStateLabel: Record<FeedSort, string> = {
 
 export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyncAt }: FeedControlsProps) => {
   const dispatch = useAppDispatch()
-  const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
+  const { source, sort, limit, query } = useAppSelector((state) => state.feedFilters)
+  const user = useAppSelector((state) => state.session.user)
 
   return (
     <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
       <div className="feed-toolbar">
         <div className="feed-toolbar__intro">
           <div className="feed-toolbar__user-status">
-            {useAppSelector((state) => state.session.user) ? (
+            {user ? (
               <div className="feed-user-badge">
-                <span className="feed-user-badge__email">{useAppSelector((state) => state.session.user?.email)}</span>
-                {useAppSelector((state) => state.session.user?.isPremium) && (
+                <span className="feed-user-badge__email">{user.email}</span>
+                {user.isPremium && (
                   <span className="feed-user-badge__premium">PREMIUM</span>
                 )}
-                <span className="feed-user-badge__role">{useAppSelector((state) => state.session.user?.role?.toUpperCase())}</span>
+                <span className="feed-user-badge__role">{user.role?.toUpperCase()}</span>
               </div>
             ) : (
               <span className="feed-toolbar__eyebrow">Архив</span>
