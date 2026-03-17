@@ -1,15 +1,17 @@
 :root {
-  --mudro-bg-base: #FF1493;
-  --mudro-bg-soft: #FFF0F5;
-  --mudro-card: #ffffff;
-  --mudro-card-strong: #ffffff;
-  --mudro-line: rgba(0, 0, 0, 0.08);
-  --mudro-text: #1c1e21;
-  --mudro-muted: #65676b;
-  --mudro-accent: #FF1493;
+  --mudro-bg-base: #0f0a14;
+  --mudro-bg-soft: #1a1122;
+  --mudro-card: rgba(25, 15, 30, 0.65);
+  --mudro-card-strong: rgba(35, 20, 45, 0.85);
+  --mudro-line: rgba(255, 105, 180, 0.15);
+  --mudro-text: #f0f0f0;
+  --mudro-muted: #a095ad;
+  --mudro-accent: #ff1493;
+  --mudro-accent-glow: rgba(255, 20, 147, 0.4);
   --mudro-vk: #0077FF;
   --mudro-tg: #24A1DE;
-  --mudro-radius-lg: 18px;
-  --mudro-radius-md: 12px;
-  --mudro-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --mudro-radius-lg: 24px;
+  --mudro-radius-md: 16px;
+  --mudro-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(255, 105, 180, 0.1);
+  --mudro-glass-border: 1px solid rgba(255, 255, 255, 0.08);
 }

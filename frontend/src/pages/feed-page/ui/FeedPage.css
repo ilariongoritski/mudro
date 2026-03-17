@@ -6,10 +6,11 @@
   overflow: hidden;
   border-radius: calc(var(--mudro-radius-lg) + 4px);
   padding: clamp(1rem, 2vw, 1.35rem);
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  box-shadow: 0 18px 40px rgba(19, 10, 23, 0.12);
-  backdrop-filter: blur(8px);
+  background: var(--mudro-card);
+  border: var(--mudro-glass-border);
+  box-shadow: var(--mudro-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .feed-page-header {
@@ -20,7 +21,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: rgba(255, 251, 254, 0.74);
+  background: rgba(15, 10, 20, 0.74);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--mudro-radius-lg);
+  border: var(--mudro-glass-border);
+  padding: 0.5rem 1rem;
 }
 
 .feed-page-header__logo {
@@ -73,15 +79,22 @@
   justify-content: center;
   border-radius: 999px;
   padding: 0.42rem 0.78rem;
-  background: rgba(255, 105, 180, 0.14);
-  border: 1px solid rgba(255, 105, 180, 0.26);
-  color: var(--mudro-text);
+  background: rgba(255, 20, 147, 0.15);
+  border: 1px solid rgba(255, 20, 147, 0.3);
+  color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-decoration: none;
   text-transform: uppercase;
   transition: all 0.2s ease;
+}
+
+.feed-page-header__link:hover,
+.feed-page-next__eyebrow:hover {
+  background: var(--mudro-accent);
+  box-shadow: 0 0 16px var(--mudro-accent-glow);
+  color: #fff;
 }
 
 .feed-page-header__auth {
@@ -91,23 +104,24 @@
 }
 
 .feed-page-header__link_auth {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 105, 180, 0.3);
+  background: rgba(255, 20, 147, 0.2);
+  border-color: rgba(255, 20, 147, 0.5);
   text-transform: none;
   font-size: 0.82rem;
   letter-spacing: 0.02em;
+  color: #fff;
 }
 
 .feed-page-header__link_auth:hover {
-  background: #fff;
-  border-color: rgba(255, 105, 180, 0.6);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.12);
+  background: var(--mudro-accent);
+  border-color: var(--mudro-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px var(--mudro-accent-glow);
 }
 
 .feed-page-header__link_register {
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.18), rgba(255, 251, 254, 0.8));
-  border-color: rgba(255, 105, 180, 0.5);
+  background: linear-gradient(135deg, rgba(255, 20, 147, 0.8), rgba(15, 10, 20, 0.6));
+  border-color: var(--mudro-accent);
   font-weight: 800;
 }
 
