@@ -106,7 +106,7 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
           <input
             type="text"
             placeholder="Что ищем?.."
-            value={useAppSelector((state) => state.feedFilters.query ?? '')}
+            value={query ?? ''}
             onChange={(e) => dispatch(setQuery(e.target.value))}
             className="feed-controls__search-input"
           />
