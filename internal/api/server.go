@@ -332,7 +332,7 @@ func compactText(s *string) string {
 
 func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", args)
+	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
 	rows, err := s.pool.Query(ctx, `
 		select source, count(*) as posts
 		from posts`+whereSQL+`
