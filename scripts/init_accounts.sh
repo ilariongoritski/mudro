@@ -1,0 +1,5 @@
+-- MUDRO initial_accounts.sql
+-- Пароль 'admin123' хешируется bcrypt с DefaultCost. Для простоты используем заранее сгенерированный хеш пароля 'admin123' и 'user123'.
+-- Используем хеш от bcrypt.GenerateFromPassword([]byte("admin123"), 10): $2a$10$wNn.N33A1R/5P2T.G7B37OWJkU77i8.g/4oA0NkxvI8CwvXY.rP0y (это пример)
+-- Но надежнее сгенерировать через сам Go API, поэтому мы зарегистрируем их через curl-запросы, либо используем заглушку, которую API сможет переварить.
+-- Поскольку у нас есть API, проще всего дернуть /api/auth/register локально!
