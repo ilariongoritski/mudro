@@ -1,4 +1,4 @@
-﻿Дата/время: 2026-03-16 13:43:39
+Дата/время: 2026-03-16 13:43:39
 Что запускал: frontend build, новый dev-сервер на 5174, browser smoke по живому API 18080.
 Что прошло: npm run build; Vite dev на 5174; /api/front 200; toolbar с реальными числами; карточка TG #3106; drawer с комментариями и reply-иерархией; mobile smoke.
 Что упало (ошибка 5–15 строк): Не падало. Первый snapshot был снят до завершения загрузки данных, после ожидания контур стабилизировался.
@@ -147,3 +147,11 @@
 - Что упало (ошибка 5–15 строк): не падало; nginx установился и стартовал с первой попытки
 - Что починил (если было): убрал зависимость MVP frontend от Vercel как обязательной точки входа; добавил воспроизводимый VPS rollout через scripts/ops/deploy_vps_frontend.sh и scripts/ops/mudro.nginx.conf
 - Следующий шаг: при появлении домена закрыть тот же контур под HTTPS (80/443) и затем уже решать, закрывать ли внешний 8080 полностью
+
+- Дата/время: 2026-03-18 02:48
+- Что запускал: Упрощение auth (email→username); создание аккаунтов admin/user на VPS; Premium Dark UI (Glassmorphism); fix Vercel routes; fix Nginx proxy_pass; seed DB; E2E browser smoke
+- Что прошло: миграция `011_simplify_auth.sql` применена; Go-сервис и фронтенд переведены на username; `admin`+`user` созданы через curl API и подтверждены SQL; Premium Dark Hotpink тема внедрена в `variables.css`, `global.css`, `FeedPage.css`, `PostCard.css`; `vercel.json` переведен с `rewrites` на `routes`; Nginx proxy_pass исправлен (убран trailing slash); 3 seed-поста с Unsplash-медиа залиты в БД; Vercel deployed
+- Что упало (ошибка 5–15 строк): agent `--mode once` — worker упал на `go test`: сломанные сигнатуры `NewServer` и `authRequest` в тестах после рефакторинга auth; PowerShell `&&` не работает как разделитель (нужен `;`); `password_hash` колонка отсутствовала в таблице users (первая регистрация вернула 500)
+- Что починил (если было): добавлен import `strings`; добавлена колонка `password_hash`; PowerShell-разделители заменены на `;`; Nginx proxy_pass trailing slash убран
+- Следующий шаг: починить Go-тесты (`auth_handlers_test.go`, `server_integration_test.go`, `server_test.go`, `pkg/vercelapi/handler.go`), загрузить реальный контент (VK+TG), довести premium UI до mobile-ready, настроить HTTPS
+
