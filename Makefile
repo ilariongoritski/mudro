@@ -104,26 +104,30 @@ tables:
 test:
 	$(GO) test ./...
 
+test-no-tmp:
+	@PKGS=`$(GO) list ./... | grep -v '/tmp$$'`; \
+	$(GO) test $$PKGS
+
 selftest:
-	$(GO) test ./cmd/vkimport ./cmd/tgimport
+	$(GO) test ./tools/importers/vkimport/app ./tools/importers/tgimport/app
 
 media-backfill:
-	$(GO) run ./cmd/mediabackfill
+	$(GO) run ./tools/backfill/mediabackfill/cmd
 
 comment-backfill:
-	$(GO) run ./cmd/commentbackfill
+	$(GO) run ./tools/backfill/commentbackfill/cmd
 
 tg-csv-import:
 	@if [ -z "$(CSV)" ]; then echo "CSV is required"; exit 1; fi
-	$(GO) run ./cmd/tgcsvimport -in "$(CSV)" -dsn "$(DSN)"
+	$(GO) run ./tools/importers/tgcsvimport/cmd -in "$(CSV)" -dsn "$(DSN)"
 
 tg-comments-csv-import:
 	@if [ -z "$(CSV)" ]; then echo "CSV is required"; exit 1; fi
-	$(GO) run ./cmd/tgcommentscsvimport -in "$(CSV)" -dsn "$(DSN)"
+	$(GO) run ./tools/importers/tgcommentscsvimport/cmd -in "$(CSV)" -dsn "$(DSN)"
 
 tg-comment-media-import:
 	@if [ -z "$(DIR)" ]; then echo "DIR is required"; exit 1; fi
-	$(GO) run ./cmd/tgcommentmediaimport -dir "$(DIR)" -dsn "$(DSN)"
+	$(GO) run ./tools/importers/tgcommentmediaimport/cmd -dir "$(DIR)" -dsn "$(DSN)"
 
 count-posts:
 	$(PSQL_CMD) -X -c "select count(*) from posts;"
@@ -138,7 +142,7 @@ health:
 	$(MAKE) count-posts
 
 worker-loop:
-	./scripts/worker_autonomy_loop.sh
+	./ops/scripts/worker_autonomy_loop.sh
 
 bot-run:
 	@set -a; \
@@ -146,22 +150,26 @@ bot-run:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_BOT)" ]; then . "$(ENV_BOT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/bot
+	$(GO) run ./services/bot/cmd
 
 report-run:
+	@echo "DEPRECATED: report-run is Old. Use legacy-report-run if you really need reporter."
+	$(MAKE) legacy-report-run
+
+legacy-report-run:
 	@set -a; \
 	if [ -f ./.env ]; then . ./.env; fi; \
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_REPORTER)" ]; then . "$(ENV_REPORTER)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/reporter
+	$(GO) run ./legacy/old/services/reporter-old/cmd
 
 memento:
 	@set -a; \
 	if [ -f ./.env ]; then . ./.env; fi; \
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	set +a; \
-	GOCACHE=/tmp/go-build-cache $(GO) run ./cmd/memento
+	GOCACHE=/tmp/go-build-cache $(GO) run ./tools/maintenance/memento/cmd
 
 agent-plan-once:
 	@set -a; \
@@ -169,7 +177,7 @@ agent-plan-once:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/agent --mode once
+	$(GO) run ./services/agent/cmd --mode once
 
 agent-plan:
 	@set -a; \
@@ -177,7 +185,7 @@ agent-plan:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/agent --mode planner --interval 1m
+	$(GO) run ./services/agent/cmd --mode planner --interval 1m
 
 agent-work:
 	@set -a; \
@@ -185,7 +193,7 @@ agent-work:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/agent --mode worker --interval 15s
+	$(GO) run ./services/agent/cmd --mode worker --interval 15s
 
 agent-approve:
 	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
@@ -194,7 +202,7 @@ agent-approve:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/agent --mode approve --task-id "$(TASK_ID)"
+	$(GO) run ./services/agent/cmd --mode approve --task-id "$(TASK_ID)"
 
 agent-reject:
 	@if [ -z "$(TASK_ID)" ]; then echo "TASK_ID is required"; exit 1; fi
@@ -203,4 +211,4 @@ agent-reject:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./cmd/agent --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
+	$(GO) run ./services/agent/cmd --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"

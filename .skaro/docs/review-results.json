@@ -1,0 +1,90 @@
+{
+  "checklist": [
+    {
+      "id": "constitution_validated",
+      "label": "Constitution validated",
+      "passed": false,
+      "detail": "Not validated"
+    },
+    {
+      "id": "invariants_present",
+      "label": "Architectural invariants defined",
+      "passed": true,
+      "detail": "24 lines"
+    },
+    {
+      "id": "architecture_reviewed",
+      "label": "Architecture reviewed",
+      "passed": false,
+      "detail": "Not reviewed"
+    },
+    {
+      "id": "devplan_confirmed",
+      "label": "Dev plan confirmed",
+      "passed": true,
+      "detail": "Confirmed"
+    },
+    {
+      "id": "all_tasks_tests_confirmed",
+      "label": "All task tests confirmed",
+      "passed": false,
+      "detail": "0/6 tasks"
+    },
+    {
+      "id": "all_tasks_implemented",
+      "label": "All tasks fully implemented",
+      "passed": false,
+      "detail": "0/6 tasks"
+    },
+    {
+      "id": "milestones_have_tasks",
+      "label": "All milestones have tasks",
+      "passed": false,
+      "detail": "Empty: 01-overview, 05-backlog"
+    }
+  ],
+  "global_commands": [
+    {
+      "name": "dbcheck",
+      "command": "wsl bash -lc \"cd /mnt/d/mudr/mudro11 && make dbcheck\"",
+      "success": false,
+      "exit_code": 2,
+      "stdout": "docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1 -e -a -c \"select 1;\"\n",
+      "stderr": "service \"db\" is not running\nmake: *** [Makefile:42: dbcheck] Error 1\n"
+    },
+    {
+      "name": "tables",
+      "command": "wsl bash -lc \"cd /mnt/d/mudr/mudro11 && make tables\"",
+      "success": false,
+      "exit_code": 2,
+      "stdout": "docker compose exec -T db psql -U postgres -d gallery -X -c \"\\\\dt\"\n",
+      "stderr": "service \"db\" is not running\nmake: *** [Makefile:102: tables] Error 1\n"
+    },
+    {
+      "name": "go-test",
+      "command": "wsl bash -lc \"cd /mnt/d/mudr/mudro11 && make test-no-tmp\"",
+      "success": true,
+      "exit_code": 0,
+      "stdout": "?   \tgithub.com/goritskimihail/mudro/api\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/agent\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/api\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/bot\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/commentbackfill\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/importer\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/mediabackfill\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/memento\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/reporter\t[no test files]\nok  \tgithub.com/goritskimihail/mudro/cmd/tgcommentmediaimport\t(cached)\nok  \tgithub.com/goritskimihail/mudro/cmd/tgcommentscsvimport\t(cached)\nok  \tgithub.com/goritskimihail/mudro/cmd/tgcommentsimport\t(cached)\nok  \tgithub.com/goritskimihail/mudro/cmd/tgcsvimport\t(cached)\nok  \tgithub.com/goritskimihail/mudro/cmd/tgdedupe\t(cached)\n?   \tgithub.com/goritskimihail/mudro/cmd/tghtmlimport\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/cmd/tgimport\t[no test files]\nok  \tgithub.com/goritskimihail/mudro/cmd/tgload\t(cached)\nok  \tgithub.com/goritskimihail/mudro/cmd/tgrootmerge\t(cached)\n?   \tgithub.com/goritskimihail/mudro/cmd/vkimport\t[no test files]\nok  \tgithub.com/goritskimihail/mudro/e2e\t(cached)\n?   \tgithub.com/goritskimihail/mudro/frontend/node_modules/flatted/golang/pkg/flatted\t[no test files]\nok  \tgithub.com/goritskimihail/mudro/internal/agent\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/api\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/bot\t0.074s\n?   \tgithub.com/goritskimihail/mudro/internal/commentmodel\t[no test files]\nok  \tgithub.com/goritskimihail/mudro/internal/config\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/events\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/media\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/ratelimit\t(cached)\nok  \tgithub.com/goritskimihail/mudro/internal/reporter\t(cached)\n?   \tgithub.com/goritskimihail/mudro/internal/tgexport\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/output\t[no test files]\n?   \tgithub.com/goritskimihail/mudro/pkg/vercelapi\t[no test files]\n",
+      "stderr": ""
+    },
+    {
+      "name": "frontend-build",
+      "command": "npm.cmd --prefix frontend run build",
+      "success": true,
+      "exit_code": 0,
+      "stdout": "\n> mudro11-frontend@0.0.0 build\n> tsc -b && vite build\n\n\u001b[36mvite v7.3.1 \u001b[32mbuilding client environment for production...\u001b[36m\u001b[39m\ntransforming...\n\u001b[32m✓\u001b[39m 62 modules transformed.\nrendering chunks...\ncomputing gzip size...\n\u001b[2mdist/\u001b[22m\u001b[32mindex.html                 \u001b[39m\u001b[1m\u001b[2m  0.55 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  0.37 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[35massets/index-U_r1S7Fs.css  \u001b[39m\u001b[1m\u001b[2m 23.18 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:  4.67 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[36massets/index-aSYTXKqd.js   \u001b[39m\u001b[1m\u001b[2m294.65 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip: 94.39 kB\u001b[22m\n\u001b[32m✓ built in 1.70s\u001b[39m\n",
+      "stderr": ""
+    },
+    {
+      "name": "frontend-lint",
+      "command": "npm.cmd --prefix frontend run lint",
+      "success": true,
+      "exit_code": 0,
+      "stdout": "\n> mudro11-frontend@0.0.0 lint\n> eslint . --max-warnings=0\n\n",
+      "stderr": ""
+    }
+  ],
+  "passed": false,
+  "timestamp": "2026-03-19T19:05:19.903722"
+}

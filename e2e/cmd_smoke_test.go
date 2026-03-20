@@ -38,7 +38,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 
 	root := repoRoot(t)
 	bin := filepath.Join(t.TempDir(), "mudro-api-smoke")
-	build := exec.Command(goBin(t), "build", "-o", bin, "./cmd/api")
+	build := exec.Command(goBin(t), "build", "-o", bin, "./services/feed-api/cmd")
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build api: %v\n%s", err, string(out))
@@ -111,7 +111,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 
 	root := repoRoot(t)
 	bin := filepath.Join(t.TempDir(), "mudro-bot-smoke")
-	build := exec.Command(goBin(t), "build", "-o", bin, "./cmd/bot")
+	build := exec.Command(goBin(t), "build", "-o", bin, "./services/bot/cmd")
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build bot: %v\n%s", err, string(out))
@@ -129,6 +129,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 		}
 		env = append(env, e)
 	}
+	env = append(env, "DSN=postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable")
 	cmd.Env = env
 
 	var out bytes.Buffer
@@ -139,7 +140,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected bot startup failure without token")
 	}
-	if !strings.Contains(out.String(), "TELEGRAM_BOT_TOKEN is not set") {
+	if !strings.Contains(out.String(), "missing required env: TELEGRAM_BOT_TOKEN") {
 		t.Fatalf("unexpected output:\n%s", out.String())
 	}
 }

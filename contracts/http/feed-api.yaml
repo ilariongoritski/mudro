@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: MUDRO Feed API Contract
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /api/front:
+    get:
+      summary: Front page aggregated payload
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Aggregated front payload
+  /api/posts:
+    get:
+      summary: Feed items list
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: before_ts
+          schema:
+            type: string
+        - in: query
+          name: before_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Posts payload

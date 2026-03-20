@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -171,6 +174,80 @@ func KafkaClientID() string {
 
 func KafkaTopicTasks() string {
 	return envOr("KAFKA_TOPIC_TASKS", DefaultKafkaTopic)
+}
+
+func MudroEnv() string {
+	return strings.ToLower(strings.TrimSpace(os.Getenv("MUDRO_ENV")))
+}
+
+func ValidateRequiredEnv(required ...string) error {
+	var missing []string
+	for _, key := range required {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf("missing required env: %s", strings.Join(missing, ", "))
+}
+
+func ValidateRuntimeDSN(service, dsn string) error {
+	parsed, err := url.Parse(strings.TrimSpace(dsn))
+	if err != nil {
+		return fmt.Errorf("%s DSN parse: %w", service, err)
+	}
+	if parsed.Scheme == "" {
+		return fmt.Errorf("%s DSN parse: missing scheme", service)
+	}
+
+	user := ""
+	if parsed.User != nil {
+		user = strings.ToLower(strings.TrimSpace(parsed.User.Username()))
+	}
+	if user != "postgres" {
+		return nil
+	}
+
+	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	if isProductionLikeEnv(MudroEnv()) {
+		return fmt.Errorf("%s runtime refuses superuser DSN for MUDRO_ENV=%q", service, MudroEnv())
+	}
+	if isLocalDevDBHost(host) {
+		return nil
+	}
+	return fmt.Errorf("%s runtime refuses superuser DSN for non-local host %q", service, host)
+}
+
+func ValidateRuntime(service string, requiredEnv ...string) error {
+	if err := ValidateRequiredEnv(requiredEnv...); err != nil {
+		return fmt.Errorf("%s config invalid: %w", service, err)
+	}
+	if err := ValidateRuntimeDSN(service, DSN()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func isProductionLikeEnv(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "prod", "production", "stage", "staging":
+		return true
+	default:
+		return false
+	}
+}
+
+func isLocalDevDBHost(host string) bool {
+	if host == "" {
+		return false
+	}
+	switch host {
+	case "localhost", "127.0.0.1", "::1", "db":
+		return true
+	}
+	return net.ParseIP(host) != nil && net.ParseIP(host).IsLoopback()
 }
 
 func fileExists(path string) bool {

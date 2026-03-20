@@ -104,3 +104,46 @@ func TestKafkaBrokers(t *testing.T) {
 		t.Fatalf("brokers=%v", b)
 	}
 }
+
+func TestValidateRequiredEnv(t *testing.T) {
+	t.Setenv("X_ONE", "ok")
+	t.Setenv("X_TWO", "")
+	err := ValidateRequiredEnv("X_ONE", "X_TWO")
+	if err == nil {
+		t.Fatal("expected missing env error")
+	}
+	if got := err.Error(); got != "missing required env: X_TWO" {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestValidateRuntimeDSNAllowsLocalDevSuperuser(t *testing.T) {
+	t.Setenv("MUDRO_ENV", "development")
+	err := ValidateRuntimeDSN("api", "postgres://postgres:postgres@db:5432/gallery?sslmode=disable")
+	if err != nil {
+		t.Fatalf("expected local dev DSN to pass, got %v", err)
+	}
+}
+
+func TestValidateRuntimeDSNRejectsSuperuserOutsideLocalDev(t *testing.T) {
+	err := ValidateRuntimeDSN("api", "postgres://postgres:postgres@10.0.0.5:5432/gallery?sslmode=disable")
+	if err == nil {
+		t.Fatal("expected superuser DSN rejection")
+	}
+}
+
+func TestValidateRuntimeDSNRejectsProductionSuperuser(t *testing.T) {
+	t.Setenv("MUDRO_ENV", "production")
+	err := ValidateRuntimeDSN("api", "postgres://postgres:postgres@127.0.0.1:5432/gallery?sslmode=disable")
+	if err == nil {
+		t.Fatal("expected production superuser DSN rejection")
+	}
+}
+
+func TestValidateRuntimeAllowsNonSuperuserProductionDSN(t *testing.T) {
+	t.Setenv("MUDRO_ENV", "production")
+	t.Setenv("DSN", "postgres://mudro_app:secret@127.0.0.1:5432/gallery?sslmode=disable")
+	if err := ValidateRuntime("api", "DSN"); err != nil {
+		t.Fatalf("expected runtime validation to pass, got %v", err)
+	}
+}

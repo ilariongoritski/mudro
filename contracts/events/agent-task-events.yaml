@@ -1,0 +1,44 @@
+version: 1
+kind: event-contract
+name: mudro.agent.tasks.v1
+owner: services/agent
+
+topic:
+  name_template: mudro.agent.tasks.v1
+  source_env:
+    - KAFKA_TOPIC_TASKS
+
+producer:
+  service: agent
+  path: services/agent/cmd
+
+payload:
+  required:
+    - event_type
+    - task_id
+    - created_at
+  fields:
+    event_type:
+      type: string
+      enum:
+        - task_created
+        - task_started
+        - task_succeeded
+        - task_failed
+        - task_retried
+        - task_waiting_approval
+        - task_rejected
+    task_id:
+      type: integer
+    worker_id:
+      type: string
+      nullable: true
+    task_kind:
+      type: string
+      nullable: true
+    message:
+      type: string
+      nullable: true
+    created_at:
+      type: string
+      format: date-time

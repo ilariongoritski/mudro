@@ -1,0 +1,20 @@
+services:
+  reporter:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./legacy/old/services/reporter-old/cmd"
+    environment:
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN:-}"
+      REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
+      REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
+      API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./legacy/old/services/reporter-old/cmd'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5

@@ -1,0 +1,123 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gallery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gallery"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kafka:
+    image: redpandadata/redpanda:v24.3.6
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - "512M"
+      - --reserve-memory
+      - "0M"
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - "PLAINTEXT://0.0.0.0:9092"
+      - --advertise-kafka-addr
+      - "PLAINTEXT://kafka:9092"
+    ports:
+      - "127.0.0.1:${KAFKA_PORT:-9092}:9092"
+    volumes:
+      - kafka_prod:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:'"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  api:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./services/feed-api/cmd"
+    environment:
+      API_ADDR: ":8080"
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+      API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
+      API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
+      REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
+      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_DB: "${REDIS_DB:-0}"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  agent:
+    image: golang:1.23
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "go run ./services/agent/cmd --mode worker --interval 15s"
+    environment:
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      MUDRO_ROOT: /app
+      KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
+      KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
+      KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
+      KAFKA_CLIENT_ID: "${KAFKA_CLIENT_ID:-mudro-agent}"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./services/agent/cmd'"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_prod:
+  redis_prod:
+  kafka_prod:

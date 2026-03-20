@@ -86,4 +86,4 @@ Repo-level verify commands assume:
 - backend and `make` commands run through WSL at `/mnt/d/mudr/mudro11`
 - frontend build/lint run via `npm.cmd`
 
-Current Go verify excludes scratch-only package `tmp/`, because `tmp/feed_check.go` is not canonical product code.
+Current Go verify excludes scratch-only package `tmp/` via `make test-no-tmp`, because `tmp/feed_check.go` is not canonical product code and direct `$(go list ...)` expansion is unsafe when `Skaro` launches checks through PowerShell.

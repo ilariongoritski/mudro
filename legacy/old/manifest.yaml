@@ -1,0 +1,30 @@
+version: 1
+updated_at: "2026-03-20"
+
+runtime:
+  moved_from_cmd:
+    - cmd/api
+    - cmd/agent
+    - cmd/bot
+    - cmd/reporter
+  archived_path: legacy/old/cmd-runtime
+
+legacy_services:
+  - name: reporter-old
+    moved_from: services/reporter
+    path: legacy/old/services/reporter-old
+    status: "Old (not used by default)"
+
+misc:
+  - from: scripts/ops
+    to: legacy/old/misc/scripts-ops-old
+    reason: "ops scripts canonicalized under ops/scripts"
+  - from: docs/log-improvements-20260316.md
+    to: legacy/old/misc/log-improvements-20260316.md
+    reason: "historical note, not active runbook"
+  - from: move_files.sh
+    to: legacy/old/misc/move_files.sh
+    reason: "one-time migration script"
+  - from: cmd/server
+    to: legacy/old/misc/cmd-server-empty
+    reason: "empty legacy directory"

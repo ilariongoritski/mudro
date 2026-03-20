@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+﻿import { useEffect } from 'react'
 
-import type { Post, PostComment } from "@/entities/post/model/types";
+import type { Post, PostComment } from '@/entities/post/model/types'
 import {
+  buildOriginalPostUrl,
+  humanizeCommentAuthor,
   mediaKindLabel,
   metricDisplay,
   metricLabel,
@@ -11,88 +13,78 @@ import {
   resolveMediaKind,
   resolveMediaTitle,
   resolveMediaUrl,
-} from "@/entities/post/lib/postPresentation";
-import { formatDateTime } from "@/shared/lib/format/date";
-import "./PostDetailDrawer.css";
+} from '@/entities/post/lib/postPresentation'
+import { formatDateTime } from '@/shared/lib/format/date'
+import './PostDetailDrawer.css'
 
 interface PostDetailDrawerProps {
-  post: Post | null;
-  onClose: () => void;
+  post: Post | null
+  onClose: () => void
 }
 
-const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
-  if (!reactions) return [] as Array<[string, number]>;
+const normalizeCommentReactions = (reactions?: PostComment['reactions']) => {
+  if (!reactions) return [] as Array<[string, number]>
 
   if (Array.isArray(reactions)) {
     return reactions
       .filter((reaction) => reaction.count > 0)
-      .map((reaction) => [reaction.raw || reaction.label, reaction.count] as [string, number]);
+      .map((reaction) => [reaction.raw || reaction.label, reaction.count] as [string, number])
   }
 
-  return normalizeReactions(reactions);
-};
+  return normalizeReactions(reactions)
+}
 
 export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
   useEffect(() => {
-    if (!post) return;
+    if (!post) return
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
+      if (event.key === 'Escape') onClose()
+    }
 
-    window.addEventListener("keydown", handleEscape);
+    window.addEventListener('keydown', handleEscape)
     return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [post, onClose]);
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [post, onClose])
 
-  if (!post) return null;
+  if (!post) return null
 
-  const mediaItems = post.media ?? [];
-  const reactions = normalizeReactions(post.reactions);
-  const comments = post.comments ?? [];
-  const totalComments = post.comments_count ?? comments.length;
-  const fullText = post.text?.trim() || "Для этого поста нет развернутого текста.";
-  const viewsMetric = metricDisplay(post.views_count);
+  const mediaItems = post.media ?? []
+  const reactions = normalizeReactions(post.reactions)
+  const comments = post.comments ?? []
+  const totalComments = post.comments_count ?? comments.length
+  const fullText = post.text?.trim() || 'Для этого поста нет развернутого текста.'
+  const viewsMetric = metricDisplay(post.views_count)
+  const originalPostUrl = buildOriginalPostUrl(post.source, post.source_post_id)
 
   return (
-    <div
-      className="post-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="post-drawer-title"
-    >
-      <button
-        type="button"
-        className="post-drawer__backdrop"
-        aria-label="Закрыть карточку поста"
-        onClick={onClose}
-      />
+    <div className="post-drawer" role="dialog" aria-modal="true" aria-labelledby="post-drawer-title">
+      <button type="button" className="post-drawer__backdrop" aria-label="Закрыть карточку поста" onClick={onClose} />
 
       <aside className="post-drawer__panel">
         <header className="post-drawer__head">
           <div className="post-drawer__head-main">
-            <div className={`post-drawer__source post-drawer__source_${post.source}`}>
-              {post.source.toUpperCase()}
-            </div>
-            <div className="post-drawer__eyebrow">
-              {post.source.toUpperCase()} #{post.source_post_id} · внутренний id {post.id}
-            </div>
+            <div className={`post-drawer__source post-drawer__source_${post.source}`}>{post.source.toUpperCase()}</div>
+            <div className="post-drawer__eyebrow">{post.source.toUpperCase()} #{post.source_post_id}</div>
             <h2 id="post-drawer-title">Развернутый просмотр поста</h2>
             <p>{formatDateTime(post.published_at)}</p>
           </div>
 
-          <button
-            type="button"
-            className="post-drawer__close"
-            onClick={onClose}
-          >
-            Закрыть
-          </button>
+          <div className="post-drawer__head-actions">
+            {originalPostUrl ? (
+              <a className="post-drawer__origin-link" href={originalPostUrl} target="_blank" rel="noreferrer">
+                Оригинальный пост
+              </a>
+            ) : null}
+            <button type="button" className="post-drawer__close" onClick={onClose}>
+              Закрыть
+            </button>
+          </div>
         </header>
 
         <section className="post-drawer__stats" aria-label="Метрики поста">
@@ -102,9 +94,7 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
           </article>
           <article>
             <span>Просмотры</span>
-            <strong className={viewsMetric.missing ? "post-drawer__metric-missing" : undefined}>
-              {viewsMetric.value}
-            </strong>
+            <strong className={viewsMetric.missing ? 'post-drawer__metric-missing' : undefined}>{viewsMetric.value}</strong>
           </article>
           <article>
             <span>Комментарии</span>
@@ -132,31 +122,28 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
             <span className="post-drawer__section-label">Вложения</span>
             <div className="post-drawer__media-grid">
               {mediaItems.map((item, index) => {
-                const kind = resolveMediaKind(item);
-                const title = resolveMediaTitle(item);
-                const mediaUrl = resolveMediaUrl(item.url);
-                const displayUrl = resolveMediaDisplayUrl(item);
+                const kind = resolveMediaKind(item)
+                const title = resolveMediaTitle(item)
+                const mediaUrl = resolveMediaUrl(item.url)
+                const displayUrl = resolveMediaDisplayUrl(item)
+                const ctaHref = originalPostUrl ?? mediaUrl
+                const ctaLabel = originalPostUrl ? 'Оригинальный пост' : 'Открыть файл'
 
                 return (
-                  <article
-                    key={`${item.url ?? item.title ?? item.kind}-${index}`}
-                    className="post-drawer__media-card"
-                  >
-                    {(kind === "image" || kind === "video") && displayUrl ? (
-                      <img src={displayUrl} alt={title} loading="lazy" />
-                    ) : null}
+                  <article key={`${item.url ?? item.title ?? item.kind}-${index}`} className="post-drawer__media-card">
+                    {(kind === 'image' || kind === 'video') && displayUrl ? <img src={displayUrl} alt={title} loading="lazy" /> : null}
 
                     <div className="post-drawer__media-info">
                       <strong>{mediaKindLabel(kind)}</strong>
-                      <span>{title}</span>
-                      {mediaUrl ? (
-                        <a href={mediaUrl} target="_blank" rel="noreferrer">
-                          Открыть оригинал
+                      <span title={title}>{title}</span>
+                      {ctaHref ? (
+                        <a href={ctaHref} target="_blank" rel="noreferrer">
+                          {ctaLabel}
                         </a>
                       ) : null}
                     </div>
                   </article>
-                );
+                )
               })}
             </div>
           </section>
@@ -167,30 +154,24 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
             <span className="post-drawer__section-label">Комментарии и ответы</span>
             <div className="post-drawer__comment-list">
               {comments.map((comment) => {
-                const commentReactions = normalizeCommentReactions(comment.reactions);
+                const commentReactions = normalizeCommentReactions(comment.reactions)
 
                 return (
                   <article
-                    key={`${comment.source_comment_id}-${comment.parent_comment_id ?? "root"}`}
-                    className={`post-drawer__comment-card ${comment.parent_comment_id ? "post-drawer__comment-card_reply" : ""}`}
+                    key={`${comment.source_comment_id}-${comment.parent_comment_id ?? 'root'}`}
+                    className={`post-drawer__comment-card ${comment.parent_comment_id ? 'post-drawer__comment-card_reply' : ''}`}
                   >
                     <div className="post-drawer__comment-meta">
-                      <strong>{comment.author_name || "Без имени"}</strong>
+                      <strong>{humanizeCommentAuthor(comment.author_name)}</strong>
                       <span>{formatDateTime(comment.published_at)}</span>
-                      {comment.parent_comment_id ? (
-                        <span>ответ на #{comment.parent_comment_id}</span>
-                      ) : null}
+                      {comment.parent_comment_id ? <span>ответ на #{comment.parent_comment_id}</span> : null}
                     </div>
-                    <p>{comment.text?.trim() || "Без текста"}</p>
+                    <p>{comment.text?.trim() || 'Без текста'}</p>
 
                     {commentReactions.length > 0 ? (
                       <div className="post-drawer__comment-reactions">
                         {commentReactions.map(([reaction, count]) => (
-                          <span
-                            key={`${comment.source_comment_id}-${reaction}`}
-                            className="post-drawer__comment-reaction"
-                            title={reaction}
-                          >
+                          <span key={`${comment.source_comment_id}-${reaction}`} className="post-drawer__comment-reaction" title={reaction}>
                             {reactionLabel(reaction)} {count}
                           </span>
                         ))}
@@ -200,41 +181,41 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
                     {(comment.media ?? []).length > 0 ? (
                       <div className="post-drawer__comment-media-grid">
                         {(comment.media ?? []).map((item, index) => {
-                          const kind = resolveMediaKind(item);
-                          const title = resolveMediaTitle(item);
-                          const mediaUrl = resolveMediaUrl(item.url);
-                          const displayUrl = resolveMediaDisplayUrl(item);
+                          const kind = resolveMediaKind(item)
+                          const title = resolveMediaTitle(item)
+                          const mediaUrl = resolveMediaUrl(item.url)
+                          const displayUrl = resolveMediaDisplayUrl(item)
+                          const ctaHref = originalPostUrl ?? mediaUrl
+                          const ctaLabel = originalPostUrl ? 'Оригинальный пост' : 'Открыть файл'
 
                           return (
                             <article
                               key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
                               className="post-drawer__comment-media-card"
                             >
-                              {(kind === "image" || kind === "video") && displayUrl ? (
-                                <img src={displayUrl} alt={title} loading="lazy" />
-                              ) : null}
+                              {(kind === 'image' || kind === 'video') && displayUrl ? <img src={displayUrl} alt={title} loading="lazy" /> : null}
 
                               <div className="post-drawer__comment-media-info">
                                 <strong>{mediaKindLabel(kind)}</strong>
-                                <span>{title}</span>
-                                {mediaUrl ? (
-                                  <a href={mediaUrl} target="_blank" rel="noreferrer">
-                                    Открыть оригинал
+                                <span title={title}>{title}</span>
+                                {ctaHref ? (
+                                  <a href={ctaHref} target="_blank" rel="noreferrer">
+                                    {ctaLabel}
                                   </a>
                                 ) : null}
                               </div>
                             </article>
-                          );
+                          )
                         })}
                       </div>
                     ) : null}
                   </article>
-                );
+                )
               })}
             </div>
           </section>
         ) : null}
       </aside>
     </div>
-  );
-};
+  )
+}

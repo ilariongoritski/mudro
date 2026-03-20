@@ -231,3 +231,15 @@
 - Что упало (ошибка 5-15 строк): не падало
 - Что починил (если было): в `.codex` памяти устранен битый merge-state, из-за которого следующий чат мог получить конфликтный контекст вместо цельной истории
 - Следующий шаг: при необходимости отдельным коммитом сохранять уже кодовые правки (`frontend`, `internal/api`, `cmd/*`) после их самостоятельной проверки
+Дата/время: 2026-03-18 00:35
+Что запускал: разбор `.skaro/docs/review-results.json`; правки `Makefile`, `.skaro/config.yaml`, `.skaro/ops/local-run.md`; `make test-no-tmp`, `make dbcheck`, frontend build/lint, `skaro status`.
+Что прошло: `make test-no-tmp` в WSL; `make dbcheck`; `npm.cmd --prefix frontend run build`; `npm.cmd --prefix frontend run lint`; `skaro status` показывает `Constitution` и `Architecture` как OK.
+Что упало (ошибка 5–15 строк): `wsl bash -lc "cd /mnt/d/mudr/mudro11 && go test $(go list ./... | grep -v '/tmp$')"` падал, потому что PowerShell разворачивал `$(...)` до передачи в WSL и ломал verify.
+Что починил (если было): вынес Go-проверку в `make test-no-tmp` и перевел `Skaro` verify на этот таргет; зафиксировал это в `.skaro/ops/local-run.md`.
+Следующий шаг: при необходимости отдельно разобраться с process-only статусами `Skaro` (`validated/reviewed/confirmed`, 50% по tasks), но это уже не блокер кодовой валидации.
+Дата/время: 2026-03-18 21:35
+Что запускал: чтение внешних логов `D:/важные логи/backlog_tomorrow.md` и `D:/важные логи/mudro-status-report-v5.4.md`; сверку staged diff текущей копии; обновление `.codex` памяти.
+Что прошло: собран snapshot `.codex/notes/antigravity-sync-20260318.md`; `TODO/DONE/TOP10` обновлены с учетом Antigravity и текущего staged WIP.
+Что упало (ошибка 5–15 строк): Явных падений не было; обнаружено содержательное расхождение между внешним отчетом Antigravity и этой копией по статусу auth-refactor/go tests.
+Что починил (если было): в памяти проекта явно разделены внешние подтвержденные факты, staged-срез этой копии и branch-divergence как главный текущий риск.
+Следующий шаг: при первой кодовой сессии не спорить по памяти, а сначала свести `mudro11` и `mudro11-main`/Antigravity в один проверяемый baseline.

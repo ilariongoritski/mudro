@@ -1,0 +1,32 @@
+version: 1
+updated_at: "2026-03-20"
+
+runtime:
+  active:
+    - name: feed-api
+      path: services/feed-api/cmd
+      run: go run ./services/feed-api/cmd
+      env_files: [env/common.env, env/api.env]
+    - name: agent
+      path: services/agent/cmd
+      run: go run ./services/agent/cmd
+      env_files: [env/common.env, env/agent.env]
+    - name: bot
+      path: services/bot/cmd
+      run: go run ./services/bot/cmd
+      env_files: [env/common.env, env/bot.env]
+  legacy:
+    - name: reporter-old
+      path: legacy/old/services/reporter-old/cmd
+      run: go run ./legacy/old/services/reporter-old/cmd
+      status: "Old (not used by default)"
+      env_files: [env/common.env, env/reporter.env]
+
+cli:
+  importers_root: tools/importers
+  backfill_root: tools/backfill
+  maintenance_root: tools/maintenance
+
+compose:
+  core: ops/compose/docker-compose.core.yml
+  legacy: ops/compose/docker-compose.legacy.yml

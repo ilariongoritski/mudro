@@ -20,7 +20,6 @@ import (
 	"github.com/goritskimihail/mudro/internal/config"
 	mediadb "github.com/goritskimihail/mudro/internal/media"
 	"github.com/goritskimihail/mudro/internal/tgexport"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -358,66 +357,28 @@ func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, [
 }
 
 func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder string) ([]postDTO, *cursor, error) {
-	var (
-		rows pgx.Rows
-		err  error
-	)
 	order := "desc"
-	comparator := "<"
 	if sortOrder == "asc" {
 		order = "asc"
-		comparator = ">"
 	}
-
-	if page != nil {
-		offset := (*page - 1) * limit
-		args := []any{}
-		q := `
-			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
-			from posts
-		`
-		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
-		args = nextArgs
-		q += whereSQL
-		args = append(args, limit, offset)
-		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
-		rows, err = s.pool.Query(ctx, q, args...)
-	} else {
-		base := `
-			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
-			from posts
-		`
-		if beforeTS == nil || beforeID == nil {
-			args := []any{}
-			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
-			args = nextArgs
-			q += whereSQL
-			args = append(args, limit)
-			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
-			rows, err = s.pool.Query(ctx, q, args...)
-		} else {
-			args := []any{}
-			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
-			args = nextArgs
-			if whereSQL == "" {
-				q += " where "
-			} else {
-				q += whereSQL + " and "
-			}
-			args = append(args, *beforeTS, *beforeID, limit)
-			q += fmt.Sprintf("(published_at, id) %s ($%d, $%d) order by published_at %s, id %s limit $%d", comparator, len(args)-2, len(args)-1, order, order, len(args))
-			rows, err = s.pool.Query(ctx, q, args...)
-		}
-	}
+	args := []any{}
+	q := `
+		select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count,
+		       coalesce((select count(*)::int from post_comments pc where pc.post_id = posts.id), 0) as actual_comments,
+		       created_at, updated_at
+		from posts
+	`
+	whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
+	args = nextArgs
+	q += whereSQL
+	q += fmt.Sprintf(" order by published_at %s, id %s", order, order)
+	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
 
 	posts := make([]postDTO, 0, limit)
-	ids := make([]int64, 0, limit)
 
 	for rows.Next() {
 		var (
@@ -434,6 +395,7 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			&p.LikesCount,
 			&p.ViewsCount,
 			&p.CommentsCount,
+			&p.ActualComments,
 			&p.CreatedAt,
 			&p.UpdatedAt,
 		); err != nil {
@@ -443,14 +405,20 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			p.Media = json.RawMessage(mediaBytes)
 		}
 		posts = append(posts, p)
-		ids = append(ids, p.ID)
 	}
 	if rows.Err() != nil {
 		return nil, nil, rows.Err()
 	}
 
+	posts = dedupeFeedPosts(posts)
+	posts, hasMore := slicePosts(posts, beforeTS, beforeID, page, limit, sortOrder)
 	if len(posts) == 0 {
 		return posts, nil, nil
+	}
+
+	ids := make([]int64, 0, len(posts))
+	for _, p := range posts {
+		ids = append(ids, p.ID)
 	}
 
 	normalizedPostMedia, err := mediadb.LoadPostMediaJSON(ctx, s.pool, ids)
@@ -484,7 +452,7 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	}
 
 	var next *cursor
-	if page == nil {
+	if page == nil && hasMore {
 		last := posts[len(posts)-1]
 		next = &cursor{
 			BeforeTS: last.PublishedAt,
@@ -492,6 +460,129 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		}
 	}
 	return posts, next, nil
+}
+
+func slicePosts(posts []postDTO, beforeTS *time.Time, beforeID *int64, page *int, limit int, sortOrder string) ([]postDTO, bool) {
+	filtered := posts
+	if page == nil && beforeTS != nil && beforeID != nil {
+		filtered = make([]postDTO, 0, len(posts))
+		for _, post := range posts {
+			if sortOrder == "asc" {
+				if post.PublishedAt.After(*beforeTS) || (post.PublishedAt.Equal(*beforeTS) && post.ID > *beforeID) {
+					filtered = append(filtered, post)
+				}
+				continue
+			}
+			if post.PublishedAt.Before(*beforeTS) || (post.PublishedAt.Equal(*beforeTS) && post.ID < *beforeID) {
+				filtered = append(filtered, post)
+			}
+		}
+	}
+
+	start := 0
+	if page != nil {
+		start = (*page - 1) * limit
+		if start >= len(filtered) {
+			return nil, false
+		}
+	}
+	end := start + limit
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+	return filtered[start:end], end < len(filtered)
+}
+
+func dedupeFeedPosts(posts []postDTO) []postDTO {
+	type recentEntry struct {
+		index       int
+		publishedAt time.Time
+	}
+
+	kept := make([]postDTO, 0, len(posts))
+	recentByText := make(map[string][]recentEntry)
+	for _, post := range posts {
+		key := feedDedupeKey(post)
+		if key == "" {
+			kept = append(kept, post)
+			continue
+		}
+
+		recent := recentByText[key]
+		pruned := recent[:0]
+		duplicateIdx := -1
+		for _, entry := range recent {
+			if absDurationSeconds(post.PublishedAt.Sub(entry.publishedAt)) > 5 {
+				continue
+			}
+			pruned = append(pruned, entry)
+			if duplicateIdx == -1 {
+				duplicateIdx = entry.index
+			}
+		}
+		recentByText[key] = pruned
+		if duplicateIdx == -1 {
+			kept = append(kept, post)
+			recentByText[key] = append(recentByText[key], recentEntry{
+				index:       len(kept) - 1,
+				publishedAt: post.PublishedAt,
+			})
+			continue
+		}
+		if feedPostScore(post) > feedPostScore(kept[duplicateIdx]) {
+			kept[duplicateIdx] = post
+			for i := range recentByText[key] {
+				if recentByText[key][i].index == duplicateIdx {
+					recentByText[key][i].publishedAt = post.PublishedAt
+				}
+			}
+		}
+	}
+	return kept
+}
+
+func feedDedupeKey(post postDTO) string {
+	if post.Source != "tg" || post.Text == nil {
+		return ""
+	}
+	text := normalizeLookupText(*post.Text)
+	if text == "" {
+		return ""
+	}
+	return text
+}
+
+func feedPostScore(post postDTO) int {
+	score := post.ActualComments * 100000
+	score += intValue(post.CommentsCount) * 1000
+	if len(post.Media) > 0 {
+		score += 100
+	}
+	score += post.LikesCount
+	score += len(strings.TrimSpace(compactText(post.Text)))
+	return score
+}
+
+func absDurationSeconds(d time.Duration) int64 {
+	if d < 0 {
+		d = -d
+	}
+	return int64(d / time.Second)
+}
+
+func normalizeLookupText(raw string) string {
+	text := strings.TrimSpace(strings.ToLower(strings.ReplaceAll(raw, "\r\n", "\n")))
+	for strings.Contains(text, "  ") {
+		text = strings.ReplaceAll(text, "  ", " ")
+	}
+	return text
+}
+
+func intValue(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 func (s *Server) loadReactions(ctx context.Context, posts []postDTO, ids []int64) error {
@@ -528,19 +619,20 @@ func (s *Server) loadReactions(ctx context.Context, posts []postDTO, ids []int64
 }
 
 type postDTO struct {
-	ID            int64           `json:"id"`
-	Source        string          `json:"source"`
-	SourcePostID  string          `json:"source_post_id"`
-	PublishedAt   time.Time       `json:"published_at"`
-	Text          *string         `json:"text"`
-	Media         json.RawMessage `json:"media,omitempty"`
-	LikesCount    int             `json:"likes_count"`
-	ViewsCount    *int            `json:"views_count,omitempty"`
-	CommentsCount *int            `json:"comments_count,omitempty"`
-	Comments      []feedComment   `json:"comments,omitempty"`
-	Reactions     map[string]int  `json:"reactions"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	ID             int64           `json:"id"`
+	Source         string          `json:"source"`
+	SourcePostID   string          `json:"source_post_id"`
+	PublishedAt    time.Time       `json:"published_at"`
+	Text           *string         `json:"text"`
+	Media          json.RawMessage `json:"media,omitempty"`
+	LikesCount     int             `json:"likes_count"`
+	ViewsCount     *int            `json:"views_count,omitempty"`
+	CommentsCount  *int            `json:"comments_count,omitempty"`
+	Comments       []feedComment   `json:"comments,omitempty"`
+	Reactions      map[string]int  `json:"reactions"`
+	ActualComments int             `json:"-"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 type cursor struct {

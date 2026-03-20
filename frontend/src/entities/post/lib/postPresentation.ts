@@ -1,4 +1,4 @@
-import type { MediaItem } from "@/entities/post/model/types";
+﻿import type { MediaItem } from "@/entities/post/model/types";
 import { env } from "@/shared/config/env";
 
 export type MediaKind =
@@ -9,10 +9,11 @@ export type MediaKind =
   | "link"
   | "unknown";
 
-const imageExt = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i;
-const videoExt = /\.(mp4|mov|avi|mkv|webm)$/i;
-const audioExt = /\.(mp3|ogg|wav|m4a|aac|flac)$/i;
-const docExt = /\.(pdf|doc|docx|txt|zip|rar|7z)$/i;
+const imageExt = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(?:$|[?#])/i;
+const videoExt = /\.(mp4|mov|avi|mkv|webm)(?:$|[?#])/i;
+const audioExt = /\.(mp3|ogg|wav|m4a|aac|flac)(?:$|[?#])/i;
+const docExt = /\.(pdf|doc|docx|txt|zip|rar|7z)(?:$|[?#])/i;
+const trailingCombiningMarks = /[\u0300-\u036f]+/g;
 
 const resolveApiOrigin = (): string | null => {
   const base = env.apiBaseUrl.trim();
@@ -70,9 +71,17 @@ export const resolveMediaTitle = (item: MediaItem): string => {
   if (explicit) return explicit;
 
   const url = item.url?.trim() ?? "";
-  const normalizedUrl = url.replace(/\\/g, "/");
-  const fromUrl = normalizedUrl.split("/").filter(Boolean).at(-1);
-  if (fromUrl) return fromUrl;
+  if (!url) return mediaKindLabel(resolveMediaKind(item));
+
+  try {
+    const parsed = new URL(url.replace(/\\/g, "/"));
+    const fromPath = parsed.pathname.split("/").filter(Boolean).at(-1);
+    if (fromPath) return fromPath;
+  } catch {
+    const normalizedUrl = url.replace(/\\/g, "/");
+    const fromUrl = normalizedUrl.split("/").filter(Boolean).at(-1)?.split("?")[0];
+    if (fromUrl) return fromUrl;
+  }
 
   return mediaKindLabel(resolveMediaKind(item));
 };
@@ -88,12 +97,12 @@ export const resolveMediaDisplayUrl = (item: MediaItem): string | undefined => {
   const previewUrl = resolveMediaUrl(item.preview_url);
 
   if (kind === "image") {
-    if (isImageUrl(mediaUrl)) return mediaUrl;
-    if (isImageUrl(previewUrl)) return previewUrl;
+    return mediaUrl ?? previewUrl;
   }
 
   if (kind === "video") {
-    return previewUrl ?? mediaUrl;
+    if (previewUrl) return previewUrl;
+    if (isImageUrl(mediaUrl)) return mediaUrl;
   }
 
   return undefined;
@@ -150,4 +159,29 @@ export const reactionLabel = (raw: string): string => {
   if (raw.startsWith("custom:")) return "✨";
   if (raw.startsWith("unknown:")) return "•";
   return raw;
+};
+
+export const buildOriginalPostUrl = (source: "vk" | "tg", sourcePostID: string): string | undefined => {
+  const normalized = sourcePostID.trim();
+  if (!normalized) return undefined;
+
+  if (source === "vk") {
+    if (normalized.includes("_")) {
+      return `https://vk.com/wall${normalized}`;
+    }
+    return undefined;
+  }
+
+  if (/^\d+$/.test(normalized)) {
+    return `https://t.me/tgmydro/${normalized}`;
+  }
+
+  return undefined;
+};
+
+export const humanizeCommentAuthor = (author?: string | null): string => {
+  const normalized = author?.trim();
+  if (!normalized) return "Без имени";
+  if (/^Участник #\d+$/.test(normalized)) return normalized;
+  return normalized.replace(trailingCombiningMarks, "");
 };

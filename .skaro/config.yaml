@@ -42,7 +42,7 @@ verify_commands:
   name: dbcheck
 - command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && make tables"
   name: tables
-- command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && go test $(go list ./... | grep -v '/tmp$')"
+- command: wsl bash -lc "cd /mnt/d/mudr/mudro11 && make test-no-tmp"
   name: go-test
 - command: npm.cmd --prefix frontend run build
   name: frontend-build

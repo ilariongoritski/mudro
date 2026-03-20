@@ -26,9 +26,9 @@
 - Забирает из `agent_queue`
 - Исполняет только safe task kinds
 
-6. `reporter`
-- Формирует дайджесты
-- Публикует отчеты в Telegram
+6. `reporter-old` (legacy)
+- Исторический сервис дайджестов
+- Вынесен в `legacy/old/services/reporter-old`, не используется в default runtime
 
 7. `telegram-bot` (отдельно от reporter)
 - Управляющие команды
@@ -44,7 +44,7 @@
 Kafka добавлять как event backbone между импортерами, API и воркерами.
 
 Текущее состояние (2026-02-28):
-- runtime-публикация task-событий из `cmd/agent` уже включается флагом `KAFKA_ENABLED=true`
+- runtime-публикация task-событий из `services/agent` уже включается флагом `KAFKA_ENABLED=true`
 - topic по умолчанию: `mudro.agent.tasks.v1`
 
 Топики (предложение):

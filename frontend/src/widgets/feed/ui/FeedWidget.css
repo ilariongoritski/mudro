@@ -54,9 +54,9 @@
 .feed-widget__grid {
   margin-top: 1.15rem;
   display: grid;
-  grid-template-columns: minmax(0, 820px);
+  grid-template-columns: minmax(0, 760px);
   justify-content: center;
-  gap: 0.95rem;
+  gap: 1rem;
 }
 
 .feed-widget__grid_loading {

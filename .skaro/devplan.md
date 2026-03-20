@@ -49,4 +49,6 @@ _Directory: `milestones/03-vps-runtime/`_
 - **done** - completed in the current baseline
 
 ## Change Log
+
+- 2026-03-19: Confirmed 6 tasks: 01-project-cockpit/import-project-memory, 01-project-cockpit/stabilize-skaro-workflow, 02-public-mvp-release/lock-public-mvp-links, 02-public-mvp-release/finalize-release-checklist, 03-vps-runtime/stabilize-vps-runtime, 03-vps-runtime/prepare-skaro-vps-host
 - 2026-03-17: Reworked the plan around the real `mudro` state: imported project memory, documented public MVP links, and created milestone/task structure for Skaro.

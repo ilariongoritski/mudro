@@ -56,11 +56,11 @@
 - документальные и логирующие изменения в `.codex/*`.
 
 ## 5) Карта проекта (для автономного ориентирования)
-- `cmd/api` — HTTP API и рендер `/feed`.
-- `cmd/bot` — Telegram бот (управление/память/отчеты).
-- `cmd/reporter` — отдельный репортер-бот с digest.
-- `cmd/agent` + `internal/agent` — planner/worker и очередь задач.
-- `cmd/tgimport`, `cmd/tgload`, `cmd/vkimport`, `cmd/tgcommentsimport` — импорт контента.
+- `services/feed-api` — HTTP API и рендер `/feed`.
+- `services/bot` — Telegram бот (управление/память/отчеты).
+- `legacy/old/services/reporter-old` — старый репортер-бот (не используется по умолчанию).
+- `services/agent` + `internal/agent` — planner/worker и очередь задач.
+- `tools/importers/tgimport`, `tools/importers/tgload`, `tools/importers/vkimport`, `tools/importers/tgcommentsimport` — импорт контента.
 - `internal/api`, `internal/bot`, `internal/reporter`, `internal/config` — доменная логика.
 - `migrations/` — SQL миграции.
 - `env/*.env.example` — шаблоны конфигурации по сервисам.

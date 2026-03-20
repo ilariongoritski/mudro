@@ -44,7 +44,7 @@ func TestRebuildMemoryJSONAndTimeSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TimeSummary: %v", err)
 	}
-	if !strings.Contains(string(out), "Р’СЂРµРјСЏ СЂР°Р±РѕС‚С‹:") {
+	if !strings.Contains(string(out), "Время работы:") {
 		t.Fatalf("unexpected summary: %q", string(out))
 	}
 	if !strings.Contains(string(out), "Общий runtime (бот + backfill из чата/кловбота):") {

@@ -9,7 +9,7 @@
 
 ## Карта соответствия
 - Конституция -> `AGENTS.md`, `.editorconfig`, `.gitattributes`, `env/*.env.example`
-- Архитектура -> `README.md`, `docs/microservices-architecture.md`, `docs/ops-runbook.md`, `docs/worker-autonomy.md`, `docs/mcp-baseline.md`
+- Архитектура -> `README.md`, `docs/microservices-architecture.md`, `ops/runbooks/ops-runbook.md`, `docs/worker-autonomy.md`, `docs/mcp-baseline.md`
 - ADR -> `docs/adr/`
 - План разработки -> `.codex/todo.md`, `.codex/top10.md`, крупные заметки в `.codex/notes/`
 - Задачи -> `.codex/templates/task-spec.md`, `.codex/logs/<run>/index.md`, рабочий diff в репозитории
@@ -33,7 +33,7 @@
 
 - `README.md` — общий overview, запуск, команды, состав системы
 - `docs/microservices-architecture.md` — целевая декомпозиция runtime и event-пайплайна
-- `docs/ops-runbook.md` — recovery, VPS-контур, hardening, эксплуатационные сценарии
+- `ops/runbooks/ops-runbook.md` — recovery, VPS-контур, hardening, эксплуатационные сценарии
 - `docs/worker-autonomy.md` — поведение локального агентского цикла
 - `docs/mcp-baseline.md` — LLM/MCP-инфраструктура и границы доступа
 
