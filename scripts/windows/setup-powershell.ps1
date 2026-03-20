@@ -56,7 +56,19 @@ if not exist "%BASH%" (
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mudro.cmd') -Value $mudroCmd
 
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mmake.cmd') -Value "@echo off`r`nmudro make %*`r`n"
-Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mh.cmd') -Value "@echo off`r`nmudro make health`r`n"
+$mhCmd = @'
+@echo off
+setlocal
+call mmake up || exit /b 1
+call mps || exit /b 1
+call mmake dbcheck || exit /b 1
+call mmake migrate || exit /b 1
+call mmake tables || exit /b 1
+call mt || exit /b 1
+call me2e || exit /b 1
+call mmake count-posts || exit /b 1
+'@
+Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mh.cmd') -Value $mhCmd
 $mtCmd = @'
 @echo off
 setlocal
