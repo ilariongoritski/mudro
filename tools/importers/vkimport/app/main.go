@@ -411,42 +411,35 @@ func (r *Repo) UpsertPost(ctx context.Context, p UnifiedPost) error {
 		views = *p.ViewsNullable
 	}
 
-	var (
-		mediaJSON    any
-		rawMediaJSON json.RawMessage
-	)
-	if len(p.Media) == 0 {
-		mediaJSON = nil
-	} else {
+	var rawMediaJSON json.RawMessage
+	if len(p.Media) > 0 {
 		b, err := json.Marshal(p.Media)
 		if err != nil {
 			return fmt.Errorf("marshal media: %w", err)
 		}
-		mediaJSON = b
 		rawMediaJSON = json.RawMessage(b)
 	}
 
 	_, err := r.pool.Exec(txCtx, `
 insert into posts (
   source, source_post_id,
-  published_at, text, media, likes_count, views_count, comments_count,
+  published_at, text, likes_count, views_count, comments_count,
   updated_at
 ) values (
   $1,$2,
-  $3,$4,$5,$6,$7,$8,
+  $3,$4,$5,$6,$7,
   now()
 )
 on conflict (source, source_post_id) do update set
   published_at = excluded.published_at,
   text = excluded.text,
-  media = excluded.media,
   likes_count = excluded.likes_count,
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
   updated_at = now()
 `,
 		p.Source, p.SourcePostID,
-		p.PublishedAt, nullIfEmpty(p.Text), mediaJSON, p.Likes, views, p.CommentsCount,
+		p.PublishedAt, nullIfEmpty(p.Text), p.Likes, views, p.CommentsCount,
 	)
 	if err != nil {
 		return err

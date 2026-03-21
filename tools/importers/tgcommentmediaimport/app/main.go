@@ -177,9 +177,6 @@ func syncCommentMedia(ctx context.Context, pool *pgxpool.Pool, commentID int64, 
 		return err
 	}
 
-	if _, err := tx.Exec(opCtx, `update post_comments set media = $2, updated_at = now() where id = $1`, commentID, encoded); err != nil {
-		return err
-	}
 	if err := mediadb.SyncCommentLinks(opCtx, tx, commentID, "tg", encoded); err != nil {
 		return err
 	}

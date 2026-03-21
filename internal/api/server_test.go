@@ -244,58 +244,29 @@ func TestNormalizeMediaURL(t *testing.T) {
 	}
 }
 
-func TestNormalizePostMediaJSON(t *testing.T) {
-	raw := json.RawMessage(`[
-	  {"kind":"photo","url":"photos/file.jpg","extra":{"file_name":"file.jpg"}},
-	  {"kind":"video","url":"https://cdn.example.com/video.mp4"}
-	]`)
+func TestBuildPostsVisibilityWhereNoSource(t *testing.T) {
+	s := &Server{}
 
-	got := normalizePostMediaJSON(raw)
-	if len(got) == 0 {
-		t.Fatal("normalizePostMediaJSON returned empty payload")
-	}
-	if !strings.Contains(string(got), `"url":"/media/photos/file.jpg"`) {
-		t.Fatalf("normalized payload = %s, want lowercase url key", string(got))
-	}
+	where, args := s.buildPostsVisibilityWhere("", nil)
 
-	var decoded []feedMediaItem
-	if err := json.Unmarshal(got, &decoded); err != nil {
-		t.Fatalf("unmarshal normalized media: %v", err)
+	if where != " where visible = true" {
+		t.Fatalf("where = %q, want visible-only filter", where)
 	}
-	if len(decoded) != 2 {
-		t.Fatalf("len(decoded) = %d, want 2", len(decoded))
-	}
-	if decoded[0].URL != "/media/photos/file.jpg" {
-		t.Fatalf("decoded[0].URL = %q, want /media/photos/file.jpg", decoded[0].URL)
-	}
-	if decoded[1].URL != "https://cdn.example.com/video.mp4" {
-		t.Fatalf("decoded[1].URL = %q, want original https URL", decoded[1].URL)
+	if len(args) != 0 {
+		t.Fatalf("args = %#v, want empty", args)
 	}
 }
 
-func TestBuildPostsVisibilityWhereSkipsTGFilterForVK(t *testing.T) {
-	s := &Server{tgVisiblePostIDs: []string{"1", "2"}}
+func TestBuildPostsVisibilityWhereWithSource(t *testing.T) {
+	s := &Server{}
 
 	where, args := s.buildPostsVisibilityWhere("vk", nil)
 
-	if where != " where source = $1" {
-		t.Fatalf("where = %q, want only source filter", where)
-	}
-	if len(args) != 1 || args[0] != "vk" {
-		t.Fatalf("args = %#v, want only vk source", args)
-	}
-}
-
-func TestBuildPostsVisibilityWhereKeepsTGFilterForTG(t *testing.T) {
-	s := &Server{tgVisiblePostIDs: []string{"1", "2"}}
-
-	where, args := s.buildPostsVisibilityWhere("tg", nil)
-
-	if where != " where source = $1 and source_post_id = any($2)" {
+	if where != " where visible = true and source = $1" {
 		t.Fatalf("where = %q", where)
 	}
-	if len(args) != 2 {
-		t.Fatalf("args len = %d, want 2", len(args))
+	if len(args) != 1 || args[0] != "vk" {
+		t.Fatalf("args = %#v, want [vk]", args)
 	}
 }
 
@@ -309,15 +280,15 @@ func TestDedupeFeedPostsDropsNearDuplicateTGPost(t *testing.T) {
 			SourcePostID:  "100",
 			PublishedAt:   base,
 			Text:          &text,
-			CommentsCount: intPtr(0),
+			CommentsCount: 0,
 		},
 		{
-			ID:             2,
-			Source:         "tg",
-			SourcePostID:   "200",
-			PublishedAt:    base.Add(3 * time.Second),
-			Text:           &text,
-			ActualComments: 4,
+			ID:            2,
+			Source:        "tg",
+			SourcePostID:  "200",
+			PublishedAt:   base.Add(3 * time.Second),
+			Text:          &text,
+			CommentsCount: 4,
 		},
 	}
 

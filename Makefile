@@ -1,13 +1,16 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
 MIGRATIONS_DIR ?= migrations
 MIGRATION ?= $(MIGRATIONS_DIR)/001_init.sql
-AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002_agent_queue.sql
+AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002b_agent_queue.sql
 COMMENTS_MIGRATION ?= $(MIGRATIONS_DIR)/003_post_comments.sql
 AGENT_REVIEW_MIGRATION ?= $(MIGRATIONS_DIR)/004_agent_review_gate.sql
 AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_task_events.sql
 MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
+AGENT_EVENTS_FK_MIGRATION ?= $(MIGRATIONS_DIR)/009_agent_events_fk.sql
+VISIBILITY_MIGRATION ?= $(MIGRATIONS_DIR)/010_posts_visibility_and_comments.sql
+DROP_JSONB_MIGRATION ?= $(MIGRATIONS_DIR)/011_drop_legacy_jsonb.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -97,6 +100,29 @@ ifeq ($(USE_DOCKER_PSQL),1)
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(COMMENT_MODEL_MIGRATION)"
 endif
+
+migrate-agent-events-fk:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(AGENT_EVENTS_FK_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_FK_MIGRATION)"
+endif
+
+migrate-visibility:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(VISIBILITY_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(VISIBILITY_MIGRATION)"
+endif
+
+migrate-drop-jsonb:
+ifeq ($(USE_DOCKER_PSQL),1)
+	cat "$(DROP_JSONB_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+else
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(DROP_JSONB_MIGRATION)"
+endif
+
+migrate-runtime: migrate-all
 
 tables:
 	$(PSQL_CMD) -X -c "\\dt"

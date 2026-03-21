@@ -114,14 +114,13 @@ func upsertTGPost(ctx context.Context, pool *pgxpool.Pool, it feedItem) error {
 	var postID int64
 	if err := tx.QueryRow(txCtx, `
 insert into posts (
-  source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, updated_at
+  source, source_post_id, published_at, text, likes_count, views_count, comments_count, updated_at
 ) values (
-  $1,$2,$3,$4,$5,$6,$7,$8, now()
+  $1,$2,$3,$4,$5,$6,$7, now()
 )
 on conflict (source, source_post_id) do update set
   published_at = excluded.published_at,
   text = excluded.text,
-  media = excluded.media,
   likes_count = excluded.likes_count,
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
@@ -132,7 +131,6 @@ returning id
 		it.SourcePostID,
 		publishedAt,
 		nullIfEmpty(it.Text),
-		mediaJSON,
 		likes,
 		it.Stats.Views,
 		it.Stats.Comments,
