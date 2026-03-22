@@ -3,35 +3,35 @@ import:
   token_limit: 200000
 lang: ru
 llm:
-  api_key_env: GEMINI_API_KEY
-  base_url: null
+  api_key_env: ANTHROPIC_API_KEY
+  base_url: https://claude-api.filips-site.online
   max_tokens: 16384
-  model: gemini-2.5-pro
-  provider: google
+  model: claude-sonnet-4.6
+  provider: anthropic
   temperature: 0.2
 project_description: Unified VK + Telegram feed platform with Go backend, PostgreSQL, React frontend, importers, bots, and local/VPS ops workflows.
 project_name: MUDRO
 roles:
   architect:
-    api_key_env: OPENAI_API_KEY
-    base_url: null
-    max_tokens: 16384
-    model: gpt-5.4
-    provider: openai
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: https://claude-api.filips-site.online
+    max_tokens: 24000
+    model: claude-opus-4.6
+    provider: anthropic
     temperature: 0.15
   coder:
-    api_key_env: OPENAI_API_KEY
-    base_url: null
-    max_tokens: 16384
-    model: gpt-5.3-codex
-    provider: openai
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: https://claude-api.filips-site.online
+    max_tokens: 24000
+    model: claude-opus-4.6
+    provider: anthropic
     temperature: 0.1
   reviewer:
-    api_key_env: OPENAI_API_KEY
-    base_url: null
-    max_tokens: 12000
-    model: gpt-5.4
-    provider: openai
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: https://claude-api.filips-site.online
+    max_tokens: 16000
+    model: claude-opus-4.6
+    provider: anthropic
     temperature: 0.1
 theme: dark
 ui:

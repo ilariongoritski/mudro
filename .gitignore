@@ -33,5 +33,14 @@ output/doc/
 output/playwright/
 output/*.json
 output/db-comment-media-ids.txt
+.skaro/secrets.yaml
+.skaro/token_usage.yaml
+.skaro/usage_log.jsonl
+.skaro/docs/
+.skaro/architecture/last-review.md
+
+# local Claude helper runtime files
+scripts/mcp/local/mudro-claude-repo-server.mjs
+scripts/mcp/local/mudro-mcp-claude-repo.ps1
 
 .vercel

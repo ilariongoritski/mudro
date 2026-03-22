@@ -27,12 +27,14 @@ Wrapper-скрипты лежат в:
 - `scripts/mcp/local/mudro-mcp-postgres.ps1`
 - `scripts/mcp/local/mudro-mcp-github.ps1`
 - `scripts/mcp/local/mudro-mcp-magic.ps1`
+- `scripts/mcp/local/mudro-mcp-claude-repo.ps1`
 
 Все секреты и внешние переменные живут вне репозитория, в:
 
 - `%USERPROFILE%\.codex\secrets\mudro-postgres-mcp.local.env`
 - `%USERPROFILE%\.codex\secrets\mudro-github-mcp.local.env`
 - `%USERPROFILE%\.codex\secrets\magic-21st.local.env`
+- `%USERPROFILE%\.codex\secrets\mudro-claude-mcp.local.env`
 
 ### Границы доступа
 
@@ -40,6 +42,7 @@ Wrapper-скрипты лежат в:
 - `git` ограничен тем же корнем и запускается через отдельный Docker image `mudro-mcp-git:2026.1.14`.
 - `postgres` работает только через read-only MCP server.
 - `github` по умолчанию должен использовать fine-grained PAT только на нужные репозитории.
+- `mudro_claude_repo` ограничен корнем локального репозитория `mudro` и отправляет во внешний Claude-провайдер только явно приложенные файлы или текущий git diff.
 
 ### GitHub PAT
 
@@ -61,6 +64,26 @@ Wrapper-скрипты лежат в:
 `Magic` полезен только для локальной генерации/рефайна React UI. Для его работы нужен ключ `TWENTY_FIRST_API_KEY`, который хранится в `%USERPROFILE%\.codex\secrets\magic-21st.local.env`.
 
 Без ключа сервер стартует, но UI generation endpoints (`fetch-ui`, `create-ui`, `refine-ui`) будут отвечать `401 Unauthorized`.
+
+### Claude Custom Key (опционально)
+
+`mudro_claude_repo` нужен для случаев, когда нужно спросить Claude отдельно от основного Codex-контура, но в привязке к локальному репозиторию.
+
+Сервер дает два инструмента:
+
+- `claude_repo_ask` — отправляет произвольный prompt и выбранные файлы из репозитория;
+- `claude_repo_review_worktree` — отправляет текущие `git status` и `git diff`.
+
+Оба инструмента поддерживают `thinking_budget_tokens` для Claude extended thinking на Anthropic-compatible endpoint.
+
+Секреты и настройки лежат в `%USERPROFILE%\.codex\secrets\mudro-claude-mcp.local.env`:
+
+- `MUDRO_CLAUDE_API_KEY`
+- `MUDRO_CLAUDE_BASE_URL`
+- `MUDRO_CLAUDE_MODEL`
+- `MUDRO_CLAUDE_ANTHROPIC_VERSION`
+
+Сервер рассчитан на Anthropic-compatible endpoint и запускается через `scripts/mcp/local/mudro-mcp-claude-repo.ps1`.
 
 ## VPS / OpenClaw
 

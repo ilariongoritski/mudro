@@ -7,19 +7,23 @@ import (
 )
 
 const (
-	DefaultDSN           = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
-	DefaultTelegramLimit = 3800
-	DefaultTelegramUser  = "sirilarion"
-	DefaultOpenAIModel   = "gpt-4.1-mini"
-	DefaultAPIAddr       = ":8080"
-	DefaultAPIBaseURL    = "http://127.0.0.1:8080"
-	DefaultAPIRateRPS    = 20
-	DefaultAPIRateBurst  = 40
-	DefaultCodexLogsDir  = ".codex/logs"
-	DefaultReportMinutes = 30
-	DefaultRedisAddr     = "localhost:6379"
-	DefaultKafkaClientID = "mudro"
-	DefaultKafkaTopic    = "mudro.agent.tasks.v1"
+	DefaultDSN              = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
+	DefaultTelegramLimit    = 3800
+	DefaultTelegramUser     = "sirilarion"
+	DefaultOpenAIModel      = "gpt-4.1-mini"
+	DefaultAPIAddr          = ":8080"
+	DefaultAPIBaseURL       = "http://127.0.0.1:8080"
+	DefaultCasinoServiceURL = "http://127.0.0.1:8081"
+	DefaultAPIRateRPS       = 20
+	DefaultAPIRateBurst     = 40
+	DefaultCodexLogsDir     = ".codex/logs"
+	DefaultReportMinutes    = 30
+	DefaultRedisAddr        = "localhost:6379"
+	DefaultKafkaClientID    = "mudro"
+	DefaultKafkaTopic       = "mudro.agent.tasks.v1"
+	DefaultMudroLocalRoot   = "D:\\mudr\\_mudro-local"
+	DefaultSkaroDashboard   = "http://127.0.0.1:4700/dashboard"
+	DefaultClaudeProxyURL   = "http://127.0.0.1:8788"
 )
 
 func DSN() string {
@@ -102,6 +106,10 @@ func APIBaseURL() string {
 	return strings.TrimRight(envOr("API_BASE_URL", DefaultAPIBaseURL), "/")
 }
 
+func CasinoServiceURL() string {
+	return strings.TrimRight(envOr("CASINO_SERVICE_URL", DefaultCasinoServiceURL), "/")
+}
+
 func APIRateLimitRPS() int {
 	if v := strings.TrimSpace(os.Getenv("API_RATE_LIMIT_RPS")); v != "" {
 		if n, ok := parseNonNegativeInt(v); ok {
@@ -122,6 +130,34 @@ func APIRateLimitBurst() int {
 
 func CodexLogsDir() string {
 	return envOr("CODEX_LOGS_DIR", DefaultCodexLogsDir)
+}
+
+func MudroLocalRoot() string {
+	return envOr("MUDRO_LOCAL_ROOT", DefaultMudroLocalRoot)
+}
+
+func SkaroLocalRoot() string {
+	return filepath.Join(MudroLocalRoot(), "skaro")
+}
+
+func SkaroDashboardURL() string {
+	return strings.TrimRight(envOr("SKARO_DASHBOARD_URL", DefaultSkaroDashboard), "/")
+}
+
+func ClaudeProxyURL() string {
+	return strings.TrimRight(envOr("MUDRO_CLAUDE_PROXY_URL", DefaultClaudeProxyURL), "/")
+}
+
+func ClaudeUsageLogPath() string {
+	return envOr("MUDRO_CLAUDE_USAGE_LOG", filepath.Join(SkaroLocalRoot(), "usage_log.jsonl"))
+}
+
+func ClaudeTokenUsagePath() string {
+	return envOr("MUDRO_CLAUDE_TOKEN_USAGE", filepath.Join(SkaroLocalRoot(), "token_usage.yaml"))
+}
+
+func SkaroProfilePath() string {
+	return filepath.Join(SkaroLocalRoot(), "profile.json")
 }
 
 func RedisAddr() string {

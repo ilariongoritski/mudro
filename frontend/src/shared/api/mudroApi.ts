@@ -8,12 +8,10 @@ export const mudroApi = createApi({
     baseUrl: env.apiBaseUrl,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).session?.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`)
-      }
+      if (token) headers.set('authorization', `Bearer ${token}`)
       return headers
     },
   }),
-  tagTypes: ['Feed'],
+  tagTypes: ['Feed', 'Casino'],
   endpoints: () => ({}),
 })

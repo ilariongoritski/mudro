@@ -4,10 +4,11 @@
 
 Рекомендуемая структура:
 - `env/common.env` — общие переменные (`MUDRO_ROOT`, общие feature-flags)
-- `env/api.env` — только API (`API_ADDR`, `DSN`, rate-limit настройки)
+- `env/api.env` — только API (`API_ADDR`, `DSN`, `JWT_SECRET`, rate-limit настройки, casino proxy URL)
 - `env/agent.env` — только agent (`DSN`, `MUDRO_ROOT`)
 - `env/reporter.env` — только reporter (`REPORT_BOT_TOKEN`, `REPORT_CHAT_ID`, `REPORT_INTERVAL_MIN`)
 - `env/bot.env` — только bot (`TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `API_BASE_URL`)
+- `env/casino.env` — только casino service (`CASINO_ADDR`, `CASINO_DSN`, `CASINO_INITIAL_COINS`, `CASINO_RTP_BPS`, `CASINO_MAX_BET`)
 - `env/db.env` — только db (`POSTGRES_PASSWORD`, `POSTGRES_PORT`)
 
 Дополнительно:

@@ -17,7 +17,8 @@ type MockService struct{}
 
 func (s *MockService) Login(ctx context.Context, email, password string) (*auth.User, string, error) {
 	if email == "test@example.com" && password == "password123" {
-		return &auth.User{ID: 1, Email: email, Role: "user"}, "mock-jwt-token", nil
+		emailCopy := email
+		return &auth.User{ID: 1, Email: &emailCopy, Role: "user"}, "mock-jwt-token", nil
 	}
 	return nil, "", auth.ErrInvalidCredentials
 }
@@ -26,7 +27,8 @@ func (s *MockService) Register(ctx context.Context, email, password string) (*au
 	if email == "exists@example.com" {
 		return nil, auth.ErrUserExists
 	}
-	return &auth.User{ID: 2, Email: email, Role: "user"}, nil
+	emailCopy := email
+	return &auth.User{ID: 2, Email: &emailCopy, Role: "user"}, nil
 }
 
 func (s *MockService) ValidateToken(token string) (map[string]interface{}, error) {
@@ -37,7 +39,7 @@ func (s *MockService) GetUserByID(ctx context.Context, id int64) (*auth.User, er
 	return nil, nil
 }
 
-// Since auth.Service is a concrete struct in auth package and not an interface, 
+// Since auth.Service is a concrete struct in auth package and not an interface,
 // we would normally use interfaces or monkey patching for full unit tests.
 // The code below demonstrates the shape of the test utilizing the handlers.
 // Note: To fully unit test AuthHandlers, auth.Service should be decoupled via an interface.

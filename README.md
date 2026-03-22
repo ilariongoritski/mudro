@@ -160,6 +160,19 @@ make worker-loop
 ```
 РџРѕРґСЂРѕР±РЅС‹Р№ СЂРµРіР»Р°РјРµРЅС‚: [docs/worker-autonomy.md](docs/worker-autonomy.md)
 
+## Agent Orchestration (Opus + Codex)
+For complex tasks (analysis/review/planning/implementation) use this workflow:
+- Claude Opus prepares plan/review/draft.
+- Local Codex applies repository changes and runs validations.
+
+Rules:
+- internal prompts/handoffs between agents are in English;
+- user-facing explanations and status updates are in Russian;
+- logs and memory stay in existing `.codex/*` files, no new logging format.
+- bootstrap a new run log with `make orchestration-log-init RUN_ID=<run> TASK="<short task>"`.
+
+Details: [docs/agent-orchestration-opus-codex.md](docs/agent-orchestration-opus-codex.md)
+
 ## Agent Queue (MVP)
 РџСЂРѕСЃС‚РѕР№ РєР°СЂРєР°СЃ Р°РІС‚РѕРЅРѕРјРЅРѕРіРѕ Р°РіРµРЅС‚Р°:
 - planner С‡РёС‚Р°РµС‚ `.codex/todo.md` Рё СЃС‚Р°РІРёС‚ Р·Р°РґР°С‡Рё РІ `agent_queue`
@@ -293,3 +306,7 @@ Response wrapper (page-based):
 - Mission and guardrails: `Mission.md`
 - OpenClaw integration notes: `docs/openclaw-integration.md`
 - Draft process policy: `BIBLE.proposed.md`
+
+## UTF-8 and local-only files
+- Use explicit UTF-8 for text I/O in PowerShell and shell commands. If output looks garbled, rerun with explicit encoding or use WSL/bash.
+- Keep auxiliary local files, downloads, caches, and tool installs under `D:\mudr\_mudro-local` instead of the tracked repo tree.

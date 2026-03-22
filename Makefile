@@ -9,6 +9,7 @@ MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
 USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
+CASINO_MIGRATION ?= services/casino/migrations/001_init.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 ENV_COMMON ?= env/common.env
@@ -16,6 +17,7 @@ ENV_API ?= env/api.env
 ENV_AGENT ?= env/agent.env
 ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
+ENV_CASINO ?= env/casino.env
 
 ifeq ($(shell [ -x "$(GO)" ] && echo 1 || echo 0),0)
 GO := go
@@ -108,6 +110,9 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
 endif
 
+migrate-casino:
+	bash ./scripts/migrate-casino.sh
+
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
 
@@ -144,17 +149,29 @@ tg-comment-media-import:
 count-posts:
 	$(PSQL_CMD) -X -c "select count(*) from posts;"
 
+casino-dbcheck:
+	@if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
+		docker compose exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+	else \
+		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+	fi
+
 health:
 	$(MAKE) up
 	$(MAKE) ps
 	$(MAKE) dbcheck
+	$(MAKE) casino-dbcheck
 	$(MAKE) migrate
+	$(MAKE) migrate-casino
 	$(MAKE) tables
 	$(MAKE) test
 	$(MAKE) count-posts
 
 worker-loop:
 	./scripts/worker_autonomy_loop.sh
+
+orchestration-log-init:
+	@bash ./scripts/orchestration_run_init.sh "$(RUN_ID)" "$(TASK)"
 
 bot-run:
 	@set -a; \
@@ -163,6 +180,14 @@ bot-run:
 	if [ -f "$(ENV_BOT)" ]; then . "$(ENV_BOT)"; fi; \
 	set +a; \
 	$(GO) run ./cmd/bot
+
+casino-run:
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_CASINO)" ]; then . "$(ENV_CASINO)"; fi; \
+	set +a; \
+	$(GO) run ./services/casino/cmd/casino
 
 report-run:
 	@set -a; \

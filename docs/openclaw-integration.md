@@ -28,3 +28,13 @@
 - Никаких секретов в репозитории.
 - Все токены только во внешнем хранилище секретов.
 - Деструктивные операции (drop/truncate/down -v/rm -rf) запрещены без подтверждения владельца.
+
+## Связь с Opus/Codex orchestration
+- Для сложных задач `Claude Opus` используется как planning/review/draft слой.
+- Применение изменений в репозиторий и валидация остаются за локальным `Codex`.
+- Internal handoff в агентском контуре ведется на English; отчеты пользователю остаются на русском.
+- Основной журнал выполнения хранится в существующих `.codex/*` файлах (без нового формата логов).
+
+## UTF-8 and local-only files
+- Use explicit UTF-8 for text I/O in PowerShell and shell commands. If output looks garbled, rerun with explicit encoding or use WSL/bash.
+- Keep auxiliary local files, downloads, caches, and tool installs under `D:\mudr\_mudro-local` instead of the tracked repo tree.

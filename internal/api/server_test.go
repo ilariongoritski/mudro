@@ -34,6 +34,48 @@ func TestHandleHealth(t *testing.T) {
 	}
 }
 
+func TestHandleOrchestrationStatus(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest("GET", "/api/orchestration/status", nil)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "application/json") {
+		t.Fatalf("content-type = %q, want application/json", ct)
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+
+	if _, ok := resp["branch"].(string); !ok {
+		t.Fatalf("branch missing or invalid: %#v", resp["branch"])
+	}
+	if _, ok := resp["commit"].(string); !ok {
+		t.Fatalf("commit missing or invalid: %#v", resp["commit"])
+	}
+	if resp["api_endpoint"] != "/api/orchestration/status" {
+		t.Fatalf("api_endpoint = %#v, want /api/orchestration/status", resp["api_endpoint"])
+	}
+	if _, ok := resp["state"].([]any); !ok {
+		t.Fatalf("state missing or invalid: %#v", resp["state"])
+	}
+	if _, ok := resp["todo"].([]any); !ok {
+		t.Fatalf("todo missing or invalid: %#v", resp["todo"])
+	}
+	if _, ok := resp["done"].([]any); !ok {
+		t.Fatalf("done missing or invalid: %#v", resp["done"])
+	}
+	if _, ok := resp["status"].([]any); !ok {
+		t.Fatalf("status missing or invalid: %#v", resp["status"])
+	}
+}
+
 func TestHandleHealthCORS(t *testing.T) {
 	s := &Server{}
 	req := httptest.NewRequest("GET", "/healthz", nil)
@@ -42,8 +84,11 @@ func TestHandleHealthCORS(t *testing.T) {
 
 	s.Router().ServeHTTP(w, req)
 
-	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "*" {
-		t.Fatalf("Access-Control-Allow-Origin = %q, want *", got)
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "http://127.0.0.1:4174" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want origin echo", got)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(got, "Authorization") {
+		t.Fatalf("Access-Control-Allow-Headers = %q, want Authorization", got)
 	}
 }
 
