@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Casino accounts (wallets)
 CREATE TABLE IF NOT EXISTS casino_accounts (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID,
+    user_id     BIGINT REFERENCES users(id) ON DELETE SET NULL,
     type        TEXT NOT NULL DEFAULT 'user' CHECK (type IN ('user','system')),
     code        TEXT UNIQUE NOT NULL,
     currency    TEXT NOT NULL DEFAULT 'МДР',
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_casino_ledger_account ON casino_ledger_entries(ac
 -- Game rounds (provably fair)
 CREATE TABLE IF NOT EXISTS casino_rounds (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          TEXT NOT NULL,
+    user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     server_seed      TEXT NOT NULL,
     server_seed_hash TEXT NOT NULL,
     client_seed      TEXT,
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS casino_rtp_profiles (
 -- RTP assignments (user -> profile)
 CREATE TABLE IF NOT EXISTS casino_rtp_assignments (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         TEXT NOT NULL,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     rtp_profile_id  UUID NOT NULL REFERENCES casino_rtp_profiles(id) ON DELETE CASCADE,
     assigned_by     TEXT NOT NULL DEFAULT 'system',
     reason          TEXT,
@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_casino_rtp_assign_user ON casino_rtp_assignments(
 -- Idempotency keys
 CREATE TABLE IF NOT EXISTS casino_idempotency (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id      TEXT NOT NULL,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     key          TEXT NOT NULL,
     request_hash TEXT NOT NULL,
     status       TEXT NOT NULL DEFAULT 'processing' CHECK (status IN ('processing','succeeded','failed')),
