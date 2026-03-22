@@ -1,4 +1,5 @@
 import { mudroApi } from '@/shared/api/mudroApi'
+import { env } from '@/shared/config/env'
 
 export interface OrchestrationStat {
   label: string
@@ -19,7 +20,6 @@ export interface OrchestrationStatusResponse {
   status: OrchestrationStat[]
 }
 
-const SKARO_DASHBOARD_URL = 'http://127.0.0.1:4700/dashboard'
 const ORCHESTRATION_ENDPOINT = '/orchestration/status'
 
 const asString = (value: unknown, fallback = '') => {
@@ -77,7 +77,7 @@ export const normalizeOrchestrationStatus = (raw: unknown): OrchestrationStatusR
       minute: '2-digit',
       second: '2-digit',
     })),
-    dashboard_url: asString(record.dashboard_url, SKARO_DASHBOARD_URL),
+    dashboard_url: asString(record.dashboard_url, env.skaroDashboardUrl),
     api_endpoint: asString(record.api_endpoint, ORCHESTRATION_ENDPOINT),
     state: asList(extractNested(record, 'state')),
     todo: asList(extractNested(record, 'todo')),

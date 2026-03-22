@@ -1,44 +1,11 @@
-import { useEffect, useState } from 'react'
-
-interface AdminUser {
-  id: number | string
-  email: string
-  role: string
-}
-
-interface AdminUsersResponse {
-  status?: string
-  users?: AdminUser[]
-}
-
-interface AdminStats {
-  active_subscriptions?: number
-}
+import { useGetAdminStatsQuery, useGetAdminUsersQuery } from '@/features/admin/api/adminApi'
 
 export const AdminPage = () => {
-  const [users, setUsers] = useState<AdminUser[]>([])
-  const [stats, setStats] = useState<AdminStats | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const usersResp = await fetch('/api/admin/users').then((r) => r.json() as Promise<AdminUsersResponse>)
-        const statsResp = await fetch('/api/admin/stats').then((r) => r.json() as Promise<AdminStats>)
-
-        if (usersResp.status === 'ok' && Array.isArray(usersResp.users)) {
-          setUsers(usersResp.users)
-        }
-        setStats(statsResp)
-      } catch (err) {
-        console.error('Failed to fetch admin data', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAdminData()
-  }, [])
+  const { data: usersResp, isLoading: usersLoading } = useGetAdminUsersQuery()
+  const { data: statsResp, isLoading: statsLoading } = useGetAdminStatsQuery()
+  const users = usersResp?.status === 'ok' && Array.isArray(usersResp.users) ? usersResp.users : []
+  const stats = statsResp ?? null
+  const loading = usersLoading || statsLoading
 
   if (loading) return <div className="p-8">Загрузка панели управления...</div>
 

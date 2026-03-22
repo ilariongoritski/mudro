@@ -1,5 +1,5 @@
 version: 1
-updated_at: "2026-03-20"
+updated_at: "2026-03-23"
 
 runtime:
   active:
@@ -7,6 +7,10 @@ runtime:
       path: services/feed-api/cmd
       run: go run ./services/feed-api/cmd
       env_files: [env/common.env, env/api.env]
+    - name: casino
+      path: services/casino/cmd/casino
+      run: go run ./services/casino/cmd/casino
+      env_files: [env/common.env, env/casino.env]
     - name: agent
       path: services/agent/cmd
       run: go run ./services/agent/cmd
@@ -15,6 +19,15 @@ runtime:
       path: services/bot/cmd
       run: go run ./services/bot/cmd
       env_files: [env/common.env, env/bot.env]
+  bootstrap:
+    - name: api-gateway
+      path: services/api-gateway/cmd
+      run: go run ./services/api-gateway/cmd
+      env_files: [env/gateway.env]
+    - name: bff-web
+      path: services/bff-web/cmd
+      run: go run ./services/bff-web/cmd
+      env_files: [env/bff-web.env]
   legacy:
     - name: reporter-old
       path: legacy/old/services/reporter-old/cmd
@@ -29,4 +42,5 @@ cli:
 
 compose:
   core: ops/compose/docker-compose.core.yml
+  services: ops/compose/docker-compose.services.yml
   legacy: ops/compose/docker-compose.legacy.yml

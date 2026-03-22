@@ -21,13 +21,13 @@ interface LoginArgs {
 export const authApi = mudroApi.injectEndpoints({
   endpoints: (build) => ({
     register: build.mutation<AuthResponse, RegisterArgs>({
-      query: (body) => ({ url: '/api/auth/register', method: 'POST', body }),
+      query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
     login: build.mutation<AuthResponse, LoginArgs>({
-      query: (body) => ({ url: '/api/auth/login', method: 'POST', body }),
+      query: (body) => ({ url: '/auth/login', method: 'POST', body }),
     }),
     getMe: build.query<AuthUser, void>({
-      query: () => '/api/auth/me',
+      query: () => '/auth/me',
       providesTags: ['Auth'],
     }),
   }),

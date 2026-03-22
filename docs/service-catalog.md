@@ -22,6 +22,18 @@
 - Run: `go run ./services/casino/cmd`
 - Purpose: isolated casino runtime with its own Postgres database, RTP/admin settings, and separate API surface.
 
+## Bootstrap / Migration Services
+
+1. `api-gateway`
+- Path: `services/api-gateway/cmd`
+- Run: `go run ./services/api-gateway/cmd`
+- Purpose: additive public edge skeleton for `/api/v1/*` and BFF routing without breaking the current `feed-api` runtime.
+
+2. `bff-web`
+- Path: `services/bff-web/cmd`
+- Run: `go run ./services/bff-web/cmd`
+- Purpose: additive web aggregation layer for `/api/bff/web/v1/*`, starting with timeline, orchestration status, and casino widget aggregation.
+
 ## Old / Legacy
 
 1. `reporter-old`

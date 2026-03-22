@@ -15,6 +15,8 @@ USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 CORE_COMPOSE_FILE ?= ops/compose/docker-compose.core.yml
 CORE_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE)
+SERVICES_COMPOSE_FILE ?= ops/compose/docker-compose.services.yml
+MICRO_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE) -f $(SERVICES_COMPOSE_FILE)
 ENV_COMMON ?= env/common.env
 ENV_API ?= env/api.env
 ENV_AGENT ?= env/agent.env
@@ -64,6 +66,18 @@ core-ps:
 
 core-logs:
 	$(CORE_COMPOSE) logs --no-color --tail=200
+
+micro-up:
+	$(MICRO_COMPOSE) up -d
+
+micro-down:
+	$(MICRO_COMPOSE) down
+
+micro-ps:
+	$(MICRO_COMPOSE) ps
+
+micro-logs:
+	$(MICRO_COMPOSE) logs --no-color --tail=200
 
 dbcheck:
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"
@@ -161,6 +175,9 @@ tables-core:
 test:
 	$(GO) test ./...
 
+test-active:
+	$(GO) test ./...
+
 lint:
 	golangci-lint run ./...
 	cd frontend && npm run lint
@@ -169,6 +186,12 @@ check: lint test
 
 validate-contracts:
 	$(GO) run ./tools/validate-contracts -dir ./contracts
+
+validate-microservices:
+	$(MAKE) test-active
+	$(MAKE) validate-contracts
+	docker compose -f $(CORE_COMPOSE_FILE) -f $(SERVICES_COMPOSE_FILE) config >/dev/null
+	python -m py_compile ./scripts/claude/run_role_matrix.py
 
 guard-main-clean:
 	$(GUARD_MAIN_CLEAN_SCRIPT)
@@ -249,6 +272,9 @@ worker-loop:
 
 orchestration-log-init:
 	@bash ./scripts/orchestration_run_init.sh "$(RUN_ID)" "$(TASK)"
+
+claude-role-matrix:
+	python ./scripts/claude/run_role_matrix.py --task "$(TASK)" --repo-root .
 
 openclaw-gateway-service:
 	bash ./scripts/openclaw/openclaw_gateway_user_service.sh

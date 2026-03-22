@@ -19,14 +19,14 @@ export const postsApi = mudroApi.injectEndpoints({
       providesTags: ['Feed'],
     }),
     toggleLike: build.mutation<{ liked: boolean; likes_count: number }, number>({
-      query: (postId) => ({ url: `/api/posts/${postId}/like`, method: 'POST' }),
+      query: (postId) => ({ url: `/posts/${postId}/like`, method: 'POST' }),
       invalidatesTags: ['Feed'],
     }),
     createComment: build.mutation<
       { id: number; post_id: number; author_name: string; text: string; published_at: string },
       { postId: number; text: string; parent_comment_id?: number }
     >({
-      query: ({ postId, ...body }) => ({ url: `/api/posts/${postId}/comments`, method: 'POST', body }),
+      query: ({ postId, ...body }) => ({ url: `/posts/${postId}/comments`, method: 'POST', body }),
       invalidatesTags: ['Feed'],
     }),
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
