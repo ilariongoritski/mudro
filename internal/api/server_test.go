@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/goritskimihail/mudro/internal/auth"
+	"github.com/goritskimihail/mudro/internal/posts"
 )
 
 func TestNewServer(t *testing.T) {
@@ -41,38 +44,20 @@ func TestHandleOrchestrationStatus(t *testing.T) {
 
 	s.Router().ServeHTTP(w, req)
 
-	if w.Code != 200 {
-		t.Fatalf("status = %d, want 200", w.Code)
+	if w.Code != 503 {
+		t.Fatalf("status = %d, want 503", w.Code)
 	}
-	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "application/json") {
-		t.Fatalf("content-type = %q, want application/json", ct)
-	}
+}
 
-	var resp map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("json.Unmarshal: %v", err)
-	}
+func TestHandleOrchestrationStatusRequiresAuthWhenConfigured(t *testing.T) {
+	s := &Server{authHandlers: &AuthHandlers{authSvc: &auth.Service{}}}
+	req := httptest.NewRequest("GET", "/api/orchestration/status", nil)
+	w := httptest.NewRecorder()
 
-	if _, ok := resp["branch"].(string); !ok {
-		t.Fatalf("branch missing or invalid: %#v", resp["branch"])
-	}
-	if _, ok := resp["commit"].(string); !ok {
-		t.Fatalf("commit missing or invalid: %#v", resp["commit"])
-	}
-	if resp["api_endpoint"] != "/api/orchestration/status" {
-		t.Fatalf("api_endpoint = %#v, want /api/orchestration/status", resp["api_endpoint"])
-	}
-	if _, ok := resp["state"].([]any); !ok {
-		t.Fatalf("state missing or invalid: %#v", resp["state"])
-	}
-	if _, ok := resp["todo"].([]any); !ok {
-		t.Fatalf("todo missing or invalid: %#v", resp["todo"])
-	}
-	if _, ok := resp["done"].([]any); !ok {
-		t.Fatalf("done missing or invalid: %#v", resp["done"])
-	}
-	if _, ok := resp["status"].([]any); !ok {
-		t.Fatalf("status missing or invalid: %#v", resp["status"])
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != 401 {
+		t.Fatalf("status = %d, want 401", w.Code)
 	}
 }
 
@@ -109,7 +94,7 @@ func TestOptionsCORSPreflight(t *testing.T) {
 }
 
 func TestHandlePostsInvalidParams(t *testing.T) {
-	s := &Server{}
+	s := &Server{postsSvc: &posts.Service{}}
 
 	req := httptest.NewRequest("GET", "/api/posts?page=0", nil)
 	w := httptest.NewRecorder()
@@ -123,6 +108,30 @@ func TestHandlePostsInvalidParams(t *testing.T) {
 	s.Router().ServeHTTP(w, req)
 	if w.Code != 400 {
 		t.Fatalf("cursor invalid status = %d, want 400", w.Code)
+	}
+}
+
+func TestHandlePostsServiceUnavailableWhenMissing(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest("GET", "/api/posts", nil)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != 503 {
+		t.Fatalf("status = %d, want 503", w.Code)
+	}
+}
+
+func TestHandleFrontServiceUnavailableWhenMissing(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest("GET", "/api/front", nil)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != 503 {
+		t.Fatalf("status = %d, want 503", w.Code)
 	}
 }
 
@@ -314,4 +323,3 @@ func TestBuildPostsVisibilityWhereWithSource(t *testing.T) {
 		t.Fatalf("args = %#v, want [vk]", args)
 	}
 }
-

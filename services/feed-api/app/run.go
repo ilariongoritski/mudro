@@ -35,6 +35,9 @@ func Run() {
 		log.Fatalf("pgxpool.New: %v", err)
 	}
 	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("db ping: %v", err)
+	}
 
 	baseHandler, err := wiring.NewHandler(pool)
 	if err != nil {

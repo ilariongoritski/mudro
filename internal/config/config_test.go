@@ -54,6 +54,18 @@ func TestEnvOrAndAPIBaseURL(t *testing.T) {
 	}
 }
 
+func TestTelegramAllowedUsernameRequiresExplicitEnv(t *testing.T) {
+	t.Setenv("TELEGRAM_ALLOWED_USERNAME", "")
+	if got := TelegramAllowedUsername(); got != "" {
+		t.Fatalf("TelegramAllowedUsername=%q, want empty", got)
+	}
+
+	t.Setenv("TELEGRAM_ALLOWED_USERNAME", "  MudroAdmin ")
+	if got := TelegramAllowedUsername(); got != "mudroadmin" {
+		t.Fatalf("TelegramAllowedUsername=%q", got)
+	}
+}
+
 func TestRepoRootByEnv(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("MUDRO_ROOT", root)

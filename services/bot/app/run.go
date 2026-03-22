@@ -14,7 +14,7 @@ var botAPI *tgbotapi.BotAPI
 
 // Инициализация бота и регистрация команд
 func init() {
-	if err := config.ValidateRuntime("bot", "TELEGRAM_BOT_TOKEN"); err != nil {
+	if err := config.ValidateRuntime("bot", "TELEGRAM_BOT_TOKEN", "TELEGRAM_ALLOWED_USERNAME"); err != nil {
 		log.Fatal(err)
 	}
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")

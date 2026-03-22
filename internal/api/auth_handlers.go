@@ -135,6 +135,10 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	if h.authSvc == nil {
+		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+		return
+	}
 
 	user, token, err := h.authSvc.Login(r.Context(), req.principal(), req.Password)
 	if err != nil {
@@ -258,6 +262,10 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 // AuthMiddleware wraps an http.HandlerFunc to require a valid JWT token.
 func (h *AuthHandlers) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if h == nil || h.authSvc == nil {
+			http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		token := extractToken(r)
 		if token == "" {
 			http.Error(w, "unauthorized - no token", http.StatusUnauthorized)

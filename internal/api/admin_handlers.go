@@ -25,6 +25,10 @@ type userListItem struct {
 
 // HandleGetUsers returns a list of all users.
 func (h *AdminHandlers) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
+	if h == nil || h.authSvc == nil {
+		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	users, err := h.authSvc.ListUsers(r.Context())
 	if err != nil {
 		log.Printf("admin list users: %v", err)
@@ -51,6 +55,10 @@ func (h *AdminHandlers) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetStats returns basic system stats for admin.
 func (h *AdminHandlers) HandleGetStats(w http.ResponseWriter, r *http.Request) {
+	if h == nil || h.authSvc == nil {
+		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	totalUsers, err := h.authSvc.CountUsers(r.Context())
 	if err != nil {
 		log.Printf("admin stats total_users: %v", err)

@@ -12,7 +12,6 @@ import (
 const (
 	DefaultDSN              = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
 	DefaultTelegramLimit    = 3800
-	DefaultTelegramUser     = "sirilarion"
 	DefaultOpenAIModel      = "gpt-4.1-mini"
 	DefaultAPIAddr          = ":8080"
 	DefaultAPIBaseURL       = "http://127.0.0.1:8080"
@@ -43,7 +42,7 @@ func TelegramMessageLimit() int {
 }
 
 func TelegramAllowedUsername() string {
-	return strings.ToLower(envOr("TELEGRAM_ALLOWED_USERNAME", DefaultTelegramUser))
+	return strings.ToLower(strings.TrimSpace(os.Getenv("TELEGRAM_ALLOWED_USERNAME")))
 }
 
 func OpenAIAPIKey() string {

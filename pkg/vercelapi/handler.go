@@ -7,6 +7,7 @@ import (
 
 	internalapi "github.com/goritskimihail/mudro/internal/api"
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,5 +21,6 @@ func NewHandler() (http.Handler, error) {
 		return nil, err
 	}
 
-	return internalapi.NewServer(pool, nil).Router(), nil
+	postsSvc := posts.NewService(pool, nil)
+	return internalapi.NewServer(pool, postsSvc).Router(), nil
 }

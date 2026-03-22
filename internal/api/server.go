@@ -65,13 +65,13 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
-	mux.HandleFunc("/api/orchestration/status", s.handleOrchestrationStatus)
 	mux.HandleFunc("/feed", s.handleFeed)
 
 	mux.HandleFunc("/api/casino", s.handleCasinoIndex)
 
 	// Auth routes.
 	if s.authHandlers != nil {
+		mux.HandleFunc("/api/orchestration/status", s.authHandlers.AuthMiddleware(s.handleOrchestrationStatus))
 		mux.HandleFunc("/api/casino/", s.authHandlers.AuthMiddleware(s.handleCasinoProxy))
 		mux.HandleFunc("/api/auth/register", s.authHandlers.HandleRegister)
 		mux.HandleFunc("/api/auth/login", s.authHandlers.HandleLogin)
@@ -83,6 +83,10 @@ func (s *Server) Router() http.Handler {
 			mux.HandleFunc("/api/admin/users", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetUsers))
 			mux.HandleFunc("/api/admin/stats", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetStats))
 		}
+	} else {
+		mux.HandleFunc("/api/orchestration/status", func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+		})
 	}
 
 	return withCORS(mux)
@@ -157,6 +161,10 @@ func (s *Server) handleCasinoProxy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
+	if s.postsSvc == nil {
+		http.Error(w, "posts service unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	ctx := r.Context()
 
 	limit := parseLimit(r.URL.Query().Get("limit"))
@@ -205,6 +213,10 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
+	if s.postsSvc == nil {
+		http.Error(w, "posts service unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	ctx := r.Context()
 	limit := parseLimit(r.URL.Query().Get("limit"))
 	source, err := parseSource(r.URL.Query().Get("source"))

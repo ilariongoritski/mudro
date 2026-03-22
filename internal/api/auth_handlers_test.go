@@ -66,6 +66,19 @@ func TestHandleLogin_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestHandleLogin_ServiceUnavailable(t *testing.T) {
+	body, _ := json.Marshal(authRequest{Login: "demo", Password: "password123"})
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	handlers := NewAuthHandlers(nil)
+	handlers.HandleLogin(rr, req)
+
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
+	}
+}
+
 func TestHandleRegister_MissingLogin(t *testing.T) {
 	body, _ := json.Marshal(authRequest{Login: "", Password: "short"})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(body))
@@ -110,6 +123,20 @@ func TestHandleTelegramAuth_MissingInitData(t *testing.T) {
 
 	handlers := NewAuthHandlers(nil)
 	handlers.HandleTelegramAuth(rr, req)
+
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
+	}
+}
+
+func TestAuthMiddleware_ServiceUnavailable(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
+	rr := httptest.NewRecorder()
+
+	handlers := NewAuthHandlers(nil)
+	handlers.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("next handler should not be called when auth service is unavailable")
+	})(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
