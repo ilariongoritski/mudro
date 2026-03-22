@@ -176,6 +176,10 @@ func KafkaTopicTasks() string {
 	return envOr("KAFKA_TOPIC_TASKS", DefaultKafkaTopic)
 }
 
+func JWTSecret() string {
+	return envOr("JWT_SECRET", "mudro-dev-secret-change-me")
+}
+
 func MudroEnv() string {
 	return strings.ToLower(strings.TrimSpace(os.Getenv("MUDRO_ENV")))
 }

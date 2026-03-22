@@ -16,11 +16,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/goritskimihail/mudro/internal/api"
+	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/ratelimit"
 )
 
 func Run() {
+	auth.SetSecret(config.JWTSecret())
+
 	addr := config.APIAddr()
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("api"); err != nil {

@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { Heart } from 'lucide-react'
+import { useToggleLikeMutation } from '@/entities/post/model/postsApi'
 import type { Post, PostComment } from '@/entities/post/model/types'
 import {
   buildOriginalPostUrl,
@@ -36,6 +39,24 @@ const normalizeCommentReactions = (reactions?: PostComment['reactions']) => {
 }
 
 export const PostCard = ({ post, onOpen }: PostCardProps) => {
+  const [liked, setLiked] = useState(false)
+  const [localLikes, setLocalLikes] = useState(post.likes_count)
+  const [toggleLike] = useToggleLikeMutation()
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setLiked(!liked)
+    setLocalLikes(liked ? localLikes - 1 : localLikes + 1)
+    try {
+      const result = await toggleLike(post.id).unwrap()
+      setLiked(result.liked)
+      setLocalLikes(result.likes_count)
+    } catch {
+      setLiked(liked)
+      setLocalLikes(localLikes)
+    }
+  }
+
   const reactions = normalizeReactions(post.reactions)
   const mediaItems = post.media ?? []
   const visibleMedia = mediaItems.slice(0, 3)
@@ -63,10 +84,13 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
         <p className="text-sm text-slate-700 leading-relaxed line-clamp-4">{bodyText}</p>
 
         <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5">
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-400 uppercase">Лайки</span>
-            <strong className="text-sm font-semibold">{metricLabel(post.likes_count)}</strong>
-          </div>
+          <button
+            onClick={handleLike}
+            className={cn('text-center group transition-colors', liked ? 'text-red-500' : 'text-slate-600 hover:text-red-500')}
+          >
+            <Heart className={cn('w-4 h-4 mx-auto mb-0.5', liked && 'fill-current')} />
+            <strong className="text-sm font-semibold">{metricLabel(localLikes)}</strong>
+          </button>
           <div className="text-center">
             <span className="block text-[10px] text-slate-400 uppercase">Просмотры</span>
             <strong className={cn('text-sm font-semibold', viewsMetric.missing && 'text-slate-300')}>{viewsMetric.value}</strong>

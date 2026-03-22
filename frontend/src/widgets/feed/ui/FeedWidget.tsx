@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
@@ -56,6 +56,7 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
   } = useGetFrontQuery({ limit, source, sort })
 
   const [loadMorePosts, { isFetching: isLoadingMore }] = useLazyGetPostsQuery()
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const items = useMemo(() => {
     return [...(frontData?.feed.items ?? []), ...loadedItems]
@@ -75,7 +76,7 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
   const isInitialLoading = isFrontFetching && items.length === 0
   const showEmpty = !isInitialLoading && !isFrontError && items.length === 0
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (!effectiveCursor) return
 
     try {
@@ -92,7 +93,24 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
     } catch {
       setLoadError('Не удалось подгрузить следующую страницу. Проверь API и повтори запрос.')
     }
-  }
+  }, [effectiveCursor, limit, source, sort, loadMorePosts])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !isLoadingMore) {
+          handleLoadMore()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, isLoadingMore, handleLoadMore])
 
   return (
     <div className="space-y-4">
@@ -148,13 +166,8 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
 
       {loadError && <p className="text-sm text-red-500 text-center">{loadError}</p>}
 
-      {hasMore && (
-        <div className="flex justify-center pt-2">
-          <Button variant="outline" disabled={isLoadingMore} onClick={handleLoadMore}>
-            {isLoadingMore ? 'Загружаю...' : 'Показать еще'}
-          </Button>
-        </div>
-      )}
+      {hasMore && <div ref={sentinelRef} className="h-10" />}
+      {isLoadingMore && <FeedLoadingSkeleton />}
 
       <PostDetailDrawer post={selectedPost} onClose={() => setSelectedPost(null)} />
     </div>

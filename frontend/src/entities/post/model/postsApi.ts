@@ -17,6 +17,17 @@ export const postsApi = mudroApi.injectEndpoints({
       }),
       providesTags: ['Feed'],
     }),
+    toggleLike: build.mutation<{ liked: boolean; likes_count: number }, number>({
+      query: (postId) => ({ url: `/api/posts/${postId}/like`, method: 'POST' }),
+      invalidatesTags: ['Feed'],
+    }),
+    createComment: build.mutation<
+      { id: number; post_id: number; author_name: string; text: string; published_at: string },
+      { postId: number; text: string; parent_comment_id?: number }
+    >({
+      query: ({ postId, ...body }) => ({ url: `/api/posts/${postId}/comments`, method: 'POST', body }),
+      invalidatesTags: ['Feed'],
+    }),
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
       query: ({ limit, page, source, sort, before_ts, before_id }) => ({
         url: '/api/posts',
@@ -35,4 +46,4 @@ export const postsApi = mudroApi.injectEndpoints({
   }),
 })
 
-export const { useGetFrontQuery, useLazyGetPostsQuery } = postsApi
+export const { useGetFrontQuery, useLazyGetPostsQuery, useToggleLikeMutation, useCreateCommentMutation } = postsApi

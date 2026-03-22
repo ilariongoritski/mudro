@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 
+import { CommentForm } from '@/features/comment-form/ui/CommentForm'
 import type { Post, PostComment } from '@/entities/post/model/types'
 import {
   buildOriginalPostUrl,
@@ -231,6 +232,8 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
               </div>
             </div>
           )}
+
+          <CommentForm postId={post.id} />
         </div>
       </aside>
     </div>
