@@ -15,17 +15,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/goritskimihail/mudro/internal/api"
-	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
-	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/goritskimihail/mudro/internal/ratelimit"
-	"github.com/goritskimihail/mudro/internal/tgexport"
+	"github.com/goritskimihail/mudro/services/feed-api/internal/wiring"
 )
 
 func Run() {
-	auth.SetSecret(config.JWTSecret())
-
 	addr := config.APIAddr()
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("api"); err != nil {
@@ -41,28 +36,10 @@ func Run() {
 	}
 	defer pool.Close()
 
-	// Initialize auth service.
-	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
-	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET is required")
+	baseHandler, err := wiring.NewHandler(pool)
+	if err != nil {
+		log.Fatal(err)
 	}
-	authSvc := auth.NewService(pool, jwtSecret)
-
-	// Load TG visibility filter
-	var tgVisiblePostIDs []string
-	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
-		tgVisiblePostIDs = ids
-		log.Printf("main: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
-	} else if err != nil {
-		log.Printf("main: telegram visibility filter disabled: %v", err)
-	}
-
-	postsSvc := posts.NewService(pool, tgVisiblePostIDs)
-
-	authHandlers := api.NewAuthHandlers(authSvc)
-	adminHandlers := api.NewAdminHandlers(authSvc)
-
-	baseHandler := api.NewServer(pool, postsSvc, authHandlers, adminHandlers).Router()
 	handler, closeLimiter := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
 	defer closeLimiter()
 

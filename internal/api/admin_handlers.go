@@ -51,9 +51,22 @@ func (h *AdminHandlers) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetStats returns basic system stats for admin.
 func (h *AdminHandlers) HandleGetStats(w http.ResponseWriter, r *http.Request) {
+	totalUsers, err := h.authSvc.CountUsers(r.Context())
+	if err != nil {
+		log.Printf("admin stats total_users: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	activeSubscriptions, err := h.authSvc.CountActiveSubscriptions(r.Context())
+	if err != nil {
+		log.Printf("admin stats active_subscriptions: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"total_users": 0, // Placeholder
-		"active_subscriptions": 0, // Placeholder
+		"total_users":          totalUsers,
+		"active_subscriptions": activeSubscriptions,
 	})
 }

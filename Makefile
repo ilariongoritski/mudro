@@ -9,6 +9,7 @@ MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
 USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
+USERS_TELEGRAM_MIGRATION ?= $(MIGRATIONS_DIR)/015_users_telegram.sql
 CASINO_MIGRATION ?= services/casino/migrations/001_init.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
@@ -20,10 +21,16 @@ ENV_AGENT ?= env/agent.env
 ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
-RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(CASINO_MIGRATION)
+RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CASINO_MIGRATION)
 
-ifeq ($(shell [ -x "$(GO)" ] && echo 1 || echo 0),0)
+ifeq ($(wildcard $(GO)),)
 GO := go
+endif
+
+ifeq ($(OS),Windows_NT)
+GUARD_MAIN_CLEAN_SCRIPT = powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/git/guard_clean_main.ps1
+else
+GUARD_MAIN_CLEAN_SCRIPT = bash ./scripts/git/guard_clean_main.sh
 endif
 
 ifeq ($(USE_DOCKER_PSQL),1)
@@ -68,9 +75,11 @@ migrate:
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+	cat "$(USERS_TELEGRAM_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_TELEGRAM_MIGRATION)"
 endif
 
 migrate-runtime:
@@ -157,6 +166,12 @@ lint:
 	cd frontend && npm run lint
 
 check: lint test
+
+validate-contracts:
+	$(GO) run ./tools/validate-contracts -dir ./contracts
+
+guard-main-clean:
+	$(GUARD_MAIN_CLEAN_SCRIPT)
 
 selftest:
 	$(GO) test ./tools/importers/vkimport/app ./tools/importers/tgimport/app

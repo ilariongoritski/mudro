@@ -263,6 +263,22 @@
   gap: 1rem;
 }
 
+.casino-page__surface_fallback {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.casino-page__surface_fallback h2 {
+  margin: 0;
+  color: #fff7fb;
+}
+
+.casino-page__surface_fallback p {
+  margin: 0;
+  color: rgba(255, 244, 249, 0.82);
+}
+
 .casino-page__surface {
   padding: 1.05rem;
   background:

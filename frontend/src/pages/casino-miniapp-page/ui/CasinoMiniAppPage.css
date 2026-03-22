@@ -1,0 +1,241 @@
+.casino-miniapp {
+  min-height: 100vh;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 87, 159, 0.22), transparent 55%),
+    radial-gradient(circle at 80% 100%, rgba(255, 207, 88, 0.16), transparent 50%),
+    linear-gradient(180deg, #09070d 0%, #140e1b 100%);
+  color: #f9f1ff;
+}
+
+.casino-miniapp_win {
+  animation: casinoMiniWin 0.45s ease-out;
+}
+
+.casino-miniapp__top,
+.casino-miniapp__stage,
+.casino-miniapp__history {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(11, 8, 16, 0.75);
+  backdrop-filter: blur(14px);
+  padding: 14px;
+}
+
+.casino-miniapp__top {
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.casino-miniapp__eyebrow {
+  display: inline-flex;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--mudro-casino-soft);
+}
+
+.casino-miniapp__top h1 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.casino-miniapp__top p {
+  margin: 8px 0 0;
+  color: rgba(249, 241, 255, 0.8);
+  line-height: 1.4;
+}
+
+.casino-miniapp__balance {
+  min-width: 120px;
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.casino-miniapp__balance span,
+.casino-miniapp__balance small {
+  color: rgba(249, 241, 255, 0.75);
+}
+
+.casino-miniapp__balance strong {
+  font-size: 1.55rem;
+  color: var(--mudro-casino-gold);
+}
+
+.casino-miniapp__stage {
+  display: grid;
+  gap: 14px;
+}
+
+.casino-miniapp__stage_fallback {
+  gap: 10px;
+}
+
+.casino-miniapp__stage_fallback h2,
+.casino-miniapp__stage_fallback p {
+  margin: 0;
+}
+
+.casino-miniapp__reels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.casino-miniapp__reel {
+  border-radius: 12px;
+  min-height: 86px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(8, 7, 11, 0.65));
+}
+
+.casino-miniapp__reel span {
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  color: #fff8f2;
+}
+
+.casino-miniapp__reel_spinning span {
+  animation: casinoMiniSpin 0.55s ease-in-out infinite alternate;
+}
+
+.casino-miniapp__bets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.casino-miniapp__chip {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffeaf6;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+
+.casino-miniapp__chip_active {
+  border-color: rgba(255, 207, 88, 0.8);
+  color: #1a0f08;
+  background: linear-gradient(120deg, #ff4fb0, #ffcf58);
+}
+
+.casino-miniapp__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.casino-miniapp__primary,
+.casino-miniapp__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.casino-miniapp__primary {
+  border-color: rgba(255, 207, 88, 0.7);
+  background: linear-gradient(120deg, #ff4fb0, #ffcf58);
+  color: #1e0b14;
+  font-weight: 800;
+}
+
+.casino-miniapp__primary:disabled {
+  opacity: 0.6;
+}
+
+.casino-miniapp__secondary {
+  color: #ffe6f4;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.casino-miniapp__status {
+  margin: 0;
+  color: rgba(249, 241, 255, 0.88);
+}
+
+.casino-miniapp__history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.casino-miniapp__history-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.casino-miniapp__history-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.casino-miniapp__history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.casino-miniapp__history-item div {
+  display: grid;
+  gap: 2px;
+}
+
+.casino-miniapp__history-item span {
+  color: rgba(249, 241, 255, 0.7);
+  font-size: 0.83rem;
+}
+
+.casino-miniapp__empty {
+  margin: 0;
+  color: rgba(249, 241, 255, 0.66);
+}
+
+@keyframes casinoMiniSpin {
+  from {
+    transform: translateY(0);
+    opacity: 0.84;
+  }
+  to {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+@keyframes casinoMiniWin {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.26);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@media (max-width: 560px) {
+  .casino-miniapp__top {
+    flex-direction: column;
+  }
+
+  .casino-miniapp__balance {
+    text-align: left;
+  }
+}

@@ -80,7 +80,7 @@ const fallbackStatus = (now: Date) =>
 
 const quickActions = [
   { label: 'Open feed', to: '/' },
-  { label: 'Open casino', to: '/casino' },
+  { label: 'Open casino mini app', to: '/tma/casino' },
   { label: 'Open Skaro dashboard', href: SKARO_DASHBOARD_URL, external: true },
 ] as const satisfies ReadonlyArray<
   | { label: string; to: string; external?: false }
@@ -141,7 +141,7 @@ export const OrchestrationPage = () => {
           <Link to="/" className="orchestration-page__ghost-action">
             Feed
           </Link>
-          <Link to="/casino" className="orchestration-page__ghost-action">
+          <Link to="/tma/casino" className="orchestration-page__ghost-action">
             Casino
           </Link>
         </div>

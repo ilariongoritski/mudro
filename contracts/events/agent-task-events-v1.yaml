@@ -1,0 +1,47 @@
+version: 1
+kind: event-contract
+name: mudro.agent.task.v1
+owner: services/agent
+envelope: contracts/events/event-envelope-v1.yaml
+
+topic:
+  name: mudro.agent.task.v1
+  source_env:
+    - KAFKA_TOPIC_TASKS
+
+event_types:
+  - mudro.agent.task.v1.created
+  - mudro.agent.task.v1.started
+  - mudro.agent.task.v1.succeeded
+  - mudro.agent.task.v1.failed
+  - mudro.agent.task.v1.waiting_approval
+  - mudro.agent.task.v1.rejected
+
+payload:
+  required:
+    - task_id
+    - task_kind
+    - status
+  fields:
+    task_id:
+      type: integer
+    task_kind:
+      type: string
+    status:
+      type: string
+    worker_id:
+      type: string
+      nullable: true
+    message:
+      type: string
+      nullable: true
+    attempts:
+      type: integer
+      nullable: true
+
+compatibility:
+  policy: additive-only
+  notes:
+    - Do not remove required fields inside an existing major version.
+    - Breaking changes require a new major topic suffix.
+

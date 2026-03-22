@@ -90,6 +90,7 @@ make legacy-report-run
 - `make tg-csv-import CSV=/abs/path/file.csv`
 - `make tg-comments-csv-import CSV=/abs/path/file.csv`
 - `make tg-comment-media-import DIR=/abs/path/dir`
+- `make guard-main-clean` - check that `main`/`master` is clean before release work
 - `make memento`
 
 ## CLI-контур (`tools/*`)
@@ -168,6 +169,8 @@ Gateway-файл: `AGENTS.md`
 - Runbook: `ops/runbooks/ops-runbook.md`
 - Worker autonomy: `docs/worker-autonomy.md`
 - Microservices architecture: `docs/microservices-architecture.md`
+- Microservices blueprint (March 2026): `docs/microservices-blueprint-2026-03.md`
+- Migration policy: `docs/migration-policy.md`
 
 ## Примечания
 

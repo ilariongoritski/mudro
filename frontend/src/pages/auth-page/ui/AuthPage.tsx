@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { useRegisterMutation, useLoginMutation } from '@/features/auth/api/authApi'
-import { setCredentials } from '@/features/auth/model/authSlice'
+import { useRegisterMutation, useLoginMutation } from '@/entities/session/api/authApi'
+import { setCredentials } from '@/entities/session/model/sessionSlice'
 import { useAppDispatch } from '@/shared/lib/hooks/storeHooks'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
+
+interface ApiErrorShape {
+  data?: {
+    error?: string
+  }
+}
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -30,13 +36,10 @@ export default function AuthPage() {
         ? await login({ email, password }).unwrap()
         : await register({ username, email, password }).unwrap()
 
-      dispatch(setCredentials({
-        token: result.token,
-        user: { id: result.id, username: result.username, email },
-      }))
+      dispatch(setCredentials(result))
       navigate('/')
-    } catch (err: any) {
-      const msg = err?.data?.error || 'Something went wrong'
+    } catch (err: unknown) {
+      const msg = (err as ApiErrorShape)?.data?.error || 'Something went wrong'
       setError(msg)
     }
   }

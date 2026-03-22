@@ -6,9 +6,12 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/goritskimihail/mudro/internal/auth"
+	"github.com/goritskimihail/mudro/internal/casino"
 )
 
 type contextKey string
@@ -57,6 +60,10 @@ type meResponse struct {
 type tokenResponse struct {
 	Token string     `json:"token"`
 	User  meResponse `json:"user"`
+}
+
+type telegramAuthRequest struct {
+	InitData string `json:"initData"`
 }
 
 // HandleRegister registers a new user with username and password.
@@ -137,6 +144,73 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleTelegramAuth validates Telegram WebApp initData and exchanges it for a JWT.
+func (h *AuthHandlers) HandleTelegramAuth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if h.authSvc == nil {
+		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req telegramAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	req.InitData = strings.TrimSpace(req.InitData)
+	if req.InitData == "" {
+		http.Error(w, "initData is required", http.StatusBadRequest)
+		return
+	}
+
+	botToken := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	if botToken == "" {
+		botToken = strings.TrimSpace(os.Getenv("CASINO_BOT_TOKEN"))
+	}
+	if botToken == "" {
+		http.Error(w, "telegram auth is not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	tgAuth, err := casino.ValidateInitData(botToken, req.InitData)
+	if err != nil {
+		http.Error(w, "invalid telegram initData", http.StatusUnauthorized)
+		return
+	}
+	if tgAuth.AuthDate > 0 && time.Since(time.Unix(tgAuth.AuthDate, 0)) > 24*time.Hour {
+		http.Error(w, "expired telegram session", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.authSvc.FindOrCreateTelegramUser(r.Context(), tgAuth.TelegramID, tgAuth.Username)
+	if err != nil {
+		log.Printf("auth telegram bootstrap: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	token, err := h.authSvc.IssueToken(user)
+	if err != nil {
+		log.Printf("auth telegram token: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		Token: token,
+		User: meResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
+		},
+	})
+}
+
 // HandleMe returns the currently authenticated user based on the JWT token.
 func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	user := UserFromContext(r.Context())
@@ -155,7 +229,7 @@ func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleLogout is a stub for JWT since tokens are stateless. Client should delete token.
+// HandleLogout returns 200 for stateless JWT auth; client clears local token.
 func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

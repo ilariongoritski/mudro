@@ -1,0 +1,43 @@
+version: 1
+kind: event-envelope
+name: mudro.event.envelope.v1
+description: Canonical envelope for domain events published by MUDRO services.
+
+required:
+  - event_id
+  - event_type
+  - event_version
+  - producer
+  - aggregate_id
+  - occurred_at
+  - payload
+
+fields:
+  event_id:
+    type: string
+    description: Unique identifier for idempotency.
+  event_type:
+    type: string
+    description: Domain event name, for example mudro.feed.post.v1.created.
+  event_version:
+    type: integer
+    description: Event payload schema version.
+  producer:
+    type: string
+    description: Service that produced the event.
+  aggregate_id:
+    type: string
+    description: Domain aggregate identifier.
+  occurred_at:
+    type: string
+    format: date-time
+  trace_id:
+    type: string
+    nullable: true
+  dedupe_key:
+    type: string
+    nullable: true
+  payload:
+    type: object
+    additional_properties: true
+

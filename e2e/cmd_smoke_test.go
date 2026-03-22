@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -31,13 +32,28 @@ func repoRoot(t *testing.T) string {
 	return root
 }
 
+func testBinPath(dir, name string) string {
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	return filepath.Join(dir, name)
+}
+
+func isExpectedKilledErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "signal: killed") || strings.Contains(msg, "exit status 1")
+}
+
 func TestCmdAPISmokeHealthz(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skip smoke test in short mode")
 	}
 
 	root := repoRoot(t)
-	bin := filepath.Join(t.TempDir(), "mudro-api-smoke")
+	bin := testBinPath(t.TempDir(), "mudro-api-smoke")
 	build := exec.Command(goBin(t), "build", "-o", bin, "./services/feed-api/cmd")
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {
@@ -59,6 +75,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 	cmd.Env = append(os.Environ(),
 		"API_ADDR="+addr,
 		"DSN=postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable",
+		"JWT_SECRET=test-secret",
 	)
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -96,7 +113,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 	if err := cmd.Process.Kill(); err != nil {
 		t.Fatalf("kill api: %v", err)
 	}
-	if err := cmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal: killed") {
+	if err := cmd.Wait(); err != nil && !isExpectedKilledErr(err) {
 		t.Fatalf("wait api: %v\noutput:\n%s", err, out.String())
 	}
 	if !strings.Contains(out.String(), fmt.Sprintf("api listening on %s", addr)) {
@@ -110,7 +127,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 	}
 
 	root := repoRoot(t)
-	bin := filepath.Join(t.TempDir(), "mudro-bot-smoke")
+	bin := testBinPath(t.TempDir(), "mudro-bot-smoke")
 	build := exec.Command(goBin(t), "build", "-o", bin, "./services/bot/cmd")
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {

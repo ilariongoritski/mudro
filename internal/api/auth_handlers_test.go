@@ -37,7 +37,7 @@ func (s *MockService) GetUserByID(ctx context.Context, id int64) (*auth.User, er
 	return nil, nil
 }
 
-// Since auth.Service is a concrete struct in auth package and not an interface, 
+// Since auth.Service is a concrete struct in auth package and not an interface,
 // we would normally use interfaces or monkey patching for full unit tests.
 // The code below demonstrates the shape of the test utilizing the handlers.
 // Note: To fully unit test AuthHandlers, auth.Service should be decoupled via an interface.
@@ -76,5 +76,29 @@ func TestHandleRegister_MissingLogin(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestHandleTelegramAuth_InvalidMethod(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram", nil)
+	rr := httptest.NewRecorder()
+
+	handlers := NewAuthHandlers(nil)
+	handlers.HandleTelegramAuth(rr, req)
+
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHandleTelegramAuth_MissingInitData(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/telegram", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handlers := NewAuthHandlers(nil)
+	handlers.HandleTelegramAuth(rr, req)
+
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
 	}
 }

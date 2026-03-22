@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -10,6 +10,7 @@ import {
   useUpdateCasinoConfigMutation,
 } from '@/features/casino/api/casinoApi'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
 import './CasinoPage.css'
 
@@ -21,6 +22,7 @@ const formatCasinoTimestamp = (value: string) => {
   if (Number.isNaN(date.getTime())) {
     return 'Сейчас'
   }
+
   return new Intl.DateTimeFormat('ru-RU', {
     day: '2-digit',
     month: 'short',
@@ -36,8 +38,8 @@ export const CasinoPage = () => {
   const [reels, setReels] = useState<string[]>(reelFallback)
   const [spinFeedback, setSpinFeedback] = useState<string | null>(null)
   const [celebrateSpin, setCelebrateSpin] = useState(false)
-  const [rtpDraft, setRtpDraft] = useState('95')
-  const [initialBalanceDraft, setInitialBalanceDraft] = useState('2500')
+  const [rtpDraft, setRtpDraft] = useState<string | null>(null)
+  const [initialBalanceDraft, setInitialBalanceDraft] = useState<string | null>(null)
 
   const { isAuthenticated, user } = useAppSelector((state) => state.session)
   const shouldSkipCasinoQueries = !isAuthenticated
@@ -65,25 +67,30 @@ export const CasinoPage = () => {
   const balance = balanceData?.balance ?? 0
   const rtp = balanceData?.rtp ?? configData?.rtp_percent
   const history = historyData?.items ?? []
-
-  useEffect(() => {
-    if (!configData) return
-    setRtpDraft(String(configData.rtp_percent))
-    setInitialBalanceDraft(String(configData.initial_balance))
-  }, [configData])
+  const resolvedRtpDraft = rtpDraft ?? (configData ? String(configData.rtp_percent) : '')
+  const resolvedInitialBalanceDraft =
+    initialBalanceDraft ?? (configData ? String(configData.initial_balance) : '')
+  const canSpin = isAuthenticated && !isSpinning && bet > 0 && balance >= bet
 
   const topSignal = useMemo(() => {
     if (!isAuthenticated) {
       return 'Авторизуйся, чтобы открыть баланс, spins и history.'
     }
+
     if (isBalanceError) {
-      return 'Backend casino еще не отвечает. UI уже готов к подключению.'
+      return 'Casino backend временно недоступен. Повторите запрос позже.'
     }
+
     return 'Виртуальная экономика внутри MUDRO с отдельным сервисным контуром.'
   }, [isAuthenticated, isBalanceError])
 
   const handleSpin = async () => {
     if (!isAuthenticated || isSpinning) {
+      return
+    }
+
+    if (balance < bet) {
+      setSpinFeedback('Недостаточно credits для выбранной ставки.')
       return
     }
 
@@ -99,7 +106,7 @@ export const CasinoPage = () => {
       setSpinFeedback(
         response.win > 0
           ? `Выигрыш ${response.win} credits. Новый баланс ${response.balance}.`
-          : `Спин завершен. Баланс ${response.balance}.`
+          : `Спин завершен. Баланс ${response.balance}.`,
       )
     } catch {
       setReels(reelFallback)
@@ -112,8 +119,8 @@ export const CasinoPage = () => {
       return
     }
 
-    const nextRtp = Number.parseFloat(normalizeDraftNumber(rtpDraft))
-    const nextInitialBalance = Number.parseInt(initialBalanceDraft, 10)
+    const nextRtp = Number.parseFloat(normalizeDraftNumber(resolvedRtpDraft))
+    const nextInitialBalance = Number.parseInt(resolvedInitialBalanceDraft, 10)
 
     if (!Number.isFinite(nextRtp) || nextRtp <= 0) {
       setSpinFeedback('RTP должен быть положительным числом.')
@@ -151,12 +158,15 @@ export const CasinoPage = () => {
                 Войти и открыть баланс
               </Link>
             ) : (
-              <button type="button" className="casino-page__primary-action" onClick={handleSpin} disabled={isSpinning}>
+              <button type="button" className="casino-page__primary-action" onClick={handleSpin} disabled={!canSpin}>
                 {isSpinning ? 'Идет spin...' : 'Запустить spin'}
               </button>
             )}
             <Link to="/" className="casino-page__secondary-action">
               Вернуться в ленту
+            </Link>
+            <Link to="/tma/casino" className="casino-page__secondary-action">
+              Mini App
             </Link>
           </div>
 
@@ -201,140 +211,152 @@ export const CasinoPage = () => {
         </motion.div>
       </section>
 
-      <section className="casino-page__workspace">
-        <div className="casino-page__surface casino-page__surface_main">
-          <div className="casino-page__surface-head">
-            <div>
-              <span className="casino-page__kicker">Game control</span>
-              <h2>Один слот, быстрый цикл, управляемый RTP и чистая интеграция в основной UI.</h2>
+      <ErrorBoundary
+        fallback={
+          <section className="casino-page__surface casino-page__surface_fallback" role="alert">
+            <span className="casino-page__kicker">Casino runtime</span>
+            <h2>Временный сбой игрового интерфейса</h2>
+            <p>Обновите страницу или откройте Telegram Mini App. Основная лента продолжает работать.</p>
+          </section>
+        }
+      >
+        <>
+          <section className="casino-page__workspace">
+            <div className="casino-page__surface casino-page__surface_main">
+              <div className="casino-page__surface-head">
+                <div>
+                  <span className="casino-page__kicker">Game control</span>
+                  <h2>Один слот, быстрый цикл, управляемый RTP и чистая интеграция в основной UI.</h2>
+                </div>
+                <div className="casino-page__bet-row" aria-label="Bet controls">
+                  {betOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setBet(option)}
+                      className={`casino-page__bet-chip ${bet === option ? 'casino-page__bet-chip_active' : ''}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="casino-page__action-row">
+                <div className="casino-page__summary-tile">
+                  <span>Текущая ставка</span>
+                  <strong>{bet} credits</strong>
+                </div>
+                <div className="casino-page__summary-tile">
+                  <span>Последний результат</span>
+                  <strong>{spinFeedback ? 'См. статус' : 'Ожидает spin'}</strong>
+                </div>
+                <div className="casino-page__summary-tile">
+                  <span>Backend статус</span>
+                  <strong>{isBalanceError ? 'degraded' : 'linked'}</strong>
+                </div>
+              </div>
+
+              <div className="casino-page__status-line" role="status" aria-live="polite">
+                {spinFeedback ?? 'Пока backend не подключен, UI работает как интеграционная витрина и готов к реальным ответам API.'}
+              </div>
             </div>
-            <div className="casino-page__bet-row" aria-label="Bet controls">
-              {betOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setBet(option)}
-                  className={`casino-page__bet-chip ${bet === option ? 'casino-page__bet-chip_active' : ''}`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="casino-page__action-row">
-            <div className="casino-page__summary-tile">
-              <span>Текущая ставка</span>
-              <strong>{bet} credits</strong>
-            </div>
-            <div className="casino-page__summary-tile">
-              <span>Последний результат</span>
-              <strong>{spinFeedback ? 'См. статус' : 'Ожидает spin'}</strong>
-            </div>
-            <div className="casino-page__summary-tile">
-              <span>Backend статус</span>
-              <strong>{isBalanceError ? 'stub mode' : 'linked'}</strong>
-            </div>
-          </div>
+            <aside className="casino-page__surface casino-page__surface_side" id="history">
+              <div className="casino-page__side-block">
+                <span className="casino-page__kicker">History</span>
+                <h3>Последние spins</h3>
+                <div className="casino-page__history-list">
+                  {history.length === 0 && !isHistoryFetching ? (
+                    <p className="casino-page__empty-copy">История появится после первых spins и подключения casino-service.</p>
+                  ) : null}
 
-          <div className="casino-page__status-line" role="status">
-            {spinFeedback ?? 'Пока backend не подключен, UI работает как интеграционная витрина и готов к реальным ответам API.'}
-          </div>
-        </div>
+                  {history.map((item) => (
+                    <article key={item.id} className="casino-page__history-item">
+                      <div>
+                        <strong>{item.symbols.join(' · ')}</strong>
+                        <span>{formatCasinoTimestamp(item.created_at)}</span>
+                      </div>
+                      <div className="casino-page__history-metrics">
+                        <span>bet {item.bet}</span>
+                        <strong>{item.win > 0 ? `+${item.win}` : item.win}</strong>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
 
-        <aside className="casino-page__surface casino-page__surface_side" id="history">
-          <div className="casino-page__side-block">
-            <span className="casino-page__kicker">History</span>
-            <h3>Последние spins</h3>
-            <div className="casino-page__history-list">
-              {history.length === 0 && !isHistoryFetching ? (
-                <p className="casino-page__empty-copy">История появится после первых spins и подключения casino-service.</p>
-              ) : null}
+              <div className="casino-page__side-block">
+                <span className="casino-page__kicker">Why this shape</span>
+                <ul className="casino-page__signal-list">
+                  <li>Отдельный вход в продукт, без отдельного бренда.</li>
+                  <li>Glass + neon слой только там, где он усиливает сценарий.</li>
+                  <li>Прямой путь к admin RTP и отдельной business-логике.</li>
+                </ul>
+              </div>
+            </aside>
+          </section>
 
-              {history.map((item) => (
-                <article key={item.id} className="casino-page__history-item">
-                  <div>
-                    <strong>{item.symbols.join(' · ')}</strong>
-                    <span>{formatCasinoTimestamp(item.created_at)}</span>
-                  </div>
-                  <div className="casino-page__history-metrics">
-                    <span>bet {item.bet}</span>
-                    <strong>{item.win > 0 ? `+${item.win}` : item.win}</strong>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="casino-page__side-block">
-            <span className="casino-page__kicker">Why this shape</span>
-            <ul className="casino-page__signal-list">
-              <li>Отдельный вход в продукт, без отдельного бренда.</li>
-              <li>Glass + neon слой только там, где он усиливает сценарий.</li>
-              <li>Прямой путь к admin RTP и отдельной business-логике.</li>
-            </ul>
-          </div>
-        </aside>
-      </section>
-
-      {isAdmin ? (
-        <motion.section
-          className="casino-page__surface casino-page__surface_admin"
-          id="admin"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
-          <div className="casino-page__surface-head">
-            <div>
-              <span className="casino-page__kicker">Admin panel</span>
-              <h2>Тонкая настройка RTP и стартового баланса участников.</h2>
-            </div>
-            <p className="casino-page__admin-note">
-              Настройки сохраняются в отдельной casino БД и сразу влияют на новые участники и новые spins.
-            </p>
-          </div>
-
-          <div className="casino-page__admin-grid">
-            <label className="casino-page__field">
-              <span>RTP, %</span>
-              <input
-                type="number"
-                min="1"
-                step="0.01"
-                value={rtpDraft}
-                onChange={(event) => setRtpDraft(event.target.value)}
-                disabled={isConfigFetching || isSavingConfig}
-              />
-            </label>
-            <label className="casino-page__field">
-              <span>Seed balance</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={initialBalanceDraft}
-                onChange={(event) => setInitialBalanceDraft(event.target.value)}
-                disabled={isConfigFetching || isSavingConfig}
-              />
-            </label>
-          </div>
-
-          <div className="casino-page__admin-actions">
-            <button
-              type="button"
-              className="casino-page__primary-action"
-              onClick={handleSaveConfig}
-              disabled={isSavingConfig || isConfigFetching || !configData}
+          {isAdmin ? (
+            <motion.section
+              className="casino-page__surface casino-page__surface_admin"
+              id="admin"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
             >
-              {isSavingConfig ? 'Сохранение...' : 'Сохранить config'}
-            </button>
-            <span className="casino-page__admin-status">
-              {configData ? `Loaded config · updated ${formatCasinoTimestamp(configData.updated_at)}` : 'Config loading...'}
-            </span>
-          </div>
-        </motion.section>
-      ) : null}
+              <div className="casino-page__surface-head">
+                <div>
+                  <span className="casino-page__kicker">Admin panel</span>
+                  <h2>Тонкая настройка RTP и стартового баланса участников.</h2>
+                </div>
+                <p className="casino-page__admin-note">
+                  Настройки сохраняются в отдельной casino БД и сразу влияют на новых участников и новые spins.
+                </p>
+              </div>
+
+              <div className="casino-page__admin-grid">
+                <label className="casino-page__field">
+                  <span>RTP, %</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={resolvedRtpDraft}
+                    onChange={(event) => setRtpDraft(event.target.value)}
+                    disabled={isConfigFetching || isSavingConfig}
+                  />
+                </label>
+                <label className="casino-page__field">
+                  <span>Seed balance</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={resolvedInitialBalanceDraft}
+                    onChange={(event) => setInitialBalanceDraft(event.target.value)}
+                    disabled={isConfigFetching || isSavingConfig}
+                  />
+                </label>
+              </div>
+
+              <div className="casino-page__admin-actions">
+                <button
+                  type="button"
+                  className="casino-page__primary-action"
+                  onClick={handleSaveConfig}
+                  disabled={isSavingConfig || isConfigFetching || !configData}
+                >
+                  {isSavingConfig ? 'Сохранение...' : 'Сохранить config'}
+                </button>
+                <span className="casino-page__admin-status">
+                  {configData ? `Loaded config · updated ${formatCasinoTimestamp(configData.updated_at)}` : 'Config loading...'}
+                </span>
+              </div>
+            </motion.section>
+          ) : null}
+        </>
+      </ErrorBoundary>
     </main>
   )
 }

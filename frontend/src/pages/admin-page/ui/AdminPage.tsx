@@ -1,16 +1,34 @@
 import { useEffect, useState } from 'react'
 
+interface AdminUser {
+  id: number | string
+  email: string
+  role: string
+}
+
+interface AdminUsersResponse {
+  status?: string
+  users?: AdminUser[]
+}
+
+interface AdminStats {
+  active_subscriptions?: number
+}
+
 export const AdminPage = () => {
-  const [users, setUsers] = useState<any[]>([])
-  const [stats, setStats] = useState<any>(null)
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const usersResp = await fetch('/api/admin/users').then(r => r.json())
-        const statsResp = await fetch('/api/admin/stats').then(r => r.json())
-        if (usersResp.status === 'ok') setUsers(usersResp.users)
+        const usersResp = await fetch('/api/admin/users').then((r) => r.json() as Promise<AdminUsersResponse>)
+        const statsResp = await fetch('/api/admin/stats').then((r) => r.json() as Promise<AdminStats>)
+
+        if (usersResp.status === 'ok' && Array.isArray(usersResp.users)) {
+          setUsers(usersResp.users)
+        }
         setStats(statsResp)
       } catch (err) {
         console.error('Failed to fetch admin data', err)
@@ -18,6 +36,7 @@ export const AdminPage = () => {
         setLoading(false)
       }
     }
+
     fetchAdminData()
   }, [])
 
@@ -57,7 +76,9 @@ export const AdminPage = () => {
                   <td className="p-3">{u.id}</td>
                   <td className="p-3">{u.email}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}
+                    >
                       {u.role}
                     </span>
                   </td>

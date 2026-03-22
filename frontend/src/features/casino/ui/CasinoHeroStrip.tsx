@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 import './CasinoHeroStrip.css'
@@ -14,21 +14,21 @@ export const CasinoHeroStrip = () => {
     >
       <div className="casino-hero-strip__copy">
         <span className="casino-hero-strip__eyebrow">MUDRO Casino</span>
-        <h2>Отдельный игровой слой внутри ленты с виртуальным балансом и быстрым входом</h2>
+        <h2>Отдельный игровой контур с отдельной БД и Telegram Mini App интерфейсом</h2>
         <p>
-          Премиальная витрина уже встроена в интерфейс. Дальше сюда подключается отдельный Go-сервис со своим
-          PostgreSQL-контуром, admin-настройкой RTP и историей spins.
+          Базовый web-режим остается доступным, а быстрый вход для Telegram запускается в отдельном miniapp-маршруте с
+          теми же API и бизнес-логикой.
         </p>
       </div>
 
       <div className="casino-hero-strip__actions">
-        <Link to="/casino" className="casino-hero-strip__primary">
-          Открыть казино
+        <Link to="/tma/casino" className="casino-hero-strip__primary">
+          Открыть mini app
         </Link>
         <div className="casino-hero-strip__signals" aria-label="Краткая сводка casino">
           <span>Virtual credits</span>
           <span>Admin RTP</span>
-          <span>Живая история</span>
+          <span>Telegram-ready</span>
         </div>
       </div>
     </motion.section>

@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	DefaultCasinoAddr     = ":8082"
-	DefaultStartBalance   = 10000.0
-	DefaultFaucetAmount   = 1000.0
-	DefaultAdminKey       = "mudro-dev-key-123"
-	DefaultBotToken       = "demo-placeholder-token"
+	DefaultCasinoAddr   = ":8082"
+	DefaultStartBalance = 10000.0
+	DefaultFaucetAmount = 1000.0
+	DefaultAdminKey     = ""
+	DefaultBotToken     = ""
 )
 
 func CasinoAddr() string {

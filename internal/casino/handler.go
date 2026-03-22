@@ -123,8 +123,13 @@ func getAuth(r *http.Request) *TelegramAuth {
 
 func (s *Server) withAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		expected := strings.TrimSpace(CasinoAdminKey())
+		if expected == "" {
+			writeJSON(w, 503, map[string]string{"error": "Admin key is not configured"})
+			return
+		}
 		key := r.Header.Get("X-Admin-Key")
-		if key != CasinoAdminKey() {
+		if key != expected {
 			writeJSON(w, 401, map[string]string{"error": "Unauthorized"})
 			return
 		}

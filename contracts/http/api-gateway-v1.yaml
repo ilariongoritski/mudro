@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: MUDRO API Gateway Contract
+  version: 1.0.0
+  description: Public gateway contract for stable external API.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/healthz:
+    get:
+      summary: Gateway health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /api/v1/posts:
+    get:
+      summary: List feed posts
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: before_ts
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: before_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Posts list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/auth/telegram:
+    post:
+      summary: Exchange Telegram Mini App initData for JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramAuthRequest"
+      responses:
+        "200":
+          description: Auth successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/casino/balance:
+    get:
+      summary: Get current casino balance for authenticated user
+      responses:
+        "200":
+          description: Balance payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CasinoBalance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    FeedPost:
+      type: object
+      required: [id, source, source_post_id, posted_at]
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+          enum: [vk, tg, local]
+        source_post_id:
+          type: string
+        posted_at:
+          type: string
+          format: date-time
+        text:
+          type: string
+        likes_count:
+          type: integer
+        comments_count:
+          type: integer
+    FeedResponse:
+      type: object
+      required: [limit, items]
+      properties:
+        limit:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedPost"
+        next_cursor:
+          type: object
+          additionalProperties: true
+    TelegramAuthRequest:
+      type: object
+      required: [initData]
+      properties:
+        initData:
+          type: string
+    AuthUser:
+      type: object
+      required: [id, username, role, is_premium]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          nullable: true
+        role:
+          type: string
+        is_premium:
+          type: boolean
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/AuthUser"
+    CasinoBalance:
+      type: object
+      required: [balance]
+      properties:
+        balance:
+          type: integer
+        currency:
+          type: string
+        rtp:
+          type: number
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadGateway:
+      description: Upstream domain service is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+

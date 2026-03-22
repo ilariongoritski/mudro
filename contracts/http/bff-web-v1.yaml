@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: MUDRO Web BFF Contract
+  version: 1.0.0
+  description: Web-oriented aggregated endpoints for frontend clients.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/bff/web/v1/timeline:
+    get:
+      summary: Aggregated timeline payload for web UI
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Timeline payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimelineResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/bff/web/v1/casino/widget:
+    get:
+      summary: Compact casino panel payload for web and mini app entry points
+      responses:
+        "200":
+          description: Casino widget payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CasinoWidgetResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/bff/web/v1/orchestration/status:
+    get:
+      summary: Aggregated orchestration status for control dashboard
+      responses:
+        "200":
+          description: Orchestration status payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationStatusResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  schemas:
+    TimelineItem:
+      type: object
+      required: [id, source, source_post_id, posted_at]
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+        source_post_id:
+          type: string
+        posted_at:
+          type: string
+          format: date-time
+        text:
+          type: string
+        likes_count:
+          type: integer
+        comments_count:
+          type: integer
+    TimelineResponse:
+      type: object
+      required: [items, total]
+      properties:
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineItem"
+    CasinoWidgetResponse:
+      type: object
+      required: [balance, actions]
+      properties:
+        balance:
+          type: integer
+        rtp:
+          type: number
+        actions:
+          type: array
+          items:
+            type: string
+    OrchestrationStatusResponse:
+      type: object
+      required: [branch, commit, updated_at]
+      properties:
+        branch:
+          type: string
+        commit:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        status:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+

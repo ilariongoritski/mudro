@@ -75,6 +75,7 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/casino/", s.authHandlers.AuthMiddleware(s.handleCasinoProxy))
 		mux.HandleFunc("/api/auth/register", s.authHandlers.HandleRegister)
 		mux.HandleFunc("/api/auth/login", s.authHandlers.HandleLogin)
+		mux.HandleFunc("/api/auth/telegram", s.authHandlers.HandleTelegramAuth)
 		mux.HandleFunc("/api/auth/logout", s.authHandlers.HandleLogout)
 		mux.HandleFunc("/api/auth/me", s.authHandlers.AuthMiddleware(s.authHandlers.HandleMe))
 

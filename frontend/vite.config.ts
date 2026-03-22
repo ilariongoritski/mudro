@@ -12,6 +12,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'state-vendor': ['@reduxjs/toolkit', 'react-redux'],
+          'motion-vendor': ['framer-motion'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
