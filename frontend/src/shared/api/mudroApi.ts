@@ -14,6 +14,6 @@ export const mudroApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['Feed'],
+  tagTypes: ['Feed', 'Auth'],
   endpoints: () => ({}),
 })

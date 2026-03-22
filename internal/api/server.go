@@ -17,9 +17,10 @@ import (
 	"time"
 
 	commentdb "github.com/goritskimihail/mudro/internal/commentmodel"
-	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
 	mediadb "github.com/goritskimihail/mudro/internal/media"
+	"github.com/goritskimihail/mudro/internal/tgexport"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -288,7 +289,7 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	for _, p := range posts {
 		originalURL := buildOriginalPostURL(p.Source, p.SourcePostID)
 		commentsURL := ""
-		if p.CommentsCount > 0 && originalURL != "" {
+		if p.CommentsCount != nil && *p.CommentsCount > 0 && originalURL != "" {
 			commentsURL = originalURL
 		}
 		data.Items = append(data.Items, feedItem{
@@ -391,17 +392,11 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		err  error
 	)
 	order := "desc"
+	comparator := "<"
 	if sortOrder == "asc" {
 		order = "asc"
+		comparator = ">"
 	}
-	args := []any{}
-	q := `
-		select id, source, source_post_id, published_at, text, likes_count, views_count, comments_count,
-		       created_at, updated_at
-		from posts
-	`
-	whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
-	args = nextArgs
 
 	if page != nil {
 		offset := (*page - 1) * limit
@@ -445,42 +440,26 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 			rows, err = s.pool.Query(ctx, q, args...)
 		}
 	}
-
-	q += whereSQL
-	q += fmt.Sprintf(" order by published_at %s, id %s", order, order)
-
-	var fetchLimit int
-	if page != nil {
-		fetchLimit = limit
-		pageOffset := (*page - 1) * limit
-		q += fmt.Sprintf(" limit $%d offset $%d", len(args)+1, len(args)+2)
-		args = append(args, fetchLimit, pageOffset)
-	} else {
-		const oversampleFactor = 4
-		fetchLimit = (limit * oversampleFactor) + 1
-		if fetchLimit < (limit + 1) {
-			fetchLimit = limit + 1
-		}
-		q += fmt.Sprintf(" limit $%d", len(args)+1)
-		args = append(args, fetchLimit)
-	}
-
-	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
 
 	posts := make([]postDTO, 0, limit)
+	ids := make([]int64, 0, limit)
 
 	for rows.Next() {
-		var p postDTO
+		var (
+			p          postDTO
+			mediaBytes []byte
+		)
 		if err := rows.Scan(
 			&p.ID,
 			&p.Source,
 			&p.SourcePostID,
 			&p.PublishedAt,
 			&p.Text,
+			&mediaBytes,
 			&p.LikesCount,
 			&p.ViewsCount,
 			&p.CommentsCount,
@@ -489,25 +468,18 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		); err != nil {
 			return nil, nil, err
 		}
+		if len(mediaBytes) > 0 {
+			p.Media = json.RawMessage(mediaBytes)
+		}
 		posts = append(posts, p)
+		ids = append(ids, p.ID)
 	}
 	if rows.Err() != nil {
 		return nil, nil, rows.Err()
 	}
 
-	posts = dedupeFeedPosts(posts)
-	hasMore := false
-	if page == nil && len(posts) > limit {
-		hasMore = true
-		posts = posts[:limit]
-	}
 	if len(posts) == 0 {
 		return posts, nil, nil
-	}
-
-	ids := make([]int64, 0, len(posts))
-	for _, p := range posts {
-		ids = append(ids, p.ID)
 	}
 
 	normalizedPostMedia, err := mediadb.LoadPostMediaJSON(ctx, s.pool, ids)
@@ -517,6 +489,10 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	for i := range posts {
 		if raw, ok := normalizedPostMedia[posts[i].ID]; ok && len(raw) > 0 {
 			posts[i].Media = raw
+			continue
+		}
+		if len(posts[i].Media) > 0 {
+			posts[i].Media = normalizePostMediaJSON(posts[i].Media)
 		}
 	}
 
@@ -527,16 +503,17 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	if err != nil {
 		return nil, nil, err
 	}
-	tgCommentsStartAt, err := s.loadTGCommentsStartAt(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
 	for i := range posts {
-		posts[i].Comments = commentsByPost[posts[i].ID]
+		comments := commentsByPost[posts[i].ID]
+		posts[i].Comments = comments
+		if posts[i].CommentsCount == nil && len(comments) > 0 {
+			count := len(comments)
+			posts[i].CommentsCount = &count
+		}
 	}
 
 	var next *cursor
-	if page == nil && hasMore {
+	if page == nil {
 		last := posts[len(posts)-1]
 		next = &cursor{
 			BeforeTS: last.PublishedAt,
@@ -544,121 +521,6 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 		}
 	}
 	return posts, next, nil
-}
-
-func slicePosts(posts []postDTO, beforeTS *time.Time, beforeID *int64, page *int, limit int, sortOrder string) ([]postDTO, bool) {
-	filtered := posts
-	if page == nil && beforeTS != nil && beforeID != nil {
-		filtered = make([]postDTO, 0, len(posts))
-		for _, post := range posts {
-			if sortOrder == "asc" {
-				if post.PublishedAt.After(*beforeTS) || (post.PublishedAt.Equal(*beforeTS) && post.ID > *beforeID) {
-					filtered = append(filtered, post)
-				}
-				continue
-			}
-			if post.PublishedAt.Before(*beforeTS) || (post.PublishedAt.Equal(*beforeTS) && post.ID < *beforeID) {
-				filtered = append(filtered, post)
-			}
-		}
-	}
-
-	start := 0
-	if page != nil {
-		start = (*page - 1) * limit
-		if start >= len(filtered) {
-			return nil, false
-		}
-	}
-	end := start + limit
-	if end > len(filtered) {
-		end = len(filtered)
-	}
-	return filtered[start:end], end < len(filtered)
-}
-
-func dedupeFeedPosts(posts []postDTO) []postDTO {
-	type recentEntry struct {
-		index       int
-		publishedAt time.Time
-	}
-
-	kept := make([]postDTO, 0, len(posts))
-	recentByText := make(map[string][]recentEntry)
-	for _, post := range posts {
-		key := feedDedupeKey(post)
-		if key == "" {
-			kept = append(kept, post)
-			continue
-		}
-
-		recent := recentByText[key]
-		pruned := recent[:0]
-		duplicateIdx := -1
-		for _, entry := range recent {
-			if absDurationSeconds(post.PublishedAt.Sub(entry.publishedAt)) > 5 {
-				continue
-			}
-			pruned = append(pruned, entry)
-			if duplicateIdx == -1 {
-				duplicateIdx = entry.index
-			}
-		}
-		recentByText[key] = pruned
-		if duplicateIdx == -1 {
-			kept = append(kept, post)
-			recentByText[key] = append(recentByText[key], recentEntry{
-				index:       len(kept) - 1,
-				publishedAt: post.PublishedAt,
-			})
-			continue
-		}
-		if feedPostScore(post) > feedPostScore(kept[duplicateIdx]) {
-			kept[duplicateIdx] = post
-			for i := range recentByText[key] {
-				if recentByText[key][i].index == duplicateIdx {
-					recentByText[key][i].publishedAt = post.PublishedAt
-				}
-			}
-		}
-	}
-	return kept
-}
-
-func feedDedupeKey(post postDTO) string {
-	if post.Source != "tg" || post.Text == nil {
-		return ""
-	}
-	text := normalizeLookupText(*post.Text)
-	if text == "" {
-		return ""
-	}
-	return text
-}
-
-func feedPostScore(post postDTO) int {
-	score := post.CommentsCount * 1000
-	if len(post.Media) > 0 {
-		score += 100
-	}
-	score += post.LikesCount
-	score += len(strings.TrimSpace(compactText(post.Text)))
-	return score
-}
-
-func absDurationSeconds(d time.Duration) int64 {
-	if d < 0 {
-		d = -d
-	}
-	return int64(d / time.Second)
-}
-
-func normalizeLookupText(raw string) string {
-	text := strings.TrimSpace(strings.ToLower(strings.ReplaceAll(raw, "\r\n", "\n")))
-	for strings.Contains(text, "  ") {
-		text = strings.ReplaceAll(text, "  ", " ")
-	}
-	return text
 }
 
 func (s *Server) loadReactions(ctx context.Context, posts []postDTO, ids []int64) error {
@@ -703,7 +565,7 @@ type postDTO struct {
 	Media         json.RawMessage `json:"media,omitempty"`
 	LikesCount    int             `json:"likes_count"`
 	ViewsCount    *int            `json:"views_count,omitempty"`
-	CommentsCount int             `json:"comments_count"`
+	CommentsCount *int            `json:"comments_count,omitempty"`
 	Comments      []feedComment   `json:"comments,omitempty"`
 	Reactions     map[string]int  `json:"reactions"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -764,7 +626,7 @@ type feedItem struct {
 	Text          string
 	LikesCount    int
 	ViewsCount    *int
-	CommentsCount int
+	CommentsCount *int
 	OriginalURL   string
 	CommentsURL   string
 	Reactions     []feedReaction
@@ -974,7 +836,7 @@ var feedPageTmpl = template.Must(template.New("feed").Parse(`<!doctype html>
         {{else}}
           <p class="empty">Без текста</p>
         {{end}}
-        <div class="stats">likes: {{.LikesCount}} | views: {{if .ViewsCount}}{{.ViewsCount}}{{else}}-{{end}} | comments: {{.CommentsCount}}</div>
+        <div class="stats">likes: {{.LikesCount}} | views: {{if .ViewsCount}}{{.ViewsCount}}{{else}}-{{end}} | comments: {{if .CommentsCount}}{{.CommentsCount}}{{else}}-{{end}}</div>
         {{if .Reactions}}
           <div class="links">
             {{range .Reactions}}
@@ -1206,13 +1068,25 @@ func parseMediaItems(raw json.RawMessage) []feedMediaItem {
 	return out
 }
 
+func normalizePostMediaJSON(raw json.RawMessage) json.RawMessage {
+	items := parseMediaItems(raw)
+	if len(items) == 0 {
+		return nil
+	}
+	encoded, err := json.Marshal(items)
+	if err != nil {
+		return raw
+	}
+	return json.RawMessage(encoded)
+}
+
 func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int64][]feedComment, error) {
 	out := make(map[int64][]feedComment, len(postIDs))
 	if len(postIDs) == 0 {
 		return out, nil
 	}
 	rows, err := s.pool.Query(ctx, `
-		select id, post_id, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text
+		select id, post_id, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text, reactions, media
 		from post_comments
 		where post_id = any($1)
 		order by post_id asc, published_at asc, id asc
@@ -1234,14 +1108,24 @@ func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int
 		authorName            *string
 		publishedAt           time.Time
 		text                  *string
+		reactions             map[string]int
+		mediaRaw              json.RawMessage
 	}
 
 	staged := make([]commentRow, 0, len(postIDs))
 	commentIDs := make([]int64, 0, len(postIDs))
 	for rows.Next() {
-		var row commentRow
-		if err := rows.Scan(&row.commentID, &row.postID, &row.sourceCommentID, &row.sourceParentCommentID, &row.parentCommentRowID, &row.authorName, &row.publishedAt, &row.text); err != nil {
+		var (
+			row              commentRow
+			reactionsRawJSON []byte
+			mediaRawJSON     []byte
+		)
+		if err := rows.Scan(&row.commentID, &row.postID, &row.sourceCommentID, &row.sourceParentCommentID, &row.parentCommentRowID, &row.authorName, &row.publishedAt, &row.text, &reactionsRawJSON, &mediaRawJSON); err != nil {
 			return nil, err
+		}
+		row.reactions = parseReactionsJSON(reactionsRawJSON)
+		if len(mediaRawJSON) > 0 {
+			row.mediaRaw = json.RawMessage(mediaRawJSON)
 		}
 		staged = append(staged, row)
 		commentIDs = append(commentIDs, row.commentID)
@@ -1250,11 +1134,11 @@ func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int
 		return nil, err
 	}
 
-	commentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
+	normalizedCommentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
 	if err != nil {
 		return nil, err
 	}
-	commentReactions, err := commentdb.LoadCommentReactions(ctx, s.pool, commentIDs)
+	normalizedCommentReactions, err := commentdb.LoadCommentReactions(ctx, s.pool, commentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1265,13 +1149,21 @@ func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int
 	}
 
 	for _, row := range staged {
+		mediaRaw := row.mediaRaw
+		if normalized, ok := normalizedCommentMedia[row.commentID]; ok && len(normalized) > 0 {
+			mediaRaw = normalized
+		}
+		reactions := row.reactions
+		if normalized, ok := normalizedCommentReactions[row.commentID]; ok && len(normalized) > 0 {
+			reactions = normalized
+		}
 		item := feedComment{
 			SourceCommentID: row.sourceCommentID,
 			AuthorName:      compactText(row.authorName),
 			PublishedAt:     row.publishedAt.Format("2006-01-02 15:04:05"),
 			Text:            compactText(row.text),
-			Reactions:       buildFeedReactions(commentReactions[row.commentID]),
-			Media:           parseMediaItems(commentMedia[row.commentID]),
+			Reactions:       buildFeedReactions(reactions),
+			Media:           parseMediaItems(mediaRaw),
 		}
 		switch {
 		case row.parentCommentRowID != nil:
@@ -1286,6 +1178,17 @@ func (s *Server) loadPostComments(ctx context.Context, postIDs []int64) (map[int
 		out[row.postID] = append(out[row.postID], item)
 	}
 	return out, nil
+}
+
+func parseReactionsJSON(raw []byte) map[string]int {
+	if len(raw) == 0 {
+		return nil
+	}
+	var out map[string]int
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil
+	}
+	return out
 }
 
 func sourceTotals(stats []sourceStat) (vkTotal, tgTotal int64) {

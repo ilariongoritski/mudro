@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	s := NewServer(nil, nil)
+	s := NewServer(nil, nil, nil)
 	if s == nil {
 		t.Fatal("NewServer returned nil")
 	}
@@ -247,10 +247,10 @@ func TestNormalizeMediaURL(t *testing.T) {
 func TestBuildPostsVisibilityWhereNoSource(t *testing.T) {
 	s := &Server{}
 
-	where, args := s.buildPostsVisibilityWhere("", nil)
+	where, args := s.buildPostsVisibilityWhere("", "", nil)
 
-	if where != " where visible = true" {
-		t.Fatalf("where = %q, want visible-only filter", where)
+	if where != "" {
+		t.Fatalf("where = %q, want empty", where)
 	}
 	if len(args) != 0 {
 		t.Fatalf("args = %#v, want empty", args)
@@ -260,9 +260,9 @@ func TestBuildPostsVisibilityWhereNoSource(t *testing.T) {
 func TestBuildPostsVisibilityWhereWithSource(t *testing.T) {
 	s := &Server{}
 
-	where, args := s.buildPostsVisibilityWhere("vk", nil)
+	where, args := s.buildPostsVisibilityWhere("vk", "", nil)
 
-	if where != " where visible = true and source = $1" {
+	if where != " where source = $1" {
 		t.Fatalf("where = %q", where)
 	}
 	if len(args) != 1 || args[0] != "vk" {
@@ -270,75 +270,3 @@ func TestBuildPostsVisibilityWhereWithSource(t *testing.T) {
 	}
 }
 
-func TestDedupeFeedPostsDropsNearDuplicateTGPost(t *testing.T) {
-	base := time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC)
-	text := "Одинаковый пост"
-	posts := []postDTO{
-		{
-			ID:            1,
-			Source:        "tg",
-			SourcePostID:  "100",
-			PublishedAt:   base,
-			Text:          &text,
-			CommentsCount: 0,
-		},
-		{
-			ID:            2,
-			Source:        "tg",
-			SourcePostID:  "200",
-			PublishedAt:   base.Add(3 * time.Second),
-			Text:          &text,
-			CommentsCount: 4,
-		},
-	}
-
-	got := dedupeFeedPosts(posts)
-	if len(got) != 1 {
-		t.Fatalf("len = %d, want 1", len(got))
-	}
-	if got[0].ID != 2 {
-		t.Fatalf("kept id = %d, want 2", got[0].ID)
-	}
-}
-
-func TestDedupeFeedPostsKeepsFarApartSameText(t *testing.T) {
-	base := time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC)
-	text := "Повторяемый текст"
-	posts := []postDTO{
-		{ID: 1, Source: "tg", SourcePostID: "100", PublishedAt: base, Text: &text},
-		{ID: 2, Source: "tg", SourcePostID: "200", PublishedAt: base.Add(10 * time.Second), Text: &text},
-	}
-
-	got := dedupeFeedPosts(posts)
-	if len(got) != 2 {
-		t.Fatalf("len = %d, want 2", len(got))
-	}
-}
-
-func TestSlicePostsCursorAndPage(t *testing.T) {
-	base := time.Date(2026, 3, 17, 12, 0, 0, 0, time.UTC)
-	posts := []postDTO{
-		{ID: 3, PublishedAt: base.Add(2 * time.Second)},
-		{ID: 2, PublishedAt: base.Add(1 * time.Second)},
-		{ID: 1, PublishedAt: base},
-	}
-
-	pageItems, hasMore := slicePosts(posts, nil, nil, intPtr(1), 2, "desc")
-	if len(pageItems) != 2 || !hasMore {
-		t.Fatalf("page slice = %d/%v, want 2/true", len(pageItems), hasMore)
-	}
-
-	beforeTS := base.Add(1 * time.Second)
-	beforeID := int64(2)
-	cursorItems, cursorMore := slicePosts(posts, &beforeTS, &beforeID, nil, 10, "desc")
-	if len(cursorItems) != 1 || cursorMore {
-		t.Fatalf("cursor slice = %d/%v, want 1/false", len(cursorItems), cursorMore)
-	}
-	if cursorItems[0].ID != 1 {
-		t.Fatalf("cursor item id = %d, want 1", cursorItems[0].ID)
-	}
-}
-
-func intPtr(v int) *int {
-	return &v
-}

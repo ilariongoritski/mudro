@@ -48,14 +48,14 @@ func testDBServer(t *testing.T) *Server {
 		t.Fatalf("seed reactions: %v", err)
 	}
 
-	return NewServer(pool, nil)
+	return NewServer(pool, nil, nil)
 }
 
 func TestLoadPostsAndFrontHandlersIntegration(t *testing.T) {
 	s := testDBServer(t)
 	ctx := context.Background()
 
-	posts, next, err := s.loadPosts(ctx, nil, nil, nil, 10, "", "desc")
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, 10, "", "desc", "")
 	if err != nil {
 		t.Fatalf("loadPosts: %v", err)
 	}

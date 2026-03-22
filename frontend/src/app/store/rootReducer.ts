@@ -7,6 +7,7 @@ import { mudroApi } from '@/shared/api/mudroApi'
 
 export const rootReducer = combineReducers({
   session: sessionReducer,
+  auth: authReducer,
   feedFilters: feedFiltersReducer,
   [mudroApi.reducerPath]: mudroApi.reducer,
 })

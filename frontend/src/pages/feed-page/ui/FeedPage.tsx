@@ -3,6 +3,12 @@ import { FeedWidget } from '@/widgets/feed/ui/FeedWidget'
 import { Link } from 'react-router-dom'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 
+const sectionLinks = [
+  { href: '#feed', label: 'Лента' },
+  { href: '#accounts', label: 'Аккаунты' },
+  { href: '#social', label: 'Соцслой' },
+]
+
 export const FeedPage = () => {
   const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
 

@@ -17,7 +17,7 @@ type MockService struct{}
 
 func (s *MockService) Login(ctx context.Context, email, password string) (*auth.User, string, error) {
 	if email == "test@example.com" && password == "password123" {
-		return &auth.User{ID: 1, Email: email, Role: "user"}, "mock-jwt-token", nil
+		return &auth.User{ID: 1, Email: &email, Role: "user"}, "mock-jwt-token", nil
 	}
 	return nil, "", auth.ErrInvalidCredentials
 }
@@ -26,7 +26,7 @@ func (s *MockService) Register(ctx context.Context, email, password string) (*au
 	if email == "exists@example.com" {
 		return nil, auth.ErrUserExists
 	}
-	return &auth.User{ID: 2, Email: email, Role: "user"}, nil
+	return &auth.User{ID: 2, Email: &email, Role: "user"}, nil
 }
 
 func (s *MockService) ValidateToken(token string) (map[string]interface{}, error) {
@@ -66,8 +66,8 @@ func TestHandleLogin_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestHandleRegister_MissingEmail(t *testing.T) {
-	body, _ := json.Marshal(authRequest{Email: "not-an-email", Password: "short"})
+func TestHandleRegister_MissingLogin(t *testing.T) {
+	body, _ := json.Marshal(authRequest{Login: "", Password: "short"})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 

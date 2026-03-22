@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/redis/go-redis/v9 v9.5.1
