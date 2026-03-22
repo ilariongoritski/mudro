@@ -1,4 +1,4 @@
--- MUDRO 004_agent_review_gate.sql
+-- MUDRO 005_agent_review_gate.sql
 
 alter table if exists agent_queue
   drop constraint if exists agent_queue_status_check;

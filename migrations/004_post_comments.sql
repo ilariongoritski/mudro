@@ -1,4 +1,4 @@
--- MUDRO 003_post_comments.sql
+-- MUDRO 004_post_comments.sql
 
 create table if not exists post_comments (
   id bigserial primary key,

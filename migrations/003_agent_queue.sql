@@ -1,4 +1,4 @@
--- MUDRO 002_agent_queue.sql
+-- MUDRO 003_agent_queue.sql
 
 create table if not exists agent_queue (
   id bigserial primary key,

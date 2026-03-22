@@ -163,3 +163,54 @@ Gateway-файл: `AGENTS.md`
 - `VK` в проекте считается snapshot-only источником.
 - Публичный API-контракт и миграции БД в этом этапе не ломались; менялась структура репозитория и контуры запуска.
 - Все устаревшее и неиспользуемое должно уезжать в `legacy/old/*` с фиксацией в `legacy/old/manifest.yaml`.
+
+## Runtime Bootstrap (P0)
+
+Use these commands as the canonical local bootstrap path:
+
+```bash
+make core-up
+make dbcheck-core
+make migrate-runtime
+make tables-core
+make test-active
+make count-posts-core
+```
+
+Full health loop:
+
+```bash
+make health-runtime
+```
+
+Backward compatibility:
+
+```bash
+make health
+```
+
+## Local Demo (No Vercel)
+
+Terminal 1:
+
+```bash
+make demo-up
+```
+
+`make demo-up` now also seeds the local demo feed from `data/nu/feed_items.json` when `posts` is still empty.
+
+Terminal 2:
+
+```bash
+npm.cmd --prefix frontend run dev
+```
+
+Check:
+
+```bash
+make demo-check
+```
+
+Open:
+- `http://127.0.0.1:5173`
+- `http://127.0.0.1:8080/healthz`

@@ -1,4 +1,4 @@
--- MUDRO 005_agent_task_events.sql
+-- MUDRO 006_agent_task_events.sql
 
 create table if not exists agent_task_events (
   id bigserial primary key,

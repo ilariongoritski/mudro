@@ -335,6 +335,18 @@ func (s *Server) countVisiblePosts(ctx context.Context, out *int64) error {
 	return s.pool.QueryRow(ctx, `select count(*) from posts`+whereSQL, args...).Scan(out)
 }
 
+func (s *Server) loadTGCommentsStartAt(ctx context.Context) (*time.Time, error) {
+	var ts *time.Time
+	if err := s.pool.QueryRow(ctx, `
+		select min(published_at)
+		from posts
+		where source = 'tg' and coalesce(comments_count, 0) > 0
+	`).Scan(&ts); err != nil {
+		return nil, err
+	}
+	return ts, nil
+}
+
 func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, []any) {
 	conditions := make([]string, 0, 2)
 	if source != "" {
@@ -370,8 +382,39 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	`
 	whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
 	args = nextArgs
+
+	if page == nil && beforeTS != nil && beforeID != nil {
+		args = append(args, *beforeTS, *beforeID)
+		cursorCond := fmt.Sprintf("(published_at, id) < ($%d, $%d)", len(args)-1, len(args))
+		if sortOrder == "asc" {
+			cursorCond = fmt.Sprintf("(published_at, id) > ($%d, $%d)", len(args)-1, len(args))
+		}
+		if whereSQL == "" {
+			whereSQL = " where " + cursorCond
+		} else {
+			whereSQL += " and " + cursorCond
+		}
+	}
+
 	q += whereSQL
 	q += fmt.Sprintf(" order by published_at %s, id %s", order, order)
+
+	var fetchLimit int
+	if page != nil {
+		fetchLimit = limit
+		pageOffset := (*page - 1) * limit
+		q += fmt.Sprintf(" limit $%d offset $%d", len(args)+1, len(args)+2)
+		args = append(args, fetchLimit, pageOffset)
+	} else {
+		const oversampleFactor = 4
+		fetchLimit = (limit * oversampleFactor) + 1
+		if fetchLimit < (limit + 1) {
+			fetchLimit = limit + 1
+		}
+		q += fmt.Sprintf(" limit $%d", len(args)+1)
+		args = append(args, fetchLimit)
+	}
+
 	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, nil, err
@@ -411,7 +454,11 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	}
 
 	posts = dedupeFeedPosts(posts)
-	posts, hasMore := slicePosts(posts, beforeTS, beforeID, page, limit, sortOrder)
+	hasMore := false
+	if page == nil && len(posts) > limit {
+		hasMore = true
+		posts = posts[:limit]
+	}
 	if len(posts) == 0 {
 		return posts, nil, nil
 	}
@@ -442,7 +489,17 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	if err != nil {
 		return nil, nil, err
 	}
+	tgCommentsStartAt, err := s.loadTGCommentsStartAt(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	for i := range posts {
+		if posts[i].Source == "tg" && tgCommentsStartAt != nil && posts[i].PublishedAt.Before(*tgCommentsStartAt) {
+			posts[i].Comments = nil
+			zero := 0
+			posts[i].CommentsCount = &zero
+			continue
+		}
 		comments := commentsByPost[posts[i].ID]
 		posts[i].Comments = comments
 		if posts[i].CommentsCount == nil && len(comments) > 0 {

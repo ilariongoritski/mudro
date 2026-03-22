@@ -7,15 +7,21 @@ $packages = @(
     @{ Id = 'ezwinports.make'; Name = 'make' }
 )
 
-foreach ($p in $packages) {
-    $installed = winget list --id $p.Id --exact 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $installed) {
-        Write-Host "Installing $($p.Name) ($($p.Id))..."
-        winget install -e --id $p.Id --accept-package-agreements --accept-source-agreements
+$winget = Get-Command winget -ErrorAction SilentlyContinue
+if ($winget) {
+    foreach ($p in $packages) {
+        $installed = winget list --id $p.Id --exact 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $installed) {
+            Write-Host "Installing $($p.Name) ($($p.Id))..."
+            winget install -e --id $p.Id --accept-package-agreements --accept-source-agreements
+        }
+        else {
+            Write-Host "$($p.Name) already installed."
+        }
     }
-    else {
-        Write-Host "$($p.Name) already installed."
-    }
+}
+else {
+    Write-Host "winget not found. Skipping package installation step."
 }
 
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -37,21 +43,14 @@ function Convert-WindowsPathToWsl([string]$PathValue) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $repoBash = Convert-WindowsPathToBash $repoRoot
 $repoWsl = Convert-WindowsPathToWsl $repoRoot
+$runHelper = (Join-Path $repoRoot 'scripts\windows\run-mudro-no-profile.ps1')
 $binDir = Join-Path $env:USERPROFILE 'bin'
 New-Item -ItemType Directory -Force -Path $binDir | Out-Null
 
 $mudroCmd = @"
 @echo off
 setlocal
-set "PATH=C:\Program Files\Go\bin;%PATH%"
-set "PATH=%LOCALAPPDATA%\Microsoft\WinGet\Packages\ezwinports.make_Microsoft.Winget.Source_8wekyb3d8bbwe\bin;%PATH%"
-set "BASH=D:\Git\bin\bash.exe"
-if not exist "%BASH%" set "BASH=C:\Program Files\Git\bin\bash.exe"
-if not exist "%BASH%" (
-  echo [mudro] Git Bash not found. Install Git for Windows.
-  exit /b 1
-)
-"%BASH%" -lc "cd '$repoBash' && %*"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$runHelper" %*
 "@
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mudro.cmd') -Value $mudroCmd
 
@@ -59,26 +58,21 @@ Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mmake.cmd') -Value "@echo 
 $mhCmd = @'
 @echo off
 setlocal
-call mmake up || exit /b 1
-call mps || exit /b 1
-call mmake dbcheck || exit /b 1
-call mmake migrate || exit /b 1
-call mmake tables || exit /b 1
+call mmake core-up || exit /b 1
+call mmake core-ps || exit /b 1
+call mmake dbcheck-core || exit /b 1
+call mmake migrate-runtime || exit /b 1
+call mmake tables-core || exit /b 1
 call mt || exit /b 1
 call me2e || exit /b 1
-call mmake count-posts || exit /b 1
+call mmake count-posts-core || exit /b 1
 '@
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mh.cmd') -Value $mhCmd
-$mtCmd = @'
+$mtCmd = @"
 @echo off
 setlocal
-set "PATH=C:\Program Files\Go\bin;%PATH%"
-set "BASH=D:\Git\bin\bash.exe"
-if not exist "%BASH%" set "BASH=C:\Program Files\Git\bin\bash.exe"
-if not exist "%BASH%" exit /b 1
-"%BASH%" -lc "cd '__REPO_BASH__' && PKGS=$(go list ./... | grep -v '/e2e$'); go test $PKGS"
-'@
-$mtCmd = $mtCmd.Replace('__REPO_BASH__', $repoBash)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$runHelper" make test-active
+"@
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mt.cmd') -Value $mtCmd
 $me2eCmd = @"
 @echo off
@@ -91,16 +85,43 @@ if not "%MUDRO_WSL_DISTRO%"=="" (
 "@
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'me2e.cmd') -Value $me2eCmd
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'mps.cmd') -Value "@echo off`r`nmudro make ps`r`n"
-Set-Content -Encoding ASCII -Path (Join-Path $binDir 'go.cmd') -Value "@echo off`r`n""C:\Program Files\Go\bin\go.exe"" %*`r`n"
-Set-Content -Encoding ASCII -Path (Join-Path $binDir 'make.cmd') -Value "@echo off`r`n""%LOCALAPPDATA%\Microsoft\WinGet\Packages\ezwinports.make_Microsoft.Winget.Source_8wekyb3d8bbwe\bin\make.exe"" %*`r`n"
+$goCmd = @'
+@echo off
+setlocal
+for %%F in (go.exe) do set "GO_BIN=%%~$PATH:F"
+if not defined GO_BIN if exist "C:\Program Files\Go\bin\go.exe" set "GO_BIN=C:\Program Files\Go\bin\go.exe"
+if not defined GO_BIN (
+  echo [go] go.exe not found in PATH.
+  exit /b 1
+)
+"%GO_BIN%" %*
+'@
+Set-Content -Encoding ASCII -Path (Join-Path $binDir 'go.cmd') -Value $goCmd
+$makeCmd = @'
+@echo off
+setlocal
+for %%F in (make.exe) do set "MAKE_BIN=%%~$PATH:F"
+if not defined MAKE_BIN if exist "%LOCALAPPDATA%\Microsoft\WinGet\Packages\ezwinports.make_Microsoft.Winget.Source_8wekyb3d8bbwe\bin\make.exe" set "MAKE_BIN=%LOCALAPPDATA%\Microsoft\WinGet\Packages\ezwinports.make_Microsoft.Winget.Source_8wekyb3d8bbwe\bin\make.exe"
+if not defined MAKE_BIN (
+  echo [make] make.exe not found in PATH.
+  exit /b 1
+)
+"%MAKE_BIN%" %*
+'@
+Set-Content -Encoding ASCII -Path (Join-Path $binDir 'make.cmd') -Value $makeCmd
 $rgCmd = @'
 @echo off
 setlocal
+for %%F in (rg.exe) do set "RG_BIN=%%~$PATH:F"
+if defined RG_BIN (
+  "%RG_BIN%" %*
+  exit /b %ERRORLEVEL%
+)
 for /f "delims=" %%F in ('dir /b /s "%LOCALAPPDATA%\Microsoft\WinGet\Packages\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe\rg.exe" 2^>nul') do (
   "%%F" %*
   exit /b %ERRORLEVEL%
 )
-echo [rg] ripgrep not found in winget package directory.
+echo [rg] rg.exe not found in PATH or winget package directory.
 exit /b 1
 '@
 Set-Content -Encoding ASCII -Path (Join-Path $binDir 'rg.cmd') -Value $rgCmd

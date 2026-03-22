@@ -64,7 +64,7 @@ services:
     image: golang:1.23
     restart: unless-stopped
     working_dir: /app
-    command: sh -lc "go run ./services/feed-api/cmd"
+    command: sh -lc "/usr/local/go/bin/go run ./services/feed-api/cmd"
     environment:
       API_ADDR: ":8080"
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
@@ -94,7 +94,7 @@ services:
     image: golang:1.23
     restart: unless-stopped
     working_dir: /app
-    command: sh -lc "go run ./services/agent/cmd --mode worker --interval 15s"
+    command: sh -lc "/usr/local/go/bin/go run ./services/agent/cmd --mode worker --interval 15s"
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app

@@ -3,7 +3,7 @@ services:
     image: golang:1.23
     restart: unless-stopped
     working_dir: /app
-    command: sh -lc "go run ./legacy/old/services/reporter-old/cmd"
+    command: sh -lc "/usr/local/go/bin/go run ./legacy/old/services/reporter-old/cmd"
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app

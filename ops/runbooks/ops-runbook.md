@@ -118,3 +118,39 @@
 ## Ежедневная дисциплина
 - минимум 1 осмысленный `commit` + `push` в рабочую ветку
 - проверка: `git log --since='today 00:00' --oneline`
+
+## Runtime Bootstrap (P0)
+
+Canonical runtime checks now use active core compose and full runtime migrations:
+
+```bash
+make core-up
+make core-ps
+make dbcheck-core
+make migrate-runtime
+make tables-core
+make test-active
+make count-posts-core
+```
+
+One-command health loop:
+
+```bash
+make health-runtime
+```
+
+## Local Demo (localhost, no Vercel)
+
+```bash
+make demo-up
+npm.cmd --prefix frontend run dev
+make demo-check
+```
+
+Expected endpoints:
+- `http://127.0.0.1:8080/healthz`
+- `http://127.0.0.1:5173`
+
+Notes:
+- `make demo-up` applies runtime migrations and auto-seeds the demo feed from `data/nu/feed_items.json` if the local `posts` table is still empty.
+- `make demo-check` now validates both API health and that `/api/front` returns a non-empty feed.
