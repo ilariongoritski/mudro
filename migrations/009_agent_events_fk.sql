@@ -1,16 +1,16 @@
 -- MUDRO 009_agent_events_fk.sql
--- Add missing FK from agent_task_events.task_id -> agent_queue.id
+-- Добавление отсутствующего FK agent_task_events.task_id -> agent_queue.id.
 
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'agent_task_events_task_id_fk'
-  ) THEN
-    ALTER TABLE agent_task_events
-      ADD CONSTRAINT agent_task_events_task_id_fk
-      FOREIGN KEY (task_id) REFERENCES agent_queue(id) ON DELETE CASCADE;
-  END IF;
-END $$;
+do $$ begin
+  if not exists (
+    select 1 from information_schema.table_constraints
+    where constraint_name = 'agent_task_events_task_id_fk'
+  ) then
+    alter table agent_task_events
+      add constraint agent_task_events_task_id_fk
+      foreign key (task_id) references agent_queue(id) on delete cascade;
+  end if;
+end $$;
 
-CREATE INDEX IF NOT EXISTS agent_task_events_task_id_idx
-  ON agent_task_events (task_id);
+create index if not exists agent_task_events_task_id_idx
+  on agent_task_events (task_id);

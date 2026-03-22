@@ -1,3 +1,6 @@
+-- MUDRO 008_comment_model.sql
+-- Древовидные комментарии (parent_comment_id) и нормализованные реакции на комментарии.
+
 alter table post_comments
   add column if not exists parent_comment_id bigint references post_comments(id) on delete set null;
 

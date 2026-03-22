@@ -1,17 +1,17 @@
 -- MUDRO 011_drop_legacy_jsonb.sql
--- Drop legacy jsonb columns after data has been migrated to normalized tables.
+-- Удаление legacy jsonb-колонок после миграции данных в нормализованные таблицы.
 --
--- IMPORTANT: Before applying, verify that all legacy data is in normalized tables:
---   SELECT count(*) FROM posts
---     WHERE media IS NOT NULL AND media != 'null'::jsonb AND media != '[]'::jsonb
---     AND NOT EXISTS (SELECT 1 FROM post_media_links WHERE post_id = posts.id);
---   -- Must return 0
+-- Перед применением убедитесь, что все данные перенесены:
+--   select count(*) from posts
+--     where media is not null and media != 'null'::jsonb and media != '[]'::jsonb
+--     and not exists (select 1 from post_media_links where post_id = posts.id);
+--   -- Должно вернуть 0
 --
---   SELECT count(*) FROM post_comments
---     WHERE media IS NOT NULL AND media != 'null'::jsonb AND media != '[]'::jsonb
---     AND NOT EXISTS (SELECT 1 FROM comment_media_links WHERE comment_id = post_comments.id);
---   -- Must return 0
+--   select count(*) from post_comments
+--     where media is not null and media != 'null'::jsonb and media != '[]'::jsonb
+--     and not exists (select 1 from comment_media_links where comment_id = post_comments.id);
+--   -- Должно вернуть 0
 
-ALTER TABLE posts DROP COLUMN IF EXISTS media;
-ALTER TABLE post_comments DROP COLUMN IF EXISTS media;
-ALTER TABLE post_comments DROP COLUMN IF EXISTS reactions;
+alter table posts drop column if exists media;
+alter table post_comments drop column if exists media;
+alter table post_comments drop column if exists reactions;
