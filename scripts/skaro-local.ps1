@@ -5,6 +5,7 @@ param(
 
 $toolRoot = 'D:\mudr\toolchain'
 $localRoot = 'D:\mudr\_mudro-local\skaro'
+$claudeOrchRoot = Join-Path 'D:\mudr\_mudro-local' 'claude-orch'
 $localEnvFile = Join-Path $localRoot 'claude.env'
 $binDir = Join-Path $toolRoot 'uv-bin'
 $toolDir = Join-Path $toolRoot 'uv-tools'
@@ -47,6 +48,10 @@ function Import-LocalEnvFile {
 }
 
 New-Item -ItemType Directory -Force -Path $localRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $claudeOrchRoot | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $claudeOrchRoot 'ledger') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $claudeOrchRoot 'runs') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $claudeOrchRoot 'state') | Out-Null
 Import-LocalEnvFile -Path $localEnvFile
 
 $env:UV_TOOL_DIR = $toolDir
@@ -58,6 +63,12 @@ $env:PYTHONUTF8 = '1'
 $env:PYTHONIOENCODING = 'utf-8'
 $env:TZ = 'Europe/Moscow'
 $env:SKARO_LOCAL_ROOT = $localRoot
+$env:MUDRO_CLAUDE_ACCOUNTING_ROOT = $claudeOrchRoot
+$env:MUDRO_CLAUDE_USAGE_LOG = Join-Path $claudeOrchRoot 'ledger\usage_log.jsonl'
+$env:MUDRO_CLAUDE_TOKEN_USAGE = Join-Path $claudeOrchRoot 'ledger\token_usage.yaml'
+$env:MUDRO_CLAUDE_ROLE_USAGE = Join-Path $claudeOrchRoot 'ledger\role_usage.yaml'
+$env:MUDRO_CLAUDE_STATE_DIR = Join-Path $claudeOrchRoot 'state'
+$env:MUDRO_CLAUDE_RUNS_DIR = Join-Path $claudeOrchRoot 'runs'
 
 if (-not $env:ANTHROPIC_BASE_URL) {
     $env:ANTHROPIC_BASE_URL = 'https://claude-api.filips-site.online'
