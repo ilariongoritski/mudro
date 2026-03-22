@@ -1,15 +1,18 @@
 # MUDRO - microservices-first монорепа (Go + Postgres + React)
 
-MUDRO - это монорепозиторий с активным runtime-контуром в `services/*`, операционными CLI в `tools/*`, и архивной зоной в `legacy/old/*`.
+MUDRO - это монорепозиторий с активным runtime-контуром в `services/*`, отдельной casino-подсистемой, UI в `frontend/`, операционными CLI в `tools/*`, и архивной зоной в `legacy/old/*`.
 
 ## Что сейчас считается каноном
 
 - Активные runtime-сервисы:
-- `services/feed-api`
-- `services/agent`
-- `services/bot`
+  - `services/feed-api`
+  - `services/agent`
+  - `services/bot`
+  - `services/casino`
+- Frontend:
+  - `frontend/` - React + TypeScript UI для ленты, casino и orchestration screens
 - Legacy-контур (не используется по умолчанию):
-- `legacy/old/services/reporter-old`
+  - `legacy/old/services/reporter-old`
 - Runtime-папки `cmd/api|agent|bot|reporter` выведены в `legacy/old/cmd-runtime/*`.
 - `cmd/*` в активной зоне - это compatibility forwarding для CLI в `tools/*`.
 
@@ -27,11 +30,18 @@ MUDRO - это монорепозиторий с активным runtime-кон
 ## Быстрый старт (локально)
 
 ```bash
-make up
-make dbcheck
-make migrate
-make tables
-go test ./...
+make core-up
+make dbcheck-core
+make migrate-runtime
+make tables-core
+make test-active
+make count-posts-core
+```
+
+Краткий health loop:
+
+```bash
+make health-runtime
 ```
 
 Канонический DSN для локалки:
@@ -55,6 +65,7 @@ go test ./...
 go run ./services/feed-api/cmd
 go run ./services/agent/cmd
 go run ./services/bot/cmd
+go run ./services/casino/cmd
 ```
 
 Legacy reporter (только при явной необходимости):

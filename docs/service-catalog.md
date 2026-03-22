@@ -17,6 +17,11 @@
 - Run: `go run ./services/bot/cmd`
 - Purpose: Telegram control-plane commands for project operations.
 
+4. `casino`
+- Path: `services/casino/cmd`
+- Run: `go run ./services/casino/cmd`
+- Purpose: isolated casino runtime with its own Postgres database, RTP/admin settings, and separate API surface.
+
 ## Old / Legacy
 
 1. `reporter-old`
