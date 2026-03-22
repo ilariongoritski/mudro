@@ -17,6 +17,7 @@ import (
 	"time"
 
 	commentdb "github.com/goritskimihail/mudro/internal/commentmodel"
+	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
 	mediadb "github.com/goritskimihail/mudro/internal/media"
 	"github.com/goritskimihail/mudro/internal/tgexport"
@@ -29,6 +30,12 @@ type Server struct {
 }
 
 func NewServer(pool *pgxpool.Pool) *Server {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if secret == "" {
+		secret = "mudro-dev-secret-change-in-prod"
+	}
+	auth.SetSecret(secret)
+
 	server := &Server{pool: pool}
 	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
 		server.tgVisiblePostIDs = ids
@@ -58,6 +65,20 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/posts", s.handlePosts)
 	mux.HandleFunc("/api/front", s.handleFront)
 	mux.HandleFunc("/feed", s.handleFeed)
+
+	// auth
+	mux.HandleFunc("POST /api/auth/register", s.handleRegister)
+	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	mux.HandleFunc("GET /api/auth/me", s.withAuth(s.handleMe))
+
+	// likes & comments
+	mux.HandleFunc("POST /api/posts/{id}/like", s.withAuth(s.handleToggleLike))
+	mux.HandleFunc("POST /api/posts/{id}/comments", s.withAuth(s.handleCreateComment))
+
+	// activitypub stubs
+	mux.HandleFunc("GET /.well-known/webfinger", s.handleWebfinger)
+	mux.HandleFunc("GET /api/activitypub/actor", s.handleActor)
+
 	return withCORS(mux)
 }
 
@@ -65,8 +86,8 @@ func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.TrimSpace(r.Header.Get("Origin")) != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			w.Header().Set("Vary", "Origin")
 		}
 		if r.Method == http.MethodOptions {

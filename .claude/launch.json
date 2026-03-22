@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "cwd": "frontend"
+    },
+    {
+      "name": "feed-api",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./services/feed-api/cmd"],
+      "port": 8080
+    },
+    {
+      "name": "bot",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./services/bot/cmd"],
+      "port": 0
+    },
+    {
+      "name": "agent-worker",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./services/agent/cmd", "--mode", "worker", "--interval", "15s"],
+      "port": 0
+    },
+    {
+      "name": "docker-core",
+      "runtimeExecutable": "make",
+      "runtimeArgs": ["core-up"],
+      "port": 5433
+    }
+  ]
+}
