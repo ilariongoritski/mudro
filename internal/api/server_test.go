@@ -292,7 +292,7 @@ func TestNormalizeMediaURL(t *testing.T) {
 func TestBuildPostsVisibilityWhereNoSource(t *testing.T) {
 	s := &Server{}
 
-	where, args := s.buildPostsVisibilityWhere("", "", nil)
+	where, args := s.buildPostsVisibilityWhere("", nil)
 
 	if where != "" {
 		t.Fatalf("where = %q, want empty", where)
@@ -305,7 +305,7 @@ func TestBuildPostsVisibilityWhereNoSource(t *testing.T) {
 func TestBuildPostsVisibilityWhereWithSource(t *testing.T) {
 	s := &Server{}
 
-	where, args := s.buildPostsVisibilityWhere("vk", "", nil)
+	where, args := s.buildPostsVisibilityWhere("vk", nil)
 
 	if where != " where source = $1" {
 		t.Fatalf("where = %q", where)
