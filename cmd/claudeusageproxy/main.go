@@ -35,6 +35,11 @@ type usageEntry struct {
 	OutputTokens    int64  `json:"output_tokens"`
 	TotalTokens     int64  `json:"total_tokens"`
 	UpstreamBaseURL string `json:"upstream_base_url"`
+	Role            string `json:"role,omitempty"`
+	AgentID         string `json:"agent_id,omitempty"`
+	RunID           string `json:"run_id,omitempty"`
+	Project         string `json:"project,omitempty"`
+	AgentKind       string `json:"agent_kind,omitempty"`
 }
 
 type usageSummary struct {
@@ -50,6 +55,7 @@ type app struct {
 	apiKey    string
 	usageLog  string
 	tokenYAML string
+	roleYAML  string
 	client    *http.Client
 	mu        sync.Mutex
 	summary   usageSummary
@@ -58,14 +64,17 @@ type app struct {
 func main() {
 	addr := envOr("MUDRO_CLAUDE_PROXY_ADDR", "127.0.0.1:8788")
 	upstream := strings.TrimRight(envOr("MUDRO_CLAUDE_UPSTREAM_BASE_URL", "https://claude-api.filips-site.online"), "/")
-	usageLog := envOr("MUDRO_CLAUDE_USAGE_LOG", filepath.Join(".skaro", "usage_log.jsonl"))
-	tokenYAML := envOr("MUDRO_CLAUDE_TOKEN_USAGE", filepath.Join(".skaro", "token_usage.yaml"))
+	accountingRoot := envOr("MUDRO_CLAUDE_ACCOUNTING_ROOT", filepath.Join(".skaro", "claude-orch"))
+	usageLog := envOr("MUDRO_CLAUDE_USAGE_LOG", filepath.Join(accountingRoot, "ledger", "usage_log.jsonl"))
+	tokenYAML := envOr("MUDRO_CLAUDE_TOKEN_USAGE", filepath.Join(accountingRoot, "ledger", "token_usage.yaml"))
+	roleYAML := envOr("MUDRO_CLAUDE_ROLE_USAGE", filepath.Join(accountingRoot, "ledger", "role_usage.yaml"))
 
 	srv := &app{
 		upstream:  upstream,
 		apiKey:    envOr("ANTHROPIC_API_KEY", envOr("MUDRO_CLAUDE_API_KEY", "")),
 		usageLog:  usageLog,
 		tokenYAML: tokenYAML,
+		roleYAML:  roleYAML,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -162,6 +171,11 @@ func (a *app) handleProxy(w http.ResponseWriter, r *http.Request) {
 		Path:            r.URL.Path,
 		StatusCode:      resp.StatusCode,
 		UpstreamBaseURL: a.upstream,
+		Role:            requestMeta(r.Header, "x-mudro-role", "MUDRO_CLAUDE_ROLE"),
+		AgentID:         requestMeta(r.Header, "x-mudro-agent-id", "MUDRO_CLAUDE_AGENT_ID"),
+		RunID:           requestMeta(r.Header, "x-mudro-run-id", "MUDRO_CLAUDE_RUN_ID"),
+		Project:         requestMeta(r.Header, "x-mudro-project", "MUDRO_CLAUDE_PROJECT"),
+		AgentKind:       requestMeta(r.Header, "x-mudro-agent-kind", "MUDRO_CLAUDE_AGENT_KIND"),
 	}
 	var envelope usageEnvelope
 	if err := json.Unmarshal(responseBody, &envelope); err == nil {
@@ -180,6 +194,10 @@ func (a *app) appendUsage(entry usageEntry) {
 	}
 	if err := os.MkdirAll(filepath.Dir(a.tokenYAML), 0o755); err != nil {
 		log.Printf("mkdir summary dir: %v", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(a.roleYAML), 0o755); err != nil {
+		log.Printf("mkdir role summary dir: %v", err)
 		return
 	}
 
@@ -203,6 +221,9 @@ func (a *app) appendUsage(entry usageEntry) {
 
 	if err := writeSummary(a.tokenYAML, a.summary); err != nil {
 		log.Printf("write usage summary: %v", err)
+	}
+	if err := appendRoleUsage(a.roleYAML, entry); err != nil {
+		log.Printf("write role usage: %v", err)
 	}
 }
 
@@ -247,6 +268,13 @@ func writeSummary(path string, summary usageSummary) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
 
+func requestMeta(headers http.Header, headerKey, envKey string) string {
+	if value := strings.TrimSpace(headers.Get(headerKey)); value != "" {
+		return value
+	}
+	return strings.TrimSpace(os.Getenv(envKey))
+}
+
 func copyHeaders(dst, src http.Header) {
 	for key, values := range src {
 		switch strings.ToLower(key) {
@@ -257,6 +285,27 @@ func copyHeaders(dst, src http.Header) {
 			dst.Add(key, value)
 		}
 	}
+}
+
+func appendRoleUsage(path string, entry usageEntry) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoded, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(append(encoded, '\n'))
+	return err
 }
 
 func (a *app) injectAuth(headers http.Header) {
