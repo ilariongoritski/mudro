@@ -1,5 +1,6 @@
-import { FeedPage } from '@/pages/feed-page/ui/FeedPage'
+import { RouterProvider } from 'react-router'
+import { router } from '@/app/router'
 
 export const App = () => {
-  return <FeedPage />
+  return <RouterProvider router={router} />
 }

@@ -2,12 +2,15 @@ import type { FeedSort, FeedSource } from '@/entities/post/model/types'
 import { setLimit, setSort, setSource } from '@/features/feed-controls/model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
-import './FeedControls.css'
+import { cn } from '@/shared/lib/utils'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
 
-const sourceOptions: Array<{ value: FeedSource; label: string; badge: string }> = [
+const sourceOptions: Array<{ value: FeedSource; label: string; badge: string; variant?: 'vk' | 'tg' }> = [
   { value: 'all', label: 'Общая', badge: 'ALL' },
-  { value: 'vk', label: 'VK', badge: 'VK' },
-  { value: 'tg', label: 'Telegram', badge: 'TG' },
+  { value: 'vk', label: 'VK', badge: 'VK', variant: 'vk' },
+  { value: 'tg', label: 'Telegram', badge: 'TG', variant: 'tg' },
 ]
 
 const sortOptions: Array<{ value: FeedSort; label: string }> = [
@@ -24,114 +27,100 @@ interface FeedControlsProps {
   lastSyncAt?: string
 }
 
-const sourceStateLabel: Record<FeedSource, string> = {
-  all: 'Все источники',
-  vk: 'Только VK',
-  tg: 'Только Telegram',
-}
-
-const sortStateLabel: Record<FeedSort, string> = {
-  desc: 'Сначала новые',
-  asc: 'Сначала старые',
-}
-
 export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyncAt }: FeedControlsProps) => {
   const dispatch = useAppDispatch()
   const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
 
   return (
-    <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
-      <div className="feed-toolbar">
-        <div className="feed-toolbar__intro">
-          <span className="feed-toolbar__eyebrow">Лента</span>
-          <strong className="feed-toolbar__title">Один экран для чтения, media и обсуждений</strong>
-          <p className="feed-toolbar__lead">
-            Один рабочий surface архива: переключай источники, проверяй срез и раскрывай треды без второго технического экрана.
-          </p>
+    <Card className="mb-5">
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Лента</p>
+          <h2 className="text-base font-semibold text-mudro-text">Один экран для чтения, media и обсуждений</h2>
         </div>
 
-        <div className="feed-toolbar__stats" aria-label="Сводка ленты">
-          <div className="feed-toolbar__stat">
-            <span>Архив</span>
-            <strong>{totalPosts}</strong>
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-slate-50">
+            <span className="text-xs text-slate-500">Архив</span>
+            <strong className="text-sm font-semibold">{totalPosts}</strong>
           </div>
-          <div className="feed-toolbar__stat">
-            <span>VK snapshot</span>
-            <strong>{vkPosts}</strong>
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-slate-50">
+            <span className="text-xs text-slate-500">VK</span>
+            <strong className="text-sm font-semibold text-vk">{vkPosts}</strong>
           </div>
-          <div className="feed-toolbar__stat">
-            <span>Telegram</span>
-            <strong>{tgPosts}</strong>
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-slate-50">
+            <span className="text-xs text-slate-500">Telegram</span>
+            <strong className="text-sm font-semibold text-tg">{tgPosts}</strong>
           </div>
-          <div className="feed-toolbar__stat">
-            <span>Обновлено</span>
-            <strong>{lastSyncAt ? formatDateTime(lastSyncAt) : '—'}</strong>
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-slate-50">
+            <span className="text-xs text-slate-500">Обновлено</span>
+            <strong className="text-sm font-semibold">{lastSyncAt ? formatDateTime(lastSyncAt) : '—'}</strong>
           </div>
         </div>
 
-        <div className="feed-toolbar__status">
-          <span className="feed-toolbar__signal">Источник: {sourceStateLabel[source]}</span>
-          <span className="feed-toolbar__signal">Порядок: {sortStateLabel[sort]}</span>
-          <span className="feed-toolbar__signal">На экран: {limit}</span>
-          <button
-            type="button"
-            className="feed-toolbar__reset"
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-500">Источник</span>
+            <div className="flex gap-1.5">
+              {sourceOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={source === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => dispatch(setSource(option.value))}
+                  className={cn(source === option.value && option.variant === 'vk' && 'bg-vk hover:bg-vk/90', source === option.value && option.variant === 'tg' && 'bg-tg hover:bg-tg/90')}
+                >
+                  <Badge variant={option.variant ?? 'default'} className="text-[10px] px-1.5 py-0">
+                    {option.badge}
+                  </Badge>
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-500">Сортировка</span>
+            <div className="flex gap-1.5">
+              {sortOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={sort === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => dispatch(setSort(option.value))}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-500">На экран</span>
+            <select
+              value={limit}
+              onChange={(event) => dispatch(setLimit(Number(event.target.value)))}
+              className="flex h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              {limits.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               dispatch(setSource('all'))
               dispatch(setSort('desc'))
               dispatch(setLimit(12))
             }}
           >
-            Сбросить фильтры
-          </button>
+            Сбросить
+          </Button>
         </div>
-      </div>
-
-      <div className="feed-controls__layout">
-        <div className="feed-controls__group">
-          <span className="feed-controls__label">Источник</span>
-          <div className="feed-controls__row">
-            {sourceOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => dispatch(setSource(option.value))}
-                className={`feed-pill ${source === option.value ? 'feed-pill_active' : ''}`}
-              >
-                <span className="feed-pill__badge">{option.badge}</span>
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="feed-controls__group">
-          <span className="feed-controls__label">Сортировка</span>
-          <div className="feed-controls__row">
-            {sortOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => dispatch(setSort(option.value))}
-                className={`feed-pill ${sort === option.value ? 'feed-pill_active' : ''}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <label className="feed-controls__limit">
-          <span className="feed-controls__label">Постов на экран</span>
-          <select value={limit} onChange={(event) => dispatch(setLimit(Number(event.target.value)))}>
-            {limits.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
