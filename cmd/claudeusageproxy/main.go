@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -51,14 +53,15 @@ type usageSummary struct {
 }
 
 type app struct {
-	upstream  string
-	apiKey    string
-	usageLog  string
-	tokenYAML string
-	roleYAML  string
-	client    *http.Client
-	mu        sync.Mutex
-	summary   usageSummary
+	upstream   string
+	apiKey     string
+	proxyToken string
+	usageLog   string
+	tokenYAML  string
+	roleYAML   string
+	client     *http.Client
+	mu         sync.Mutex
+	summary    usageSummary
 }
 
 func main() {
@@ -70,11 +73,12 @@ func main() {
 	roleYAML := envOr("MUDRO_CLAUDE_ROLE_USAGE", filepath.Join(accountingRoot, "ledger", "role_usage.yaml"))
 
 	srv := &app{
-		upstream:  upstream,
-		apiKey:    envOr("ANTHROPIC_API_KEY", envOr("MUDRO_CLAUDE_API_KEY", "")),
-		usageLog:  usageLog,
-		tokenYAML: tokenYAML,
-		roleYAML:  roleYAML,
+		upstream:   upstream,
+		apiKey:     envOr("ANTHROPIC_API_KEY", envOr("MUDRO_CLAUDE_API_KEY", "")),
+		proxyToken: envOr("MUDRO_CLAUDE_PROXY_TOKEN", ""),
+		usageLog:   usageLog,
+		tokenYAML:  tokenYAML,
+		roleYAML:   roleYAML,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -108,7 +112,15 @@ func (a *app) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (a *app) handleStats(w http.ResponseWriter, _ *http.Request) {
+func (a *app) handleStats(w http.ResponseWriter, r *http.Request) {
+	// Keep usage accounting visible only to local callers unless an explicit
+	// proxy token is configured and presented by a non-loopback client.
+	// This prevents the proxy from becoming an unauthenticated open gateway.
+	if !a.authorizeRequest(r) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	a.mu.Lock()
 	summary := a.summary
 	a.mu.Unlock()
@@ -125,6 +137,11 @@ func (a *app) handleStats(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *app) handleProxy(w http.ResponseWriter, r *http.Request) {
+	if !a.authorizeRequest(r) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
 
@@ -185,6 +202,47 @@ func (a *app) handleProxy(w http.ResponseWriter, r *http.Request) {
 		entry.TotalTokens = entry.InputTokens + entry.OutputTokens
 	}
 	a.appendUsage(entry)
+}
+
+func (a *app) authorizeRequest(r *http.Request) bool {
+	if isLoopbackRemoteAddr(r.RemoteAddr) {
+		return true
+	}
+	if strings.TrimSpace(a.proxyToken) == "" {
+		return false
+	}
+	token := requestProxyToken(r)
+	if token == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(token), []byte(a.proxyToken)) == 1
+}
+
+func requestProxyToken(r *http.Request) string {
+	if token := strings.TrimSpace(r.Header.Get("X-Mudro-Proxy-Token")); token != "" {
+		return token
+	}
+	auth := strings.TrimSpace(r.Header.Get("Authorization"))
+	if auth == "" {
+		return ""
+	}
+	parts := strings.Fields(auth)
+	if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+		return strings.TrimSpace(parts[1])
+	}
+	return ""
+}
+
+func isLoopbackRemoteAddr(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddr))
+	if err != nil {
+		host = strings.TrimSpace(remoteAddr)
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback()
 }
 
 func (a *app) appendUsage(entry usageEntry) {

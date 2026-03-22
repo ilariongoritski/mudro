@@ -15,6 +15,8 @@ Goal: use Claude Opus as the planning and review layer, while Codex applies chan
 - Local Claude calls go through `D:\mudr\_mudro-local\skaro\claude.env`
 - Proxy usage is tracked in `D:\mudr\_mudro-local\skaro\usage_log.jsonl`
 - Token summary is tracked in `D:\mudr\_mudro-local\skaro\token_usage.yaml`
+- The Claude usage proxy is loopback-only by default.
+- If you ever bind it beyond `127.0.0.1`, set `MUDRO_CLAUDE_PROXY_TOKEN` and require it on non-loopback requests.
 
 ## VPS gateway
 

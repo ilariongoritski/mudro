@@ -68,3 +68,4 @@ Expected output:
 - Keep the real Claude API key only in `D:\mudr\_mudro-local\skaro\claude.env` or process env vars.
 - Do not store live credentials in `.skaro/secrets.yaml`.
 - The tracked project config may reference the Claude-compatible endpoint, but the launcher is responsible for exporting `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL` before `skaro ui` or `skaro status`.
+- If the Claude usage proxy is ever exposed beyond loopback, require `MUDRO_CLAUDE_PROXY_TOKEN` on non-local requests so the proxy does not become an unauthenticated Claude gateway.
