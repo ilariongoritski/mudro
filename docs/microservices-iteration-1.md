@@ -54,3 +54,5 @@ docker compose -f ops/compose/docker-compose.core.yml -f ops/compose/docker-comp
 - no DB split for feed/query-write services
 - no removal of compat routes
 - no OpenClaw-only deployment cutover
+
+Follow-up safe step: `docs/microservices-iteration-2.md`

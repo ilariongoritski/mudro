@@ -4,10 +4,14 @@ This repository already uses a local Claude-compatible proxy and OpenClaw/Skaro-
 
 This document defines a reproducible role matrix for parallel extended-thinking reviews:
 
+- `architect`
 - `frontend`
 - `backend`
 - `tester`
 - `devops`
+- `security`
+- `integration`
+- `data`
 
 ## Purpose
 
@@ -38,5 +42,6 @@ python scripts/claude/run_role_matrix.py \
 1. All role prompts are kept in `ops/claude-workers/roles/`.
 2. Keep prompts grounded in the actual Go repository.
 3. Do not let role prompts assume Node/Express/Prisma unless that stack is explicitly present.
-4. Use the role matrix for planning and review, not as a substitute for local validation.
-5. Codex remains the control plane and the only actor that applies tracked diffs.
+4. Always include the repository context pack from the checked-in service catalog, service map, and microservice iteration docs.
+5. Use the role matrix for planning and review, not as a substitute for local validation.
+6. Codex remains the control plane and the only actor that applies tracked diffs.

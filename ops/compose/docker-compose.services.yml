@@ -1,4 +1,50 @@
 services:
+  auth-api:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "/usr/local/go/bin/go run ./services/auth-api/cmd"
+    environment:
+      AUTH_API_ADDR: ":8087"
+      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET:-mudro-dev-secret-change-me}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      CASINO_BOT_TOKEN: "${CASINO_BOT_TOKEN:-}"
+      MUDRO_ROOT: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${AUTH_API_PORT:-8087}:8087"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8087/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  orchestration-api:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "/usr/local/go/bin/go run ./services/orchestration-api/cmd"
+    environment:
+      ORCHESTRATION_API_ADDR: ":8088"
+      ORCHESTRATION_API_BASE_URL: "http://api:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${ORCHESTRATION_API_PORT:-8088}:8088"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8088/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   bff-web:
     image: golang:1.24
     restart: unless-stopped
@@ -33,10 +79,16 @@ services:
       GATEWAY_ADDR: ":8085"
       GATEWAY_FEED_API_URL: "http://api:8080"
       GATEWAY_BFF_WEB_URL: "http://bff-web:8086"
+      GATEWAY_AUTH_API_URL: "http://auth-api:8087"
+      GATEWAY_ORCHESTRATION_API_URL: "http://orchestration-api:8088"
     depends_on:
       api:
         condition: service_healthy
       bff-web:
+        condition: service_healthy
+      auth-api:
+        condition: service_healthy
+      orchestration-api:
         condition: service_healthy
     ports:
       - "${GATEWAY_PORT:-8085}:8085"

@@ -274,7 +274,7 @@ orchestration-log-init:
 	@bash ./scripts/orchestration_run_init.sh "$(RUN_ID)" "$(TASK)"
 
 claude-role-matrix:
-	python ./scripts/claude/run_role_matrix.py --task "$(TASK)" --repo-root .
+	python ./scripts/claude/run_role_matrix.py --task "$(TASK)" --repo-root . $(CLAUDE_ROLE_MATRIX_ARGS)
 
 openclaw-gateway-service:
 	bash ./scripts/openclaw/openclaw_gateway_user_service.sh

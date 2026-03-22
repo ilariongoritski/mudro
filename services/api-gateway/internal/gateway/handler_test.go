@@ -9,8 +9,10 @@ import (
 
 func TestHealth(t *testing.T) {
 	handler, err := NewHandler(Config{
-		FeedAPIURL: "http://example.invalid",
-		BFFWebURL:  "http://example.invalid",
+		FeedAPIURL:          "http://example.invalid",
+		BFFWebURL:           "http://example.invalid",
+		AuthAPIURL:          "http://example.invalid",
+		OrchestrationAPIURL: "http://example.invalid",
 	})
 	if err != nil {
 		t.Fatalf("NewHandler: %v", err)
@@ -42,8 +44,10 @@ func TestPostsProxyRewritesPath(t *testing.T) {
 	defer upstream.Close()
 
 	handler, err := NewHandler(Config{
-		FeedAPIURL: upstream.URL,
-		BFFWebURL:  upstream.URL,
+		FeedAPIURL:          upstream.URL,
+		BFFWebURL:           upstream.URL,
+		AuthAPIURL:          upstream.URL,
+		OrchestrationAPIURL: upstream.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewHandler: %v", err)
@@ -70,8 +74,10 @@ func TestBFFProxyKeepsPath(t *testing.T) {
 	defer upstream.Close()
 
 	handler, err := NewHandler(Config{
-		FeedAPIURL: upstream.URL,
-		BFFWebURL:  upstream.URL,
+		FeedAPIURL:          upstream.URL,
+		BFFWebURL:           upstream.URL,
+		AuthAPIURL:          upstream.URL,
+		OrchestrationAPIURL: upstream.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewHandler: %v", err)
@@ -86,5 +92,65 @@ func TestBFFProxyKeepsPath(t *testing.T) {
 	}
 	if gotPath != "/api/bff/web/v1/timeline" {
 		t.Fatalf("path = %q, want %q", gotPath, "/api/bff/web/v1/timeline")
+	}
+}
+
+func TestAuthProxyKeepsPath(t *testing.T) {
+	var gotPath string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	handler, err := NewHandler(Config{
+		FeedAPIURL:          upstream.URL,
+		BFFWebURL:           upstream.URL,
+		AuthAPIURL:          upstream.URL,
+		OrchestrationAPIURL: upstream.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if gotPath != "/api/v1/auth/login" {
+		t.Fatalf("path = %q, want %q", gotPath, "/api/v1/auth/login")
+	}
+}
+
+func TestOrchestrationProxyKeepsPath(t *testing.T) {
+	var gotPath string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	handler, err := NewHandler(Config{
+		FeedAPIURL:          upstream.URL,
+		BFFWebURL:           upstream.URL,
+		AuthAPIURL:          upstream.URL,
+		OrchestrationAPIURL: upstream.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/orchestration/status", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if gotPath != "/api/v1/orchestration/status" {
+		t.Fatalf("path = %q, want %q", gotPath, "/api/v1/orchestration/status")
 	}
 }

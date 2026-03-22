@@ -10,8 +10,10 @@ import (
 )
 
 type Config struct {
-	FeedAPIURL string
-	BFFWebURL  string
+	FeedAPIURL          string
+	BFFWebURL           string
+	AuthAPIURL          string
+	OrchestrationAPIURL string
 }
 
 func NewHandler(cfg Config) (http.Handler, error) {
@@ -23,6 +25,14 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	authURL, err := parseBaseURL(cfg.AuthAPIURL, "auth API")
+	if err != nil {
+		return nil, err
+	}
+	orchestrationURL, err := parseBaseURL(cfg.OrchestrationAPIURL, "orchestration API")
+	if err != nil {
+		return nil, err
+	}
 
 	feedProxy := newProxy(feedURL, func(path string) string {
 		if strings.HasPrefix(path, "/api/v1/") {
@@ -31,11 +41,16 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		return path
 	})
 	bffProxy := newProxy(bffURL, func(path string) string { return path })
+	authProxy := newProxy(authURL, func(path string) string { return path })
+	orchestrationProxy := newProxy(orchestrationURL, func(path string) string { return path })
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", handleHealth)
 	mux.HandleFunc("/api/v1/healthz", handleHealth)
 	mux.Handle("/api/bff/web/v1/", bffProxy)
+	mux.Handle("/api/v1/auth/", authProxy)
+	mux.Handle("/api/v1/admin/", authProxy)
+	mux.Handle("/api/v1/orchestration/", orchestrationProxy)
 	mux.Handle("/api/v1/", feedProxy)
 	return mux, nil
 }

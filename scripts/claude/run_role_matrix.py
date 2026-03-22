@@ -10,11 +10,39 @@ import urllib.error
 import urllib.request
 
 
-DEFAULT_ROLES = ["frontend", "backend", "tester", "devops"]
+DEFAULT_ROLES = ["architect", "backend", "frontend", "tester", "devops", "security", "integration", "data"]
 
 
 def load_text(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def trim_text(text: str, limit: int = 4000) -> str:
+    value = text.strip()
+    if len(value) <= limit:
+        return value
+    return value[:limit].rstrip() + "\n...[truncated]"
+
+
+def build_context_pack(repo_root: pathlib.Path) -> str:
+    context_files = [
+        ("Service Catalog", repo_root / "docs" / "service-catalog.md"),
+        ("Services Map", repo_root / "platform" / "agent-control" / "services-map.yaml"),
+        ("Microservices Iteration 1", repo_root / "docs" / "microservices-iteration-1.md"),
+        ("Microservices Iteration 2", repo_root / "docs" / "microservices-iteration-2.md"),
+        ("API Gateway Contract", repo_root / "contracts" / "http" / "api-gateway-v1.yaml"),
+        ("BFF Web Contract", repo_root / "contracts" / "http" / "bff-web-v1.yaml"),
+    ]
+
+    parts = []
+    for label, path in context_files:
+        if not path.exists():
+            continue
+        try:
+            parts.append(f"## {label}\n{trim_text(load_text(path))}")
+        except Exception:
+            continue
+    return "\n\n".join(parts)
 
 
 def repo_head(repo_root: pathlib.Path) -> tuple[str, str]:
@@ -36,8 +64,37 @@ def repo_head(repo_root: pathlib.Path) -> tuple[str, str]:
     return run("branch", "--show-current"), run("rev-parse", "--short", "HEAD")
 
 
+def repo_command(repo_root: pathlib.Path, *args: str) -> str:
+    import subprocess
+
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return completed.stdout.strip()
+    except Exception:
+        return ""
+
+
+def build_worktree_pack(repo_root: pathlib.Path) -> str:
+    status = repo_command(repo_root, "status", "--short")
+    diff_stat = repo_command(repo_root, "diff", "--stat")
+    parts = []
+    if status:
+        parts.append(f"## Worktree Status\n{trim_text(status, 3000)}")
+    if diff_stat:
+        parts.append(f"## Worktree Diff Stat\n{trim_text(diff_stat, 3000)}")
+    return "\n\n".join(parts)
+
+
 def build_prompt(repo_root: pathlib.Path, task: str, role_prompt: str) -> str:
     branch, commit = repo_head(repo_root)
+    context_pack = build_context_pack(repo_root)
+    worktree_pack = build_worktree_pack(repo_root)
     return (
         "Task: review and plan the next safe microservice iteration for MUDRO.\n"
         f"User request: {task}\n"
@@ -49,6 +106,10 @@ def build_prompt(repo_root: pathlib.Path, task: str, role_prompt: str) -> str:
         "- Do not assume Node/Express/Prisma unless explicitly present.\n"
         "- Prefer incremental migration over big-bang rewrite.\n"
         "- Preserve backward compatibility with current runtime.\n\n"
+        "Repository context pack:\n"
+        f"{context_pack}\n\n"
+        "Current worktree pack:\n"
+        f"{worktree_pack}\n\n"
         f"{role_prompt}\n"
     )
 
@@ -108,7 +169,8 @@ def main() -> int:
     parser.add_argument("--roles", nargs="+", default=DEFAULT_ROLES)
     parser.add_argument("--model", default=os.environ.get("MUDRO_CLAUDE_MODEL", "claude-opus-4.6"))
     parser.add_argument("--proxy-url", default=os.environ.get("MUDRO_CLAUDE_PROXY_URL", "http://127.0.0.1:8788"))
-    parser.add_argument("--run-id", default=dt.datetime.utcnow().strftime("%Y%m%d-%H%M%S-role-matrix"))
+    parser.add_argument("--run-id", default=dt.datetime.now(dt.UTC).strftime("%Y%m%d-%H%M%S-role-matrix"))
+    parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument(
         "--output-dir",
         default=os.environ.get("MUDRO_CLAUDE_RUNS_DIR", r"D:\mudr\_mudro-local\claude-orch\runs"),
@@ -121,7 +183,8 @@ def main() -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(args.roles)) as executor:
+    max_workers = max(1, min(len(args.roles), int(args.max_workers)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for role in args.roles:
             role_path = roles_dir / f"{role}.md"

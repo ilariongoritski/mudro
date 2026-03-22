@@ -34,6 +34,16 @@
 - Run: `go run ./services/bff-web/cmd`
 - Purpose: additive web aggregation layer for `/api/bff/web/v1/*`, starting with timeline, orchestration status, and casino widget aggregation.
 
+3. `auth-api`
+- Path: `services/auth-api/cmd`
+- Run: `go run ./services/auth-api/cmd`
+- Purpose: additive auth/admin service boundary that preserves the current JWT and user runtime while moving `/api/v1/auth/*` and `/api/v1/admin/*` out of the legacy feed entrypoint.
+
+4. `orchestration-api`
+- Path: `services/orchestration-api/cmd`
+- Run: `go run ./services/orchestration-api/cmd`
+- Purpose: additive orchestration-status boundary for `/api/v1/orchestration/*`, keeping the current status logic isolated behind a dedicated thin service.
+
 ## Old / Legacy
 
 1. `reporter-old`

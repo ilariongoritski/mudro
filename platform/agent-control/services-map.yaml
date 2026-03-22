@@ -28,6 +28,14 @@ runtime:
       path: services/bff-web/cmd
       run: go run ./services/bff-web/cmd
       env_files: [env/bff-web.env]
+    - name: auth-api
+      path: services/auth-api/cmd
+      run: go run ./services/auth-api/cmd
+      env_files: [env/common.env, env/api.env]
+    - name: orchestration-api
+      path: services/orchestration-api/cmd
+      run: go run ./services/orchestration-api/cmd
+      env_files: [env/common.env, env/api.env]
   legacy:
     - name: reporter-old
       path: legacy/old/services/reporter-old/cmd

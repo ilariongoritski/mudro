@@ -9,20 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/goritskimihail/mudro/services/api-gateway/internal/gateway"
+	orchestrationapi "github.com/goritskimihail/mudro/services/orchestration-api/internal/orchestrationapi"
 )
 
 func Run() {
-	addr := envOr("GATEWAY_ADDR", ":8085")
-	handler, err := gateway.NewHandler(gateway.Config{
-		FeedAPIURL:          envOr("GATEWAY_FEED_API_URL", "http://127.0.0.1:8080"),
-		BFFWebURL:           envOr("GATEWAY_BFF_WEB_URL", "http://127.0.0.1:8086"),
-		AuthAPIURL:          envOr("GATEWAY_AUTH_API_URL", "http://127.0.0.1:8087"),
-		OrchestrationAPIURL: envOr("GATEWAY_ORCHESTRATION_API_URL", "http://127.0.0.1:8088"),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	addr := envOr("ORCHESTRATION_API_ADDR", ":8088")
+	handler := orchestrationapi.NewHandler(envOr("ORCHESTRATION_API_BASE_URL", "http://127.0.0.1:8080"))
 
 	srv := &http.Server{
 		Addr:         addr,
@@ -33,7 +25,7 @@ func Run() {
 	}
 
 	go func() {
-		log.Printf("api-gateway listening on %s", addr)
+		log.Printf("orchestration-api listening on %s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %v", err)
 		}
