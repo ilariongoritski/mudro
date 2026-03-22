@@ -24,6 +24,8 @@ usermod -aG sudo "$OPENCLAW_USER"
 echo "$OPENCLAW_USER ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/"$OPENCLAW_USER"
 chmod 440 /etc/sudoers.d/"$OPENCLAW_USER"
 
+loginctl enable-linger "$OPENCLAW_USER" || true
+
 install -d -m 700 -o "$OPENCLAW_USER" -g "$OPENCLAW_USER" "/home/$OPENCLAW_USER/.ssh"
 if [[ -n "$ADMIN_PUBKEY" ]]; then
   echo "$ADMIN_PUBKEY" >"/home/$OPENCLAW_USER/.ssh/authorized_keys"

@@ -173,6 +173,12 @@ worker-loop:
 orchestration-log-init:
 	@bash ./scripts/orchestration_run_init.sh "$(RUN_ID)" "$(TASK)"
 
+openclaw-gateway-service:
+	bash ./scripts/openclaw/openclaw_gateway_user_service.sh
+
+openclaw-post-install-checks:
+	bash ./scripts/openclaw/openclaw_post_install_checks.sh
+
 bot-run:
 	@set -a; \
 	if [ -f ./.env ]; then . ./.env; fi; \
