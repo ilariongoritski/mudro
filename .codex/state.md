@@ -1,4 +1,4 @@
-﻿Дата/время: 2026-03-16 13:43:39
+Дата/время: 2026-03-16 13:43:39
 Что запускал: frontend build, новый dev-сервер на 5174, browser smoke по живому API 18080.
 Что прошло: npm run build; Vite dev на 5174; /api/front 200; toolbar с реальными числами; карточка TG #3106; drawer с комментариями и reply-иерархией; mobile smoke.
 Что упало (ошибка 5–15 строк): Не падало. Первый snapshot был снят до завершения загрузки данных, после ожидания контур стабилизировался.
@@ -159,87 +159,11 @@
 - Что упало (ошибка 5–15 строк): не падало; nginx установился и стартовал с первой попытки
 - Что починил (если было): убрал зависимость MVP frontend от Vercel как обязательной точки входа; добавил воспроизводимый VPS rollout через scripts/ops/deploy_vps_frontend.sh и scripts/ops/mudro.nginx.conf
 - Следующий шаг: при появлении домена закрыть тот же контур под HTTPS (80/443) и затем уже решать, закрывать ли внешний 8080 полностью
-- Дата/время: 2026-03-17 02:20
-- Что запускал: анализ статьи Habr про Skaro; чтение `README.md`, `docs/*`, `.codex/*`; подготовка repo-native адаптации процесса под `mudro`
-- Что прошло: добавлены `docs/skaro-mudro-adaptation.md`, `docs/adr/README.md`, `.codex/templates/task-spec.md`; `README.md` дополнен ссылками на новый workflow
-- Что упало (ошибка 5–15 строк): не падало
-- Что починил (если было): собрал разрозненные артефакты `AGENTS.md` + `docs/*` + `.codex/*` в единый spec-driven контур без отдельного dashboard/оркестратора
-- Следующий шаг: при следующих средних и крупных задачах использовать `task-spec` как входной артефакт, а ключевые проектные решения выносить в `docs/adr/`
-- Дата/время: 2026-03-17 03:05
-- Что запускал: перенос нового `uv`/`skaro` toolchain на `D:\\mudr\\toolchain`; инициализацию `.skaro/` через внутренний API `Skaro`; проверку `scripts/skaro-local.ps1 --version` и `scripts/skaro-local.ps1 status`
-- Что прошло: `skaro 1.7.2` установлен и резолвится из `D:\\mudr\\toolchain\\uv-bin\\skaro.exe`; `.skaro/` инициализирован; `status` через wrapper показывает `Constitution` и `Architecture` OK
-- Что упало (ошибка 5–15 строк): штатный интерактивный `skaro init` в PowerShell падал на `UnicodeEncodeError` и `prompt_toolkit.output.win32.NoConsoleScreenBufferError`; прямой `skaro status` без wrapper тоже был нестабилен из-за Windows console encoding
-- Что починил (если было): обошел интерактивный Win32 TTY-блокер программной инициализацией `Skaro`; добавил `scripts/skaro-local.ps1`, который принудительно выставляет `UV_*` на `D:` и включает UTF-8 вывод
-- Следующий шаг: добавить локально `OPENAI_API_KEY` или подключить локальный provider, после чего можно прогонять уже LLM-фазы `Skaro`; затем отдельно готовить VPS-контур
-- Дата/время: 2026-03-17 05:05
-- Что запускал: импорт `.codex` памяти в `.skaro/docs/imported/`; создание `Skaro` milestones/tasks/docs; проверку публичных MVP URLs; генерацию PDF-гайда через `uv run --with reportlab --with pypdf --with pymupdf`; `scripts/skaro-local.ps1 status`
-- Что прошло: `Skaro status` теперь показывает `01-project-cockpit`, `02-public-mvp-release`, `03-vps-runtime`; публичный Vercel URL `https://frontend-psi-ten-33.vercel.app` отвечает `200`, protected preview дает `401`, VPS `http://91.218.113.247/` отвечает `200`; PDF `output/pdf/skaro-mudro-guide.pdf` собран на 3 страницы и проверен рендером первой страницы
-- Что упало (ошибка 5–15 строк): локально отсутствовали `reportlab` и `pdftoppm`; прямой вызов `uv` по неверному пути на `D:` не сработал, потому что реальный `uv.exe` установлен через WinGet в `C:\\Users\\gorit\\AppData\\Local\\Microsoft\\WinGet\\...`
-- Что починил (если было): убран ошибочный ignore всего `.skaro/` из `.gitignore`, после чего `Skaro`-артефакты стали trackable; PDF собран через системный `uv` с кешом/окружением на `D:`
-- Следующий шаг: при желании либо довести `Skaro` до VPS-hosted cockpit (`systemd` + loopback + SSH tunnel), либо сделать финальный release pass и коммитить публичный MVP
-- Дата/время: 2026-03-17 02:24
-- Что запускал: product UI pass по `FeedPage`, `FeedControls`, `PostCard`; `npm.cmd run build`; выкладка `frontend/dist` на VPS; `bash /root/projects/mudro/scripts/ops/deploy_vps_frontend.sh`; Playwright smoke по `http://91.218.113.247/?ui=20260317-1#feed`
-- Что прошло: новый header/toolbars/cards собраны и развернуты на VPS; удалены кракозябры из `PostCard.tsx`; публичная страница после reload показывает реальные числа `2189 / 1088 / 1101`, VK/TG карточки, thread preview и media; сохранены `output/playwright/ui-pass-after-desktop.png` и `output/playwright/ui-pass-after-mobile.png`
-- Что упало (ошибка 5–15 строк): `apply_patch` не смог встать на `PostCard.tsx` из-за смешанной кодировки; первая Playwright-вкладка держала старый JS bundle из кеша и показывала старые copy/нули до полного закрытия браузера
-- Что починил (если было): перешел на полную перезапись целевых UI-файлов; пересобрал и перелил `dist` на VPS; сбросил Playwright-кеш через закрытие страницы и открыл `?ui=20260317-1`, после чего runtime подтвердил новый product-pass
-- Следующий шаг: дождаться внешней рецензии по self-hosted UI и затем решать только точечный mobile/drawer polish, не трогая data/API слой
-- Дата/время: 2026-03-17 02:32
-- Что запускал: повторный deploy после проверки mobile runtime; адресная заливка `frontend/dist/index.html` и `frontend/dist/assets/*`; повторный nginx rollout; Playwright mobile smoke по `?ui=20260317-3`
-- Что прошло: на VPS обновились asset-хэши `index-CUdP94U6.js` и `index-B2KnY45X.css`; mobile control rows теперь `nowrap + overflow-x:auto`, а source pills больше не растягиваются на всю ширину; runtime по `http://91.218.113.247/#feed` совпадает с кодом
-- Что упало (ошибка 5–15 строк): предыдущая команда `scp ... dist\*` вернула `0`, но фактически оставила на сервере старый `index.html` и старые asset-ссылки (`index-BiQ310uD.js`, `index-9MXjmmVl.css`)
-- Что починил (если было): заменил неоднозначный glob на адресную заливку `index.html` и `assets/*`; после этого nginx начал раздавать новый bundle, а mobile screenshot `output/playwright/ui-pass-after-mobile-v3.png` подтвердил узкие pills вместо full-width столбцов
-- Следующий шаг: ждать внешнюю визуальную рецензию именно по self-hosted экрану и не трогать rollout-механику, пока не появится новый инфраструктурный сигнал
-- Дата/время: 2026-03-16 21:07
-- Что запускал: анализ `.codex/logs/20260316-1109/index.md`, выборка `/find` из `.codex/tg_control.jsonl`, подготовка плана улучшений
-- Что прошло: сформирован документ `docs/log-improvements-20260316.md` с P0/P1/P2 рекомендациями и измеримыми метриками
-- Что упало (ошибка 5-15 строк): не было
-- Что починил (если было): не требовалось
-- Следующий шаг: выбрать 1-2 P0 пункта и внедрить guard-проверки в Makefile/startup
-- Дата/время: 2026-03-17 03:10
-- Что запускал: `npm.cmd run build`; WSL `gofmt` и `go test` для `tgcommentscsvimport`; remote importer с `-export-json`; VPS deploy script; `vercel deploy . -y`; `npx playwright screenshot` для `http://91.218.113.247/#feed`
-- Что прошло: имена комментариев теперь восстанавливаются из полного Telegram export JSON; media CTA ведут на оригинальные посты; VK media-заголовки очищены от raw query-строк; свежий frontend билд развернут на VPS; новый Vercel preview поднят: https://frontend-nv1pu0992-goritskimihail-2652s-projects.vercel.app
-- Что упало (ошибка 5-15 строк): не было блокирующих ошибок; Vercel preview защищен deployment protection и не предназначен для анонимной curl-проверки
-- Что починил (если было): вместо fallback `Участник #...` для части discussion-comments теперь используются реальные имена из `result.json`; кнопки media больше не уводят на raw file URL при наличии оригинального поста
-- Следующий шаг: либо продвинуть этот же билд на production Vercel, либо зафиксировать изменения в git и пройти финальную внешнюю рецензию уже по VPS URL
-- Дата/время: 2026-03-17 03:45
-- Что запускал: подготовку раздельных `git worktree` под 4 рабочих контура; перенастройку глобального `C:\Users\gorit\.codex\config.toml` на базовую копию `D:\mudr\mudro11-main`; сборку общего multi-root workspace `D:\mudr\mudro.code-workspace`
-- Что прошло: созданы чистые каталоги `D:\mudr\mudro11-main`, `D:\mudr\mudro11-automation`, `D:\mudr\mudro11-bugs`, `D:\mudr\mudro11-devops`; MCP-скрипты `mudro_*` и `magic_21st` теперь смотрят в `mudro11-main`; собрана памятка `D:\mudr\mudro-worktrees.md` для перезапуска Codex
-- Что упало (ошибка 5-15 строк): попытка сделать Windows-worktree прямо из ветки `main` снова упала на `error: invalid path 'cmd/bot/ server.go '`
-- Что починил (если было): вместо checkout `main` создана чистая базовая ветка `codex/mainline-base` от текущего валидного `HEAD`, чтобы MCP и новые чаты не зависели от грязной папки `D:\mudr\mudro11`
-- Следующий шаг: перезапустить Codex и открывать только `D:\mudr\mudro.code-workspace`; старую `D:\mudr\mudro11` считать карантинной, пока отдельно не будет разобран ее грязный diff
-- Дата/время: 2026-03-17 03:55
-- Что запускал: локальный bootstrap `Skaro` по всем 4 worktree; копирование `.skaro` и `scripts/skaro-local.ps1` в `mudro11-main/automation/bugs/devops`; генерацию `.vscode/tasks.json`; настройку helper-скриптов `D:\mudr\setup-mudro-skaro.ps1` и `D:\mudr\start-mudro-skaro.ps1`
-- Что прошло: `Skaro status` успешно работает в `mudro11-main`, `mudro11-automation`, `mudro11-bugs`, `mudro11-devops`; для каждого worktree закреплен свой dashboard-port `4700..4703`; `config --show` на базе видит resolved `OPENAI_API_KEY`; launcher и памятка `D:\mudr\mudro-worktrees.md` обновлены
-- Что упало (ошибка 5-15 строк): первичная генерация `tasks.json` записала битый `${workspaceFolder}`, а `validate` оказался невалидным без `TASK_NAME`; прямой HTTP smoke dashboard через background PowerShell блокировался политикой shell tool, а отдельный повторный старт сначала уперся в занятый `4700`
-- Что починил (если было): setup-скрипт переписан; `tasks.json` теперь корректно используют `${workspaceFolder}\\scripts\\skaro-local.ps1`, вместо фиктивного `validate` добавлен `config --show`; stale listener на `4700` снят, а короткий запуск `skaro ui --port 4700 --no-browser` ушел в штатный серверный режим до таймаута
-- Следующий шаг: работать в новых чатах уже из `mudro11-automation`, `mudro11-bugs`, `mudro11-devops`; при необходимости запускать dashboard через `D:\mudr\start-mudro-skaro.ps1 -Workspace <role> -Mode ui`
-- Дата/время: 2026-03-17 04:45
-- Что запускал: переписывание `.skaro/docs/skaro-workflow-guide.md`; съемку живых screenshot `Skaro` через Playwright; сборку HTML-версии guide и печать PDF через headless Chrome; визуальную проверку страниц через `pymupdf`
-- Что прошло: guide стал полностью русским и подробным; в `output/pdf/skaro-mudro-guide.pdf` попали живые картинки dashboard/tasks/settings/task-detail; визуальный smoke подтвердил нормальную кириллицу и читаемую верстку на 13 страниц
-- Что упало (ошибка 5-15 строк): первый HTML->PDF прогон через Edge оставил browser header/footer и частично испортил вручную вставленные русские строки из inline-script по кодировке
-- Что починил (если было): пересобрал HTML в UTF-8, повторно напечатал PDF через Chrome с `--no-pdf-header-footer`, затем перепроверил рендер страниц из готового PDF
-- Следующий шаг: при следующих обновлениях guide править `.skaro/docs/skaro-workflow-guide.md` как source-of-truth и пересобирать PDF тем же HTML+Chrome путем, не трогая содержимое `.codex`
-- Дата/время: 2026-03-17 17:27
-- Что запускал: аудит `C:`/`D:`, чистку кэшей `uv/pip/npm`, `docker image prune -a -f`, перенос `Ubuntu` через `wsl --manage Ubuntu --move D:\WSL\Ubuntu`, попытки вернуть `Docker Desktop`
-- Что прошло: `Ubuntu` успешно перенесена на `D:\WSL\Ubuntu\ext4.vhdx`; свободное место на `C:` выросло примерно `3.41 -> 18.57 ГБ`; `wsl -d Ubuntu` снова запускается под пользователем `gorit`
-- Что упало (ошибка 5-15 строк): `docker desktop stop` вернул `command timed out after 124053 milliseconds`; `docker desktop restart` вернул `command timed out after 184052 milliseconds`; `docker desktop status` застрял на `Status stopping`
-- Что починил (если было): для WSL не понадобился export/import — использован штатный `wsl --manage ... --move`, поэтому перенос прошел без потери среды
-- Следующий шаг: по подтверждению пользователя либо делать принудительный recovery `Docker Desktop`, либо оставить выигрыш по `C:` и завершить на текущем состоянии; детали зафиксированы в `.codex/logs/20260317-1727/index.md`
-- Дата/время: 2026-03-17 22:18
-- Что запускал: ревизию `git status`; разбор staged/unstaged diff; очистку merge-маркеров в `.codex/done.md` и `.codex/state.md`; отбор только session-memory/Skaro-артефактов под отдельный commit
-- Что прошло: merge-маркеры из памяти проекта убраны; `Codex`- и `Skaro`-файлы отделены от продуктового diff; подготовлен коммит только по контексту сессий без незавершенного backend/frontend-кода
-- Что упало (ошибка 5-15 строк): не падало
-- Что починил (если было): в `.codex` памяти устранен битый merge-state, из-за которого следующий чат мог получить конфликтный контекст вместо цельной истории
-- Следующий шаг: при необходимости отдельным коммитом сохранять уже кодовые правки (`frontend`, `internal/api`, `cmd/*`) после их самостоятельной проверки
-Дата/время: 2026-03-18 00:35
-Что запускал: разбор `.skaro/docs/review-results.json`; правки `Makefile`, `.skaro/config.yaml`, `.skaro/ops/local-run.md`; `make test-no-tmp`, `make dbcheck`, frontend build/lint, `skaro status`.
-Что прошло: `make test-no-tmp` в WSL; `make dbcheck`; `npm.cmd --prefix frontend run build`; `npm.cmd --prefix frontend run lint`; `skaro status` показывает `Constitution` и `Architecture` как OK.
-Что упало (ошибка 5–15 строк): `wsl bash -lc "cd /mnt/d/mudr/mudro11 && go test $(go list ./... | grep -v '/tmp$')"` падал, потому что PowerShell разворачивал `$(...)` до передачи в WSL и ломал verify.
-Что починил (если было): вынес Go-проверку в `make test-no-tmp` и перевел `Skaro` verify на этот таргет; зафиксировал это в `.skaro/ops/local-run.md`.
-Следующий шаг: при необходимости отдельно разобраться с process-only статусами `Skaro` (`validated/reviewed/confirmed`, 50% по tasks), но это уже не блокер кодовой валидации.
-Дата/время: 2026-03-18 21:35
-Что запускал: чтение внешних логов `D:/важные логи/backlog_tomorrow.md` и `D:/важные логи/mudro-status-report-v5.4.md`; сверку staged diff текущей копии; обновление `.codex` памяти.
-Что прошло: собран snapshot `.codex/notes/antigravity-sync-20260318.md`; `TODO/DONE/TOP10` обновлены с учетом Antigravity и текущего staged WIP.
-Что упало (ошибка 5–15 строк): Явных падений не было; обнаружено содержательное расхождение между внешним отчетом Antigravity и этой копией по статусу auth-refactor/go tests.
-Что починил (если было): в памяти проекта явно разделены внешние подтвержденные факты, staged-срез этой копии и branch-divergence как главный текущий риск.
-Следующий шаг: при первой кодовой сессии не спорить по памяти, а сначала свести `mudro11` и `mudro11-main`/Antigravity в один проверяемый baseline.
+
+- Дата/время: 2026-03-18 02:48
+- Что запускал: Упрощение auth (email→username); создание аккаунтов admin/user на VPS; Premium Dark UI (Glassmorphism); fix Vercel routes; fix Nginx proxy_pass; seed DB; E2E browser smoke
+- Что прошло: миграция `011_simplify_auth.sql` применена; Go-сервис и фронтенд переведены на username; `admin`+`user` созданы через curl API и подтверждены SQL; Premium Dark Hotpink тема внедрена в `variables.css`, `global.css`, `FeedPage.css`, `PostCard.css`; `vercel.json` переведен с `rewrites` на `routes`; Nginx proxy_pass исправлен (убран trailing slash); 3 seed-поста с Unsplash-медиа залиты в БД; Vercel deployed
+- Что упало (ошибка 5–15 строк): agent `--mode once` — worker упал на `go test`: сломанные сигнатуры `NewServer` и `authRequest` в тестах после рефакторинга auth; PowerShell `&&` не работает как разделитель (нужен `;`); `password_hash` колонка отсутствовала в таблице users (первая регистрация вернула 500)
+- Что починил (если было): добавлен import `strings`; добавлена колонка `password_hash`; PowerShell-разделители заменены на `;`; Nginx proxy_pass trailing slash убран
+- Следующий шаг: починить Go-тесты (`auth_handlers_test.go`, `server_integration_test.go`, `server_test.go`, `pkg/vercelapi/handler.go`), загрузить реальный контент (VK+TG), довести premium UI до mobile-ready, настроить HTTPS
+

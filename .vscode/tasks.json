@@ -1,94 +1,111 @@
-{
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Skaro: UI",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\skaro-local.ps1",
-        "ui",
-        "--port",
-        "4700",
-        "--no-browser"
-      ],
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": false,
-        "clear": false
-      },
-      "runOptions": {
-        "reevaluateOnRerun": true
-      }
-    },
-    {
-      "label": "Skaro: Open Dashboard",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "Start-Process 'http://127.0.0.1:4700/dashboard'"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "never",
-        "panel": "shared"
-      }
-    },
-    {
-      "label": "Skaro: Status",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\skaro-local.ps1",
-        "status"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": false,
-        "clear": true
-      }
-    },
-    {
-      "label": "Skaro: Validate",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\skaro-local.ps1",
-        "validate"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": false,
-        "clear": true
-      }
-    },
-    {
-      "label": "Skaro: Full Local Check",
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "Skaro: Status",
-        "Skaro: Validate"
-      ],
-      "problemMatcher": []
-    }
-  ]
+﻿{
+    "version":  "2.0.0",
+    "tasks":  [
+                  {
+                      "label":  "Skaro: UI",
+                      "problemMatcher":  [
+
+                                         ],
+                      "command":  "powershell",
+                      "type":  "shell",
+                      "args":  [
+                                   "-ExecutionPolicy",
+                                   "Bypass",
+                                   "-File",
+                                   "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+                                   "ui",
+                                   "--port",
+                                   "4700",
+                                   "--no-browser"
+                               ],
+                      "presentation":  {
+                                           "reveal":  "always",
+                                           "panel":  "dedicated",
+                                           "focus":  false,
+                                           "clear":  false
+                                       },
+                      "isBackground":  true
+                  },
+                  {
+                      "label":  "Skaro: Open Dashboard",
+                      "problemMatcher":  [
+
+                                         ],
+                      "command":  "powershell",
+                      "type":  "shell",
+                      "args":  [
+                                   "-ExecutionPolicy",
+                                   "Bypass",
+                                   "-Command",
+                                   "Start-Process \u0027http://127.0.0.1:4700/dashboard\u0027"
+                               ],
+                      "presentation":  {
+                                           "panel":  "shared",
+                                           "reveal":  "never"
+                                       }
+                  },
+                  {
+                      "label":  "Skaro: Stop UI",
+                      "problemMatcher":  [
+
+                                         ],
+                      "command":  "powershell",
+                      "type":  "shell",
+                      "args":  [
+                                   "-ExecutionPolicy",
+                                   "Bypass",
+                                   "-Command",
+                                   "Get-NetTCPConnection -LocalPort 4700 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_.ToString() -Force }"
+                               ],
+                      "presentation":  {
+                                           "reveal":  "always",
+                                           "panel":  "shared",
+                                           "focus":  false,
+                                           "clear":  true
+                                       }
+                  },
+                  {
+                      "label":  "Skaro: Status",
+                      "problemMatcher":  [
+
+                                         ],
+                      "command":  "powershell",
+                      "type":  "shell",
+                      "args":  [
+                                   "-ExecutionPolicy",
+                                   "Bypass",
+                                   "-File",
+                                   "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+                                   "status"
+                               ],
+                      "presentation":  {
+                                           "reveal":  "always",
+                                           "panel":  "shared",
+                                           "focus":  false,
+                                           "clear":  true
+                                       }
+                  },
+                  {
+                      "label":  "Skaro: Config",
+                      "problemMatcher":  [
+
+                                         ],
+                      "command":  "powershell",
+                      "type":  "shell",
+                      "args":  [
+                                   "-ExecutionPolicy",
+                                   "Bypass",
+                                   "-File",
+                                   "${workspaceFolder}\\\\scripts\\\\skaro-local.ps1",
+                                   "config",
+                                   "--show"
+                               ],
+                      "presentation":  {
+                                           "reveal":  "always",
+                                           "panel":  "shared",
+                                           "focus":  false,
+                                           "clear":  true
+                                       }
+                  }
+              ]
 }

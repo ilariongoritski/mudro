@@ -1,6 +1,11 @@
-import { RouterProvider } from 'react-router'
-import { router } from '@/app/router'
+import { AppRouterProvider } from '@/app/providers/RouterProvider'
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+import '@/shared/ui/ErrorBoundary.css'
 
 export const App = () => {
-  return <RouterProvider router={router} />
+  return (
+    <ErrorBoundary>
+      <AppRouterProvider />
+    </ErrorBoundary>
+  )
 }

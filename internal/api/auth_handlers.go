@@ -1,136 +1,211 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/goritskimihail/mudro/internal/auth"
 )
 
-type registerRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type contextKey string
+const userContextKey = contextKey("user")
+
+// UserFromContext extracts the user from context.
+func UserFromContext(ctx context.Context) *auth.User {
+	if u, ok := ctx.Value(userContextKey).(*auth.User); ok {
+		return u
+	}
+	return nil
 }
 
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+// AuthHandlers provides HTTP handlers for authentication.
+type AuthHandlers struct {
+	authSvc *auth.Service
 }
 
-type authResponse struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Token    string `json:"token"`
+// NewAuthHandlers creates a new AuthHandlers.
+func NewAuthHandlers(svc *auth.Service) *AuthHandlers {
+	return &AuthHandlers{authSvc: svc}
+}
+
+type authRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 type meResponse struct {
-	ID          int64  `json:"id"`
-	Username    string `json:"username"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name,omitempty"`
-	AvatarURL   string `json:"avatar_url,omitempty"`
+	ID        int64   `json:"id"`
+	Username  string  `json:"username"`
+	Email     *string `json:"email,omitempty"`
+	Role      string  `json:"role"`
+	IsPremium bool    `json:"is_premium"`
 }
 
-func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
-	var req registerRequest
+type tokenResponse struct {
+	Token string     `json:"token"`
+	User  meResponse `json:"user"`
+}
+
+// HandleRegister registers a new user with username and password.
+func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req authRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	req.Username = strings.TrimSpace(req.Username)
-	req.Email = strings.TrimSpace(req.Email)
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error":"username, email, and password are required"}`, http.StatusBadRequest)
-		return
-	}
-
-	hash, err := auth.HashPassword(req.Password)
-	if err != nil {
-		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+	username := strings.TrimSpace(req.Login)
+	if username == "" || len(req.Password) < 6 {
+		http.Error(w, "invalid username or password too short", http.StatusBadRequest)
 		return
 	}
 
-	var id int64
-	err = s.pool.QueryRow(r.Context(),
-		`insert into users (username, email, password_hash) values ($1, $2, $3) returning id`,
-		req.Username, req.Email, hash,
-	).Scan(&id)
+	user, err := h.authSvc.Register(r.Context(), username, req.Password)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
-			http.Error(w, `{"error":"username or email already taken"}`, http.StatusConflict)
+		if errors.Is(err, auth.ErrUserExists) {
+			http.Error(w, "username already taken", http.StatusConflict)
 			return
 		}
-		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
-		return
-	}
-
-	token, err := auth.GenerateToken(id, req.Username)
-	if err != nil {
-		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		log.Printf("auth register: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(authResponse{ID: id, Username: req.Username, Token: token})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "ok",
+		"user": meResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
+		},
+	})
 }
 
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var req loginRequest
+// HandleLogin authenticates a user and returns a JWT.
+func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req authRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
-		return
-	}
-	req.Email = strings.TrimSpace(req.Email)
-	if req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error":"email and password are required"}`, http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	var id int64
-	var username, hash string
-	err := s.pool.QueryRow(r.Context(),
-		`select id, username, password_hash from users where email = $1`, req.Email,
-	).Scan(&id, &username, &hash)
+	user, token, err := h.authSvc.Login(r.Context(), req.Login, req.Password)
 	if err != nil {
-		http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
-		return
-	}
-
-	if !auth.CheckPassword(hash, req.Password) {
-		http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
-		return
-	}
-
-	token, err := auth.GenerateToken(id, username)
-	if err != nil {
-		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		}
+		log.Printf("auth login: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(authResponse{ID: id, Username: username, Token: token})
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		Token: token,
+		User: meResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
+		},
+	})
 }
 
-func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.ContextUserID(r.Context())
-	if !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return
-	}
-
-	var resp meResponse
-	err := s.pool.QueryRow(r.Context(),
-		`select id, username, email, coalesce(display_name, ''), coalesce(avatar_url, '') from users where id = $1`,
-		userID,
-	).Scan(&resp.ID, &resp.Username, &resp.Email, &resp.DisplayName, &resp.AvatarURL)
-	if err != nil {
-		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+// HandleMe returns the currently authenticated user based on the JWT token.
+func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(meResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		Role:      user.Role,
+		IsPremium: user.IsPremium,
+	})
+}
+
+// HandleLogout is a stub for JWT since tokens are stateless. Client should delete token.
+func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// AuthMiddleware wraps an http.HandlerFunc to require a valid JWT token.
+func (h *AuthHandlers) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := extractToken(r)
+		if token == "" {
+			http.Error(w, "unauthorized - no token", http.StatusUnauthorized)
+			return
+		}
+
+		claims, err := h.authSvc.ValidateToken(token)
+		if err != nil {
+			http.Error(w, "unauthorized - invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		sub, ok := claims["sub"].(float64)
+		if !ok {
+			http.Error(w, "unauthorized - invalid subject", http.StatusUnauthorized)
+			return
+		}
+
+		user, err := h.authSvc.GetUserByID(r.Context(), int64(sub))
+		if err != nil {
+			http.Error(w, "unauthorized - user not found", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), userContextKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	}
+}
+
+// AuthAdminMiddleware wraps an http.HandlerFunc to require a valid JWT token and 'admin' role.
+func (h *AuthHandlers) AuthAdminMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return h.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		user := UserFromContext(r.Context())
+		if user == nil || user.Role != "admin" {
+			http.Error(w, "forbidden - admin access required", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func extractToken(r *http.Request) string {
+	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+		return strings.TrimPrefix(h, "Bearer ")
+	}
+	if c, err := r.Cookie("token"); err == nil && c.Value != "" {
+		return c.Value
+	}
+	return ""
 }

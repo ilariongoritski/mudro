@@ -15,11 +15,10 @@ import {
   resolveMediaKind,
   resolveMediaTitle,
   resolveMediaUrl,
-} from '@/entities/post/lib/postPresentation'
-import { formatDateTime } from '@/shared/lib/format/date'
-import { cn } from '@/shared/lib/utils'
-import { Badge } from '@/shared/ui/badge'
-import { Button } from '@/shared/ui/button'
+} from "@/entities/post/lib/postPresentation";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatDateTime } from "@/shared/lib/format/date";
+import "./PostDetailDrawer.css";
 
 interface PostDetailDrawerProps {
   post: Post | null
@@ -67,30 +66,51 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
   const originalPostUrl = buildOriginalPostUrl(post.source, post.source_post_id)
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="post-drawer-title">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40 cursor-default"
-        aria-label="Закрыть"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {post && (
+        <div
+          className="post-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="post-drawer-title"
+        >
+          <motion.button
+            type="button"
+            className="post-drawer__backdrop"
+            aria-label="Закрыть карточку поста"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
 
-      <aside className="absolute inset-y-0 right-0 w-full max-w-lg bg-white shadow-2xl overflow-y-auto">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 bg-white/90 backdrop-blur border-b border-slate-200">
-          <div className="flex items-center gap-2 min-w-0">
-            <Badge variant={post.source === 'vk' ? 'vk' : 'tg'}>{post.source.toUpperCase()}</Badge>
-            <span className="text-xs text-slate-400 truncate">#{post.source_post_id}</span>
-            <h2 id="post-drawer-title" className="sr-only">Развернутый просмотр поста</h2>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {originalPostUrl && (
-              <Button variant="ghost" size="sm" asChild>
-                <a href={originalPostUrl} target="_blank" rel="noreferrer">Оригинал</a>
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X size={18} />
-            </Button>
+          <motion.aside 
+            className="post-drawer__panel"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
+          >
+            <div className="post-drawer__drag-handle" />
+            <header className="post-drawer__head">
+              <div className="post-drawer__head-main">
+                <div className={`post-drawer__source post-drawer__source_${post.source}`}>
+              {post.source.toUpperCase()}
+            </div>
+            <div className="post-drawer__eyebrow">
+              {post.source.toUpperCase()} #{post.source_post_id} · внутренний id {post.id}
+            </div>
+            <h2 id="post-drawer-title">Развернутый просмотр поста</h2>
+            <p>{formatDateTime(post.published_at)}</p>
           </div>
         </header>
 
@@ -231,11 +251,11 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
                 })}
               </div>
             </div>
-          )}
-
-          <CommentForm postId={post.id} />
-        </div>
-      </aside>
+          </section>
+        ) : null}
+      </motion.aside>
     </div>
-  )
-}
+      )}
+    </AnimatePresence>
+  );
+};

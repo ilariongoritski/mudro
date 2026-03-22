@@ -8,9 +8,7 @@ AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_task_events.sql
 MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
-AGENT_EVENTS_FK_MIGRATION ?= $(MIGRATIONS_DIR)/009_agent_events_fk.sql
-VISIBILITY_MIGRATION ?= $(MIGRATIONS_DIR)/010_posts_visibility_and_comments.sql
-DROP_JSONB_MIGRATION ?= $(MIGRATIONS_DIR)/011_drop_legacy_jsonb.sql
+USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 CORE_COMPOSE_FILE ?= ops/compose/docker-compose.core.yml
@@ -67,8 +65,10 @@ dbcheck-core:
 migrate:
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
 endif
 
 migrate-runtime:
@@ -131,28 +131,12 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(COMMENT_MODEL_MIGRATION)"
 endif
 
-migrate-agent-events-fk:
+migrate-users-auth:
 ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(AGENT_EVENTS_FK_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
+	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
 else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(AGENT_EVENTS_FK_MIGRATION)"
+	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
 endif
-
-migrate-visibility:
-ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(VISIBILITY_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(VISIBILITY_MIGRATION)"
-endif
-
-migrate-drop-jsonb:
-ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(DROP_JSONB_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(DROP_JSONB_MIGRATION)"
-endif
-
-migrate-runtime: migrate-all
 
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
@@ -163,13 +147,11 @@ tables-core:
 test:
 	$(GO) test ./...
 
-test-active:
-	@PKGS=`$(GO) list ./... | grep -Ev '/legacy/old/|/frontend/node_modules/|/output($$|/)|/tmp($$|/)'`; \
-	$(GO) test $$PKGS
+lint:
+	golangci-lint run ./...
+	cd frontend && npm run lint
 
-test-no-tmp:
-	@PKGS=`$(GO) list ./... | grep -v '/tmp$$'`; \
-	$(GO) test $$PKGS
+check: lint test
 
 selftest:
 	$(GO) test ./tools/importers/vkimport/app ./tools/importers/tgimport/app

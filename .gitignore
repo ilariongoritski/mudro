@@ -20,18 +20,18 @@ out/
 reorganize.sh
 .codex/notes/
 .vercel
-output/**
-!output/README.md
-!output/.gitkeep
+output/ssh-tool/
+output/logs/
+output/server_*.sh
+output/ssh-check.js
+output/tmp_dbcount.go
+output/get-pip.py
+output/*-smoke.png
+output/frontend-dev.log
+output/import/
+output/doc/
+output/playwright/
+output/*.json
+output/db-comment-media-ids.txt
 
-# ── Skaro (auto-generated, do not remove this marker) ──
-# This section is managed by `skaro init`. Do NOT delete it.
-# You may add your own rules below the closing marker.
-#
-# Secrets — API keys, never commit!
-.skaro/secrets.yaml
-
-# Usage tracking — local stats, not project artifacts
-.skaro/token_usage.yaml
-.skaro/usage_log.jsonl
-# ── /Skaro ─────────────────────────────────────────────
+.vercel

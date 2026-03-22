@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
@@ -14,6 +14,7 @@ interface FeedWidgetInnerProps {
   source: 'all' | 'vk' | 'tg'
   sort: 'desc' | 'asc'
   limit: number
+  query?: string
 }
 
 const skeletonIds = ['a', 'b', 'c', 'd', 'e', 'f']
@@ -42,7 +43,7 @@ const FeedLoadingSkeleton = () => (
   </div>
 )
 
-const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
+const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) => {
   const [loadedItems, setLoadedItems] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<FeedCursor | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -53,7 +54,7 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
     isFetching: isFrontFetching,
     isError: isFrontError,
     refetch,
-  } = useGetFrontQuery({ limit, source, sort })
+  } = useGetFrontQuery({ limit, source, sort, q: query })
 
   const [loadMorePosts, { isFetching: isLoadingMore }] = useLazyGetPostsQuery()
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -161,13 +162,32 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
           {items.map((post) => (
             <PostCard key={`${post.source}-${post.id}-${post.source_post_id}`} post={post} onOpen={setSelectedPost} />
           ))}
+          {isLoadingMore ? Array.from({ length: 3 }).map((_, i) => (
+             <article key={`skeleton-append-${i}`} className="feed-widget__skeleton-card">
+              <div className="feed-widget__skeleton-chip" />
+              <div className="feed-widget__skeleton-lines">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="feed-widget__skeleton-media" />
+              <div className="feed-widget__skeleton-stats">
+                <span />
+                <span />
+                <span />
+              </div>
+            </article>
+          )) : null}
         </div>
       )}
 
       {loadError && <p className="text-sm text-red-500 text-center">{loadError}</p>}
 
-      {hasMore && <div ref={sentinelRef} className="h-10" />}
-      {isLoadingMore && <FeedLoadingSkeleton />}
+      {hasMore && !isLoadingMore ? (
+        <button type="button" className="feed-widget__load-more" onClick={handleLoadMore}>
+          Показать еще
+        </button>
+      ) : null}
 
       <PostDetailDrawer post={selectedPost} onClose={() => setSelectedPost(null)} />
     </div>
@@ -175,8 +195,8 @@ const FeedWidgetInner = ({ source, sort, limit }: FeedWidgetInnerProps) => {
 }
 
 export const FeedWidget = () => {
-  const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
-  const feedKey = `${source}-${sort}-${limit}`
+  const { source, sort, limit, query } = useAppSelector((state) => state.feedFilters)
+  const feedKey = `${source}-${sort}-${limit}-${query ?? ''}`
 
-  return <FeedWidgetInner key={feedKey} source={source} sort={sort} limit={limit} />
+  return <FeedWidgetInner key={feedKey} source={source} sort={sort} limit={limit} query={query} />
 }

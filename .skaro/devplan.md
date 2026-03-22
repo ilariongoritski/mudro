@@ -1,54 +1,51 @@
 # Development Plan
 
 ## Overview
-This plan turns Skaro into a useful project cockpit for `mudro` right now.
-The goal is practical:
-- preserve the existing `.codex` memory and logs
-- expose the active backlog as milestones/tasks in Skaro
-- keep one clear public MVP link for release
-- prepare, but not yet force, a future VPS-hosted Skaro mode
+This plan maps Skaro workflow onto the real `mudro` roadmap. The goal is not a greenfield rewrite, but controlled progress on data correctness, runtime safety, and the external MVP surface.
 
-## 01 - Project Cockpit
-_Directory: `milestones/01-project-cockpit/`_
+## 01 — Local Workflow and Safety
+_Directory: `milestones/01-local-workflow-and-safety/`_
 
 | # | Task | Status | Dependencies | Description |
 |---|------|--------|--------------|-------------|
-| 1 | import-project-memory | done | none | Import `.codex` memory snapshots and build Skaro-facing summaries. |
-| 2 | stabilize-skaro-workflow | done | import-project-memory | Make local Skaro usage clear, commitable, and VS Code-friendly. |
+| 1 | skaro-bootstrap-local | done | — | Initialize `.skaro/` for `mudro`, wire roles, verify commands, constitution, architecture, and plan. |
+| 2 | stabilize-go-verify | planned | skaro-bootstrap-local | Make repo-level Go verification deterministic for Skaro by excluding or fixing scratch-only blockers like `tmp/feed_check.go`. |
+| 3 | codify-local-runbook | planned | skaro-bootstrap-local | Add Skaro-facing notes for local run flow, shell expectations, and secret handling. |
 
-## 02 - Public MVP Release
-_Directory: `milestones/02-public-mvp-release/`_
-
-| # | Task | Status | Dependencies | Description |
-|---|------|--------|--------------|-------------|
-| 1 | lock-public-mvp-links | done | none | Record the working VPS and Vercel public URLs and mark protected previews as non-final. |
-| 2 | finalize-release-checklist | planned | lock-public-mvp-links | Keep a short final release checklist for the MVP handoff. |
-
-## 03 - VPS Runtime
-_Directory: `milestones/03-vps-runtime/`_
+## 02 — Data Correctness and API Reliability
+_Directory: `milestones/02-data-correctness/`_
 
 | # | Task | Status | Dependencies | Description |
 |---|------|--------|--------------|-------------|
-| 1 | stabilize-vps-runtime | planned | none | Document how Skaro fits the current VPS runtime as an internal cockpit. |
-| 2 | prepare-skaro-vps-host | planned | stabilize-vps-runtime | Define a safe future VPS-hosted Skaro shape with internal-only access. |
+| 1 | finish-tg-canonicalization | planned | stabilize-go-verify | Reduce remaining ambiguous Telegram discussion-root leftovers safely, without false merges. |
+| 2 | lock-api-data-invariants | planned | finish-tg-canonicalization | Convert known comment/media/API invariants into repeatable checks and docs. |
+| 3 | review-import-contracts | planned | lock-api-data-invariants | Re-check CSV/JSON importer expectations and document supported source formats. |
+
+## 03 — Product MVP and VPS Runtime
+_Directory: `milestones/03-product-mvp/`_
+
+| # | Task | Status | Dependencies | Description |
+|---|------|--------|--------------|-------------|
+| 1 | vps-https-front | planned | lock-api-data-invariants | Put the self-hosted VPS frontend behind a normal HTTPS reverse proxy and re-evaluate external `:8080`. |
+| 2 | frontend-mvp-polish | planned | vps-https-front | Finish remaining mobile/detail-drawer/empty-state polish for the public feed. |
+| 3 | reporter-agent-hardening | planned | frontend-mvp-polish | Tighten runtime monitoring and operational recovery paths for agent/reporter/bot contours. |
 
 ## Backlog
 
 | # | Task | Status | Description |
 |---|------|--------|-------------|
-| 1 | adr-backfill-key-decisions | planned | Backfill ADRs for already-made durable decisions: media normalization, comment model, VPS self-hosted frontend, VK snapshot-only. |
-| 2 | public-domain-and-tls | planned | Finalize the domain and TLS layer for the public MVP when a stable domain is available. |
-| 3 | skaro-vps-systemd-rollout | idea | Turn the future VPS-hosted Skaro cockpit into a managed `systemd` service. |
+| 1 | adr-backfill-key-decisions | idea | Backfill ADRs for the most important already-made decisions: media normalization, comment model, VK snapshot-only, VPS self-hosted frontend. |
+| 2 | local-llm-fallback | idea | Revisit whether a local fallback LLM contour is worth enabling for reviewer-only or emergency scenarios. |
+| 3 | public-domain-and-tls | idea | Finalize domain/TLS layer for the external MVP when domain is available. |
 
 ---
 
 ## Status Legend
-- **idea** - not yet scoped
-- **planned** - scoped and ready
-- **in-progress** - actively being worked on
-- **done** - completed in the current baseline
+- **idea** — not yet scoped
+- **planned** — scoped, assigned to milestone
+- **in-progress** — actively being developed
+- **done** — completed and reviewed
+- **cut** — removed from scope (with reason)
 
 ## Change Log
-
-- 2026-03-19: Confirmed 6 tasks: 01-project-cockpit/import-project-memory, 01-project-cockpit/stabilize-skaro-workflow, 02-public-mvp-release/lock-public-mvp-links, 02-public-mvp-release/finalize-release-checklist, 03-vps-runtime/stabilize-vps-runtime, 03-vps-runtime/prepare-skaro-vps-host
-- 2026-03-17: Reworked the plan around the real `mudro` state: imported project memory, documented public MVP links, and created milestone/task structure for Skaro.
+- 2026-03-17: Initial `mudro` Skaro plan created from existing repo state and `.codex` priorities.

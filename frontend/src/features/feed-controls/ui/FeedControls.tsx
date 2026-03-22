@@ -1,5 +1,5 @@
 import type { FeedSort, FeedSource } from '@/entities/post/model/types'
-import { setLimit, setSort, setSource } from '@/features/feed-controls/model/feedFiltersSlice'
+import { setLimit, setSort, setSource, setQuery } from '../model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { cn } from '@/shared/lib/utils'
@@ -29,14 +29,30 @@ interface FeedControlsProps {
 
 export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyncAt }: FeedControlsProps) => {
   const dispatch = useAppDispatch()
-  const { source, sort, limit } = useAppSelector((state) => state.feedFilters)
+  const { source, sort, limit, query } = useAppSelector((state) => state.feedFilters)
+  const user = useAppSelector((state) => state.session.user)
 
   return (
-    <Card className="mb-5">
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Лента</p>
-          <h2 className="text-base font-semibold text-mudro-text">Один экран для чтения, media и обсуждений</h2>
+    <section className="feed-controls mudro-fade-up" aria-label="Контролы ленты">
+      <div className="feed-toolbar">
+        <div className="feed-toolbar__intro">
+          <div className="feed-toolbar__user-status">
+            {user ? (
+              <div className="feed-user-badge">
+                <span className="feed-user-badge__email">{user.email}</span>
+                {user.isPremium && (
+                  <span className="feed-user-badge__premium">PREMIUM</span>
+                )}
+                <span className="feed-user-badge__role">{user.role?.toUpperCase()}</span>
+              </div>
+            ) : (
+              <span className="feed-toolbar__eyebrow">Архив</span>
+            )}
+          </div>
+          <strong className="feed-toolbar__title">Живая лента с реальными постами, вложениями и обсуждениями</strong>
+          <p className="feed-toolbar__lead">
+            Переключай источники, меняй порядок и быстро открывай посты, комментарии и media без ухода со страницы.
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -120,7 +136,64 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
             Сбросить
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="feed-controls__group">
+        <span className="feed-controls__label">Поиск по тексту</span>
+        <div className="feed-controls__search-box">
+          <input
+            type="text"
+            placeholder="Что ищем?.."
+            value={query ?? ''}
+            onChange={(e) => dispatch(setQuery(e.target.value))}
+            className="feed-controls__search-input"
+          />
+        </div>
+      </div>
+
+      <div className="feed-controls__group">
+        <span className="feed-controls__label">Источник</span>
+        <div className="feed-controls__row">
+          {sourceOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => dispatch(setSource(option.value))}
+              className={`feed-pill ${source === option.value ? 'feed-pill_active' : ''}`}
+            >
+              <span className="feed-pill__badge">{option.badge}</span>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="feed-controls__group">
+        <span className="feed-controls__label">Сортировка</span>
+        <div className="feed-controls__row">
+          {sortOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => dispatch(setSort(option.value))}
+              className={`feed-pill ${sort === option.value ? 'feed-pill_active' : ''}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="feed-controls__limit">
+        <span className="feed-controls__label">Постов на экран</span>
+        <select value={limit} onChange={(event) => dispatch(setLimit(Number(event.target.value)))}>
+          {limits.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
+    </section>
   )
 }

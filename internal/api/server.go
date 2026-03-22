@@ -24,11 +24,25 @@ import (
 )
 
 type Server struct {
-	pool *pgxpool.Pool
+	pool             *pgxpool.Pool
+	tgVisiblePostIDs []string
+	authHandlers     *AuthHandlers
+	adminHandlers    *AdminHandlers
 }
 
-func NewServer(pool *pgxpool.Pool) *Server {
-	return &Server{pool: pool}
+func NewServer(pool *pgxpool.Pool, authHandlers *AuthHandlers, adminHandlers *AdminHandlers) *Server {
+	server := &Server{
+		pool:          pool,
+		authHandlers:  authHandlers,
+		adminHandlers: adminHandlers,
+	}
+	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
+		server.tgVisiblePostIDs = ids
+		log.Printf("api: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
+	} else if err != nil {
+		log.Printf("api: telegram visibility filter disabled: %v", err)
+	}
+	return server
 }
 
 func (s *Server) Router() http.Handler {
@@ -51,18 +65,18 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/front", s.handleFront)
 	mux.HandleFunc("/feed", s.handleFeed)
 
-	// auth
-	mux.HandleFunc("POST /api/auth/register", s.handleRegister)
-	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
-	mux.HandleFunc("GET /api/auth/me", s.withAuth(s.handleMe))
+	// Auth routes.
+	if s.authHandlers != nil {
+		mux.HandleFunc("/api/auth/register", s.authHandlers.HandleRegister)
+		mux.HandleFunc("/api/auth/login", s.authHandlers.HandleLogin)
+		mux.HandleFunc("/api/auth/logout", s.authHandlers.HandleLogout)
+		mux.HandleFunc("/api/auth/me", s.authHandlers.AuthMiddleware(s.authHandlers.HandleMe))
 
-	// likes & comments
-	mux.HandleFunc("POST /api/posts/{id}/like", s.withAuth(s.handleToggleLike))
-	mux.HandleFunc("POST /api/posts/{id}/comments", s.withAuth(s.handleCreateComment))
-
-	// activitypub stubs
-	mux.HandleFunc("GET /.well-known/webfinger", s.handleWebfinger)
-	mux.HandleFunc("GET /api/activitypub/actor", s.handleActor)
+		if s.adminHandlers != nil {
+			mux.HandleFunc("/api/admin/users", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetUsers))
+			mux.HandleFunc("/api/admin/stats", s.authHandlers.AuthAdminMiddleware(s.adminHandlers.HandleGetStats))
+		}
+	}
 
 	return withCORS(mux)
 }
@@ -71,8 +85,8 @@ func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.TrimSpace(r.Header.Get("Origin")) != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Vary", "Origin")
 		}
 		if r.Method == http.MethodOptions {
@@ -114,7 +128,9 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit, source, sortOrder)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	posts, next, err := s.loadPosts(ctx, cursorTS, cursorID, page, limit, source, sortOrder, query)
 	if err != nil {
 		log.Printf("loadPosts: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -148,7 +164,9 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit, source, sortOrder)
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	posts, next, err := s.loadPosts(ctx, nil, nil, nil, limit, source, sortOrder, query)
 	if err != nil {
 		log.Printf("loadPosts(front): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -223,7 +241,8 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, _, err := s.loadPosts(ctx, nil, nil, page, limit, source, sortOrder)
+	q := r.URL.Query().Get("q")
+	posts, _, err := s.loadPosts(ctx, nil, nil, page, limit, source, sortOrder, q)
 	if err != nil {
 		log.Printf("loadPosts(feed): %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -312,7 +331,7 @@ func compactText(s *string) string {
 
 func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", args)
+	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
 	rows, err := s.pool.Query(ctx, `
 		select source, count(*) as posts
 		from posts`+whereSQL+`
@@ -337,32 +356,40 @@ func (s *Server) loadSourceStats(ctx context.Context) ([]sourceStat, error) {
 
 func (s *Server) countVisiblePosts(ctx context.Context, out *int64) error {
 	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", args)
+	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
 	return s.pool.QueryRow(ctx, `select count(*) from posts`+whereSQL, args...).Scan(out)
 }
 
-func (s *Server) loadTGCommentsStartAt(ctx context.Context) (*time.Time, error) {
-	var ts *time.Time
-	if err := s.pool.QueryRow(ctx, `
-		select min(published_at)
-		from posts
-		where source = 'tg' and coalesce(comments_count, 0) > 0
-	`).Scan(&ts); err != nil {
-		return nil, err
-	}
-	return ts, nil
-}
-
-func (s *Server) buildPostsVisibilityWhere(source string, args []any) (string, []any) {
-	conditions := []string{"visible = true"}
+func (s *Server) buildPostsVisibilityWhere(source, query string, args []any) (string, []any) {
+	conditions := make([]string, 0, 3)
 	if source != "" {
 		args = append(args, source)
 		conditions = append(conditions, fmt.Sprintf("source = $%d", len(args)))
 	}
+	if query != "" {
+		args = append(args, "%"+strings.ToLower(query)+"%")
+		conditions = append(conditions, fmt.Sprintf("LOWER(text) LIKE $%d", len(args)))
+	}
+	if len(s.tgVisiblePostIDs) > 0 && (source == "" || source == "tg") {
+		args = append(args, s.tgVisiblePostIDs)
+		switch source {
+		case "tg":
+			conditions = append(conditions, fmt.Sprintf("source_post_id = any($%d)", len(args)))
+		case "":
+			conditions = append(conditions, fmt.Sprintf("(source <> 'tg' or source_post_id = any($%d))", len(args)))
+		}
+	}
+	if len(conditions) == 0 {
+		return "", args
+	}
 	return " where " + strings.Join(conditions, " and "), args
 }
 
-func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder string) ([]postDTO, *cursor, error) {
+func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source, sortOrder, query string) ([]postDTO, *cursor, error) {
+	var (
+		rows pgx.Rows
+		err  error
+	)
 	order := "desc"
 	if sortOrder == "asc" {
 		order = "asc"
@@ -376,16 +403,46 @@ func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *i
 	whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, args)
 	args = nextArgs
 
-	if page == nil && beforeTS != nil && beforeID != nil {
-		args = append(args, *beforeTS, *beforeID)
-		cursorCond := fmt.Sprintf("(published_at, id) < ($%d, $%d)", len(args)-1, len(args))
-		if sortOrder == "asc" {
-			cursorCond = fmt.Sprintf("(published_at, id) > ($%d, $%d)", len(args)-1, len(args))
-		}
-		if whereSQL == "" {
-			whereSQL = " where " + cursorCond
+	if page != nil {
+		offset := (*page - 1) * limit
+		args := []any{}
+		q := `
+			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
+			from posts
+		`
+		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
+		args = nextArgs
+		q += whereSQL
+		args = append(args, limit, offset)
+		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
+		rows, err = s.pool.Query(ctx, q, args...)
+	} else {
+		base := `
+			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
+			from posts
+		`
+		if beforeTS == nil || beforeID == nil {
+			args := []any{}
+			q := base
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
+			args = nextArgs
+			q += whereSQL
+			args = append(args, limit)
+			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
+			rows, err = s.pool.Query(ctx, q, args...)
 		} else {
-			whereSQL += " and " + cursorCond
+			args := []any{}
+			q := base
+			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
+			args = nextArgs
+			if whereSQL == "" {
+				q += " where "
+			} else {
+				q += whereSQL + " and "
+			}
+			args = append(args, *beforeTS, *beforeID, limit)
+			q += fmt.Sprintf("(published_at, id) %s ($%d, $%d) order by published_at %s, id %s limit $%d", comparator, len(args)-2, len(args)-1, order, order, len(args))
+			rows, err = s.pool.Query(ctx, q, args...)
 		}
 	}
 
@@ -1341,7 +1398,18 @@ func normalizeMediaURL(raw string) string {
 	if s == "" || strings.HasPrefix(s, "missing://") {
 		return ""
 	}
+	
+	baseURL := os.Getenv("MEDIA_BASE_URL")
+	if baseURL == "" {
+		baseURL = "/media/"
+	} else if !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
+	}
+
 	if strings.HasPrefix(s, "/media/") {
+		if baseURL != "/media/" {
+			return baseURL + strings.TrimPrefix(s, "/media/")
+		}
 		return s
 	}
 	u, err := url.Parse(s)
@@ -1354,7 +1422,7 @@ func normalizeMediaURL(raw string) string {
 	if strings.HasPrefix(s, "/") {
 		return s
 	}
-	return "/media/" + strings.TrimPrefix(strings.TrimPrefix(s, "./"), "/")
+	return baseURL + strings.TrimPrefix(strings.TrimPrefix(s, "./"), "/")
 }
 
 func guessMediaTitle(rawURL string) string {

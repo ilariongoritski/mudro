@@ -6,12 +6,14 @@ interface FeedFiltersState {
   source: FeedSource
   sort: FeedSort
   limit: number
+  query: string
 }
 
 const initialState: FeedFiltersState = {
   source: 'all',
   sort: 'desc',
   limit: 12,
+  query: '',
 }
 
 const feedFiltersSlice = createSlice({
@@ -27,8 +29,11 @@ const feedFiltersSlice = createSlice({
     setLimit: (state, action: PayloadAction<number>) => {
       state.limit = action.payload
     },
+    setQuery: (state, action: PayloadAction<string>) => {
+      state.query = action.payload
+    },
   },
 })
 
-export const { setSource, setSort, setLimit } = feedFiltersSlice.actions
+export const { setSource, setSort, setLimit, setQuery } = feedFiltersSlice.actions
 export const feedFiltersReducer = feedFiltersSlice.reducer

@@ -2,9 +2,9 @@ body {
   color: var(--mudro-text);
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
   background:
-    radial-gradient(1100px 500px at 8% 5%, rgba(255, 255, 255, 0.58), transparent 70%),
-    radial-gradient(900px 450px at 92% 0%, rgba(30, 10, 40, 0.34), transparent 70%),
-    linear-gradient(140deg, var(--mudro-bg-base) 0%, #ff8ac6 35%, var(--mudro-bg-soft) 100%);
+    radial-gradient(1100px 500px at 8% 5%, rgba(255, 20, 147, 0.15), transparent 70%),
+    radial-gradient(900px 450px at 92% 0%, rgba(30, 10, 40, 0.5), transparent 70%),
+    linear-gradient(140deg, var(--mudro-bg-base) 0%, #200d2b 35%, var(--mudro-bg-soft) 100%);
   background-attachment: fixed;
 }
 
@@ -28,18 +28,20 @@ a {
 .mudro-lead {
   margin: 0.65rem 0 0;
   max-width: 64ch;
-  color: rgba(19, 10, 23, 0.78);
+  color: var(--mudro-muted);
 }
 
 .mudro-hero {
   position: relative;
   border-radius: calc(var(--mudro-radius-lg) + 4px);
   padding: clamp(1.2rem, 2vw, 1.8rem);
-  background: linear-gradient(130deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(130deg, rgba(255, 20, 147, 0.15), rgba(15, 10, 20, 0.6));
+  border: var(--mudro-glass-border);
   box-shadow: var(--mudro-shadow);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: hidden;
+  color: var(--mudro-text);
 }
 
 .mudro-hero::after {
@@ -50,7 +52,7 @@ a {
   right: -60px;
   top: -75px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 105, 180, 0.42), transparent 72%);
+  background: radial-gradient(circle, rgba(255, 20, 147, 0.4), transparent 72%);
 }
 
 .mudro-fade-up {

@@ -1,7 +1,4 @@
-import { useState } from 'react'
-import { Heart } from 'lucide-react'
-import { useToggleLikeMutation } from '@/entities/post/model/postsApi'
-import type { Post, PostComment } from '@/entities/post/model/types'
+import type { Post, PostComment } from "@/entities/post/model/types";
 import {
   buildOriginalPostUrl,
   humanizeCommentAuthor,
@@ -69,45 +66,97 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
   const originalPostUrl = buildOriginalPostUrl(post.source, post.source_post_id)
 
   return (
-    <Card className={cn('transition-shadow', onOpen && 'hover:shadow-md cursor-pointer')}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant={post.source === 'vk' ? 'vk' : 'tg'}>{post.source.toUpperCase()}</Badge>
-            <span className="text-xs text-slate-400">#{post.source_post_id}</span>
-          </div>
-          <time className="text-xs text-slate-400">{formatDateTime(post.published_at)}</time>
+    <article
+      className={`post-card mudro-fade-up ${onOpen ? "post-card_interactive" : ""}`}
+      onClick={() => onOpen?.(post)}
+    >
+      <header className={`post-card__head post-card__source_${post.source}`}>
+        <div className="post-card__source-avatar">
+          {post.source[0].toUpperCase()}
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <p className="text-sm text-slate-700 leading-relaxed line-clamp-4">{bodyText}</p>
-
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5">
-          <button
-            onClick={handleLike}
-            className={cn('text-center group transition-colors', liked ? 'text-red-500' : 'text-slate-600 hover:text-red-500')}
-          >
-            <Heart className={cn('w-4 h-4 mx-auto mb-0.5', liked && 'fill-current')} />
-            <strong className="text-sm font-semibold">{metricLabel(localLikes)}</strong>
-          </button>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-400 uppercase">Просмотры</span>
-            <strong className={cn('text-sm font-semibold', viewsMetric.missing && 'text-slate-300')}>{viewsMetric.value}</strong>
+        <div className="post-card__head-info">
+          <div className="post-card__source-name">
+            {post.source === 'tg' ? 'Telegram' : 'ВКонтакте'}
           </div>
-          <div className="text-center">
-            <span className="block text-[10px] text-slate-400 uppercase">Комменты</span>
-            <strong className="text-sm font-semibold">{metricLabel(totalComments)}</strong>
-          </div>
+          <div className="post-card__meta">{formatDateTime(post.published_at)}</div>
         </div>
+      </header>
 
-        {reactions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {reactions.map(([reaction, count]) => (
-              <span key={reaction} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs" title={reaction}>
-                {reactionLabel(reaction)} {count}
-              </span>
-            ))}
+      <div className="post-card__body">
+        <p className="post-card__text">{bodyText}</p>
+      </div>
+
+      <div className="post-card__actions">
+        <div className="post-card__action">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          {metricLabel(post.likes_count)}
+        </div>
+        <div className="post-card__action">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          {metricLabel(totalComments)}
+        </div>
+        <div className="post-card__action">
+          <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          {viewsMetric.value}
+        </div>
+      </div>
+
+      {reactions.length > 0 && (
+        <div className="post-card__reactions">
+          {reactions.map(([reaction, count]) => (
+            <span key={reaction} className="post-reaction" title={reaction}>
+              {reactionLabel(reaction)} {count}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {mediaItems.length > 0 && (
+        <div className="post-card__media-grid">
+          {visibleMedia.map((item, index) => {
+            const kind = resolveMediaKind(item);
+            const title = resolveMediaTitle(item);
+            const mediaUrl = resolveMediaUrl(item.url);
+            const displayUrl = resolveMediaDisplayUrl(item);
+            const showOverlay = hiddenMediaCount > 0 && index === visibleMedia.length - 1;
+
+            return (
+              <div
+                key={`${item.url ?? item.title ?? item.kind}-${index}`}
+                className="post-media-card"
+              >
+                {(kind === "image" || kind === "video") && displayUrl ? (
+                  <img src={displayUrl} loading="lazy" alt={title} />
+                ) : null}
+                {showOverlay ? (
+                  <span className="post-media-card__more">+{hiddenMediaCount}</span>
+                ) : null}
+
+                <div className="post-media-card__info">
+                  <strong>{mediaKindLabel(kind)}</strong>
+                  <span>{title}</span>
+                  {mediaUrl ? (
+                    <a
+                      href={mediaUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Открыть оригинал
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {previewComments.length > 0 && (
+        <section className="post-card__thread-preview" aria-label="Превью комментариев">
+          <div className="post-card__thread-head">
+            <span>Обсуждение</span>
+            <strong>{metricLabel(totalComments)} в треде</strong>
           </div>
         )}
 
@@ -233,6 +282,9 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
           )}
         </CardFooter>
       )}
-    </Card>
-  )
-}
+
+    </article>
+  );
+};
+
+

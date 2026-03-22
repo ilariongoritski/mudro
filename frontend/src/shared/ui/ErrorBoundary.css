@@ -1,0 +1,78 @@
+.mudro-error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.mudro-error-boundary__inner {
+  max-width: 520px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--mudro-radius-lg);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: 0 16px 40px rgba(31, 38, 135, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.mudro-error-boundary__eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #e5395e;
+  margin-bottom: 0.6rem;
+}
+
+.mudro-error-boundary__inner h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.mudro-error-boundary__inner p {
+  color: var(--mudro-muted);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.mudro-error-boundary__detail {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+  color: #e5395e;
+  overflow-x: auto;
+  text-align: left;
+  margin-bottom: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mudro-error-boundary__actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mudro-error-boundary__actions button {
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--mudro-radius-md);
+  border: 1px solid var(--mudro-line);
+  background: var(--mudro-card-strong);
+  color: var(--mudro-text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 140ms, box-shadow 140ms;
+}
+
+.mudro-error-boundary__actions button:hover {
+  background: var(--mudro-bg-soft);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}

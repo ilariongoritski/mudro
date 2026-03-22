@@ -1,16 +1,20 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "http://91.218.113.247/api/$1"
+      "src": "/api/(.*)",
+      "dest": "http://91.218.113.247/api/$1"
     },
     {
-      "source": "/media/(.*)",
-      "destination": "http://91.218.113.247/media/$1"
+      "src": "/media/(.*)",
+      "dest": "http://91.218.113.247/media/$1"
     },
     {
-      "source": "/healthz",
-      "destination": "http://91.218.113.247/healthz"
+      "src": "/healthz",
+      "dest": "http://91.218.113.247/healthz"
+    },
+    {
+      "src": "/[^.]+",
+      "dest": "/index.html"
     }
   ]
 }
