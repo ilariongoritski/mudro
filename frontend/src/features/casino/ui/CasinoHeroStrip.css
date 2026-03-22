@@ -1,0 +1,121 @@
+.casino-hero-strip {
+  position: relative;
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+  gap: 1rem;
+  padding: clamp(1.2rem, 2.2vw, 1.8rem);
+  border-radius: calc(var(--mudro-radius-lg) + 8px);
+  overflow: hidden;
+  color: #fff7fb;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 105, 180, 0.28), transparent 36%),
+    radial-gradient(circle at 88% 16%, rgba(255, 182, 193, 0.2), transparent 30%),
+    linear-gradient(135deg, rgba(18, 10, 24, 0.94), rgba(38, 13, 48, 0.9), rgba(255, 20, 147, 0.3));
+  border: 1px solid rgba(255, 182, 214, 0.16);
+  box-shadow:
+    0 28px 54px rgba(9, 5, 14, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.casino-hero-strip::after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  bottom: -70px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 20, 147, 0.3), transparent 70%);
+  pointer-events: none;
+}
+
+.casino-hero-strip__copy,
+.casino-hero-strip__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.casino-hero-strip__copy {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.casino-hero-strip__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0.35rem 0.68rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.casino-hero-strip__copy h2 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(1.65rem, 3vw, 3rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.casino-hero-strip__copy p {
+  margin: 0;
+  max-width: 56ch;
+  color: rgba(255, 244, 249, 0.8);
+  line-height: 1.58;
+}
+
+.casino-hero-strip__actions {
+  display: grid;
+  align-content: space-between;
+  gap: 1rem;
+}
+
+.casino-hero-strip__primary {
+  width: fit-content;
+  min-height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.05rem;
+  border-radius: 999px;
+  color: #1b0714;
+  text-decoration: none;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffb4d7, #ff4fb0);
+  box-shadow: 0 16px 30px rgba(255, 79, 176, 0.28);
+}
+
+.casino-hero-strip__signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.casino-hero-strip__signals span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  color: rgba(255, 245, 249, 0.88);
+}
+
+@media (max-width: 860px) {
+  .casino-hero-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .casino-hero-strip__copy h2 {
+    max-width: none;
+  }
+}

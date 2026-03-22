@@ -94,3 +94,29 @@
 - `count(posts)` выполняется.
 
 Если `count = 0` — это допустимо (данные могут быть еще не импортированы).
+
+## 9) Orchestration: Claude Opus + Codex
+Режим для сложных задач:
+- `Claude Opus` готовит plan/review/draft (не пишет напрямую в tracked файлы репозитория).
+- `Codex` применяет изменения локально, запускает проверки и ведет финальный diff.
+
+Языковая политика:
+- internal prompts/handoffs между агентами — English;
+- пользовательские объяснения и отчеты — русский.
+
+Логи и память:
+- `.codex/logs/<run>/index.md`
+- `.codex/state.md`
+- `.codex/todo.md`
+- `.codex/done.md`
+- при необходимости: `.codex/time_runtime.json`, `.codex/tg_control.jsonl`
+
+Новый отдельный лог-формат не вводится.
+
+## 10) Bootstrap fresh run log
+- Use `make orchestration-log-init RUN_ID=<run> TASK="<short task>"` to seed `.codex/logs/<run>/index.md`.
+- The generated log keeps the English sections required by the orchestration contract.
+
+## 12) UTF-8 and local-only files
+- Use explicit UTF-8 for text I/O in PowerShell and shell commands. If output looks garbled, rerun with explicit encoding or use WSL/bash.
+- Keep auxiliary local files, downloads, caches, and tool installs under `D:\mudr\_mudro-local` instead of the tracked repo tree.

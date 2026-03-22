@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Install OpenClaw for a non-root Linux user.
-# Run as target user (for example: openclaw).
+# Run as the target user (for example: openclaw).
 
 if [[ "$(id -u)" -eq 0 ]]; then
   echo "Do not run as root"
@@ -25,9 +25,12 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 
 echo
 echo "OpenClaw installed."
-echo "Run interactive onboarding now:"
+echo "Optional onboarding step:"
+echo "  openclaw doctor --generate-gateway-token --non-interactive --yes"
 echo "  openclaw onboard --install-daemon"
 echo
-echo "After onboarding:"
-echo "  openclaw status"
-echo "  systemctl --user status openclaw-gateway"
+echo "To install and start the gateway as a user service:"
+echo "  bash scripts/openclaw/openclaw_gateway_user_service.sh"
+echo
+echo "After setup:"
+echo "  bash scripts/openclaw/openclaw_post_install_checks.sh"

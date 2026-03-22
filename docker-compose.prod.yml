@@ -16,6 +16,47 @@ services:
       timeout: 5s
       retries: 20
 
+  casino-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mudro_casino
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:${CASINO_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - casino_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mudro_casino"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  casino-api:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "go run ./services/casino/cmd/casino"
+    environment:
+      CASINO_ADDR: ":8081"
+      CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
+      CASINO_INITIAL_COINS: "${CASINO_INITIAL_COINS:-2500}"
+      CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
+      CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
+    depends_on:
+      casino-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
+    volumes:
+      - ./:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -68,6 +109,7 @@ services:
     environment:
       API_ADDR: ":8080"
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      JWT_SECRET: "${JWT_SECRET:-}"
       MUDRO_ROOT: /app
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
@@ -75,10 +117,15 @@ services:
       REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
       REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       REDIS_DB: "${REDIS_DB:-0}"
+      CASINO_SERVICE_URL: "http://casino-api:8081"
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      casino-db:
+        condition: service_healthy
+      casino-api:
         condition: service_healthy
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8080"
@@ -162,6 +209,7 @@ services:
 
 volumes:
   pgdata_prod:
+  casino_pgdata_prod:
   redis_prod:
   kafka_prod:
   minio_prod:

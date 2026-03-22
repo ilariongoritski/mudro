@@ -1,4 +1,6 @@
 import './FeedPage.css'
+import { CasinoHeroStrip } from '@/features/casino/ui/CasinoHeroStrip'
+import { CasinoNavButton } from '@/features/casino/ui/CasinoNavButton'
 import { FeedWidget } from '@/widgets/feed/ui/FeedWidget'
 import { Link } from 'react-router-dom'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
@@ -29,6 +31,10 @@ export const FeedPage = () => {
               {section.label}
             </a>
           ))}
+          <CasinoNavButton />
+          <Link to="/orchestration" className="feed-page-header__link">
+            Оркестрация
+          </Link>
           {!isAuthenticated && (
             <div className="feed-page-header__auth">
               <Link to="/login" className="feed-page-header__link feed-page-header__link_auth">Вход</Link>
@@ -46,6 +52,8 @@ export const FeedPage = () => {
       <section className="feed-page-live mudro-fade-up" id="feed" aria-label="Живая лента Mudro">
         <FeedWidget />
       </section>
+
+      <CasinoHeroStrip />
 
       <section className="feed-page-next mudro-fade-up" id="accounts" aria-labelledby="next-title">
         <div className="feed-page-next__panel">

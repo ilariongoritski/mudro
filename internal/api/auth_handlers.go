@@ -12,6 +12,7 @@ import (
 )
 
 type contextKey string
+
 const userContextKey = contextKey("user")
 
 // UserFromContext extracts the user from context.
@@ -34,7 +35,15 @@ func NewAuthHandlers(svc *auth.Service) *AuthHandlers {
 
 type authRequest struct {
 	Login    string `json:"login"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+func (r authRequest) principal() string {
+	if login := strings.TrimSpace(r.Login); login != "" {
+		return login
+	}
+	return strings.TrimSpace(r.Email)
 }
 
 type meResponse struct {
@@ -61,7 +70,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	username := strings.TrimSpace(req.Login)
+	username := req.principal()
 	if username == "" || len(req.Password) < 6 {
 		http.Error(w, "invalid username or password too short", http.StatusBadRequest)
 		return
@@ -104,7 +113,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, token, err := h.authSvc.Login(r.Context(), req.Login, req.Password)
+	user, token, err := h.authSvc.Login(r.Context(), req.principal(), req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)

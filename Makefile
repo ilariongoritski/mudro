@@ -9,6 +9,7 @@ MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/006_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_link_constraints.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/008_comment_model.sql
 USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
+CASINO_MIGRATION ?= services/casino/migrations/001_init.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 CORE_COMPOSE_FILE ?= ops/compose/docker-compose.core.yml
@@ -18,6 +19,7 @@ ENV_API ?= env/api.env
 ENV_AGENT ?= env/agent.env
 ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
+ENV_CASINO ?= env/casino.env
 RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(CASINO_MIGRATION)
 
 ifeq ($(shell [ -x "$(GO)" ] && echo 1 || echo 0),0)
@@ -138,6 +140,9 @@ else
 	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
 endif
 
+migrate-casino:
+	bash ./scripts/migrate-casino.sh
+
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
 
@@ -180,6 +185,13 @@ count-posts:
 count-posts-core:
 	$(PSQL_CORE_CMD) -X -c "select count(*) from posts;"
 
+casino-dbcheck:
+	@if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
+		docker compose exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+	else \
+		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+	fi
+
 health-runtime:
 	$(MAKE) core-up
 	$(MAKE) core-ps
@@ -220,6 +232,15 @@ demo-check:
 worker-loop:
 	./ops/scripts/worker_autonomy_loop.sh
 
+orchestration-log-init:
+	@bash ./scripts/orchestration_run_init.sh "$(RUN_ID)" "$(TASK)"
+
+openclaw-gateway-service:
+	bash ./scripts/openclaw/openclaw_gateway_user_service.sh
+
+openclaw-post-install-checks:
+	bash ./scripts/openclaw/openclaw_post_install_checks.sh
+
 bot-run:
 	@set -a; \
 	if [ -f ./.env ]; then . ./.env; fi; \
@@ -227,6 +248,14 @@ bot-run:
 	if [ -f "$(ENV_BOT)" ]; then . "$(ENV_BOT)"; fi; \
 	set +a; \
 	$(GO) run ./services/bot/cmd
+
+casino-run:
+	@set -a; \
+	if [ -f ./.env ]; then . ./.env; fi; \
+	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
+	if [ -f "$(ENV_CASINO)" ]; then . "$(ENV_CASINO)"; fi; \
+	set +a; \
+	$(GO) run ./services/casino/cmd/casino
 
 report-run:
 	@echo "DEPRECATED: report-run is Old. Use legacy-report-run if you really need reporter."

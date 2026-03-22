@@ -18,7 +18,9 @@ import (
 	"github.com/goritskimihail/mudro/internal/api"
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/goritskimihail/mudro/internal/ratelimit"
+	"github.com/goritskimihail/mudro/internal/tgexport"
 )
 
 func Run() {
@@ -40,16 +42,27 @@ func Run() {
 	defer pool.Close()
 
 	// Initialize auth service.
-	jwtSecret := os.Getenv("JWT_SECRET")
+	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
-		jwtSecret = "super-secret-default-key-mudro"
-		log.Println("auth: using default JWT_SECRET. Please set it in production!")
+		log.Fatal("JWT_SECRET is required")
 	}
 	authSvc := auth.NewService(pool, jwtSecret)
+
+	// Load TG visibility filter
+	var tgVisiblePostIDs []string
+	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
+		tgVisiblePostIDs = ids
+		log.Printf("main: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
+	} else if err != nil {
+		log.Printf("main: telegram visibility filter disabled: %v", err)
+	}
+
+	postsSvc := posts.NewService(pool, tgVisiblePostIDs)
+
 	authHandlers := api.NewAuthHandlers(authSvc)
 	adminHandlers := api.NewAdminHandlers(authSvc)
 
-	baseHandler := api.NewServer(pool, authHandlers, adminHandlers).Router()
+	baseHandler := api.NewServer(pool, postsSvc, authHandlers, adminHandlers).Router()
 	handler, closeLimiter := withAPIRateLimit(baseHandler, config.APIRateLimitRPS(), config.APIRateLimitBurst())
 	defer closeLimiter()
 

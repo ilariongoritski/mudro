@@ -1,30 +1,31 @@
-# Интеграция mudro с Клавботом (OpenClaw)
+# OpenClaw integration for MUDRO
 
-Цель: запускать безопасные циклы `patch -> selftest -> commit -> PR` без прямого доступа к SSH из агента.
+Goal: use Claude Opus as the planning and review layer, while Codex applies changes locally and OpenClaw runs the VPS worker plane.
 
-## Минимальный контракт команд
-Клавботу нужны только ограниченные команды:
+## Runtime layout
 
-1. `repo.snapshot`
-   - читает: `README.md`, `Makefile`, `go.mod`, `cmd/*`, `internal/*`, `migrations/*`, `.github/workflows/*`.
-2. `repo.selftest`
-   - выполняет `make selftest`.
-3. `repo.diff`
-   - возвращает `git diff --stat` и `git diff`.
-4. `repo.commit`
-   - делает commit на текущей ветке.
-5. `repo.pr`
-   - создает PR (title/body).
+- This chat: control plane
+- Claude Opus: planner / reviewer / draft generator
+- Local Codex: applies diffs, runs tests, owns repo truth
+- Local Skaro: dashboard and usage accounting
+- VPS OpenClaw: remote worker plane
 
-## Рекомендуемый ежедневный цикл
-1. `repo.snapshot`
-2. применить патч
-3. `repo.selftest`
-4. `repo.diff`
-5. `repo.commit`
-6. `repo.pr`
+## Local proxy and usage
 
-## Безопасность
-- Никаких секретов в репозитории.
-- Все токены только во внешнем хранилище секретов.
-- Деструктивные операции (drop/truncate/down -v/rm -rf) запрещены без подтверждения владельца.
+- Local Claude calls go through `D:\mudr\_mudro-local\skaro\claude.env`
+- Proxy usage is tracked in `D:\mudr\_mudro-local\skaro\usage_log.jsonl`
+- Token summary is tracked in `D:\mudr\_mudro-local\skaro\token_usage.yaml`
+
+## VPS gateway
+
+- User install script: `scripts/openclaw/openclaw_install_user.sh`
+- Gateway service helper: `scripts/openclaw/openclaw_gateway_user_service.sh`
+- Post-install checks: `scripts/openclaw/openclaw_post_install_checks.sh`
+- Root bootstrap: `scripts/openclaw/server_bootstrap_root.sh`
+
+## Notes
+
+- Keep secrets out of the repo.
+- Keep auxiliary files under `D:\mudr\_mudro-local`.
+- Use explicit UTF-8 for command output when text looks garbled.
+- If `systemd --user` is unavailable on a host, the gateway helper falls back to a `nohup` launch.

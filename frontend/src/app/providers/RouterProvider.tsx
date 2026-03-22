@@ -1,10 +1,14 @@
 import { createBrowserRouter, RouterProvider as RRProvider, Navigate } from 'react-router-dom'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 
+import { AdminPage } from '@/pages/admin-page/ui/AdminPage'
+import { CasinoPage } from '@/pages/casino-page/ui/CasinoPage'
 import { FeedPage } from '@/pages/feed-page/ui/FeedPage'
 import { LoginPage } from '@/pages/login-page/ui/LoginPage'
+import { OrchestrationPage } from '@/pages/orchestration-page/ui/OrchestrationPage'
+import { NotFoundPage } from '@/pages/not-found-page/ui/NotFoundPage'
 import { RegisterPage } from '@/pages/register-page/ui/RegisterPage'
-
+ 
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
@@ -21,9 +25,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (user?.role !== 'admin') return <Navigate to="/" replace />
   return <>{children}</>
 }
-
-import { AdminPage } from '@/pages/admin-page/ui/AdminPage'
-import { NotFoundPage } from '@/pages/not-found-page/ui/NotFoundPage'
 
 export const AppRouterProvider = () => {
   const router = createBrowserRouter([
@@ -48,6 +49,14 @@ export const AppRouterProvider = () => {
       element: <FeedPage />,
     },
     {
+      path: '/casino',
+      element: <CasinoPage />,
+    },
+    {
+      path: '/orchestration',
+      element: <OrchestrationPage />,
+    },
+    {
       path: '/admin',
       element: (
         <AdminRoute>
@@ -57,8 +66,8 @@ export const AppRouterProvider = () => {
     },
     {
       path: '*',
-      element: <NotFoundPage />
-    }
+      element: <NotFoundPage />,
+    },
   ])
 
   return <RRProvider router={router} />
