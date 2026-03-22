@@ -1,5 +1,7 @@
-import { Home, Film, MessageCircle, User } from 'lucide-react'
+import { Home, Film, MessageCircle, User, LogIn, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router'
+import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
+import { logout } from '@/features/auth/model/authSlice'
 import { cn } from '@/shared/lib/utils'
 
 const navItems = [
@@ -10,6 +12,10 @@ const navItems = [
 ]
 
 export const Sidebar = () => {
+  const dispatch = useAppDispatch()
+  const token = useAppSelector((state) => state.auth.token)
+  const user = useAppSelector((state) => state.auth.user)
+
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -43,8 +49,37 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="px-5 py-4 border-t border-slate-100">
-        <span className="inline-flex items-center gap-1.5 text-xs text-mudro-muted">
+      <div className="px-3 py-4 border-t border-slate-100 space-y-2">
+        {token ? (
+          <div className="flex items-center justify-between px-2">
+            <span className="text-sm font-medium text-slate-700 truncate">
+              {user?.username ?? 'User'}
+            </span>
+            <button
+              onClick={() => dispatch(logout())}
+              className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+              title="Выйти"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : (
+          <NavLink
+            to="/auth"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-mudro-pink/10 text-mudro-pink'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+              )
+            }
+          >
+            <LogIn size={18} />
+            Войти
+          </NavLink>
+        )}
+        <span className="inline-flex items-center gap-1.5 text-xs text-mudro-muted px-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           MVP · server live
         </span>

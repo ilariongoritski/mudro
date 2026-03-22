@@ -1,3 +1,6 @@
+-- MUDRO 006_media_assets.sql
+-- Нормализованное хранилище медиа-ассетов и link-таблицы для постов и комментариев.
+
 create table if not exists media_assets (
   id bigserial primary key,
   asset_key text not null unique,

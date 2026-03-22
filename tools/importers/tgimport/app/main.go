@@ -237,19 +237,18 @@ func upsertToDB(dsn string, items []FeedItem) error {
 		if err := tx.QueryRow(ctx, `
 insert into posts (
   source, source_post_id,
-  published_at, text, media,
+  published_at, text,
   likes_count, views_count, comments_count,
   updated_at
 ) values (
   $1, $2,
-  $3, $4, $5,
-  $6, $7, $8,
+  $3, $4,
+  $5, $6, $7,
   now()
 )
 on conflict (source, source_post_id) do update set
   published_at = excluded.published_at,
   text = excluded.text,
-  media = excluded.media,
   likes_count = excluded.likes_count,
   views_count = excluded.views_count,
   comments_count = excluded.comments_count,
@@ -260,7 +259,6 @@ returning id
 			item.SourcePostID,
 			publishedAt,
 			item.Text,
-			item.Media,
 			ptrIntToValue(item.Stats.Likes),
 			ptrIntToValue(item.Stats.Views),
 			ptrIntToValue(item.Stats.Comments),

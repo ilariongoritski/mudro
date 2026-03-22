@@ -455,22 +455,9 @@ func upsertComment(ctx context.Context, pool *pgxpool.Pool, postID int64, msg ht
 	}
 	defer tx.Rollback(opCtx)
 
-	var reactions any
-	if len(msg.Reactions) > 0 {
-		b, err := json.Marshal(msg.Reactions)
-		if err != nil {
-			return err
-		}
-		reactions = b
-	}
-
 	var text any
 	if strings.TrimSpace(msg.Text) != "" {
 		text = msg.Text
-	}
-	var media any
-	if len(msg.Media) > 0 {
-		media = msg.Media
 	}
 
 	var parentRowID any
@@ -491,9 +478,9 @@ where source = $1 and post_id = $2 and source_comment_id = $3
 	var commentID int64
 	err = tx.QueryRow(opCtx, `
 insert into post_comments (
-  post_id, source, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text, reactions, media, updated_at
+  post_id, source, source_comment_id, source_parent_comment_id, parent_comment_id, author_name, published_at, text, updated_at
 ) values (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now()
+  $1,$2,$3,$4,$5,$6,$7,$8, now()
 )
 on conflict (source, source_comment_id) do update set
   post_id = excluded.post_id,
@@ -502,11 +489,9 @@ on conflict (source, source_comment_id) do update set
   author_name = excluded.author_name,
   published_at = excluded.published_at,
   text = excluded.text,
-  reactions = excluded.reactions,
-  media = excluded.media,
   updated_at = now()
 returning id
-`, postID, "tg", strconv.FormatInt(msg.ID, 10), parentCommentID, parentRowID, nullIfEmpty(msg.FromName), msg.PublishedAt, text, reactions, media).Scan(&commentID)
+`, postID, "tg", strconv.FormatInt(msg.ID, 10), parentCommentID, parentRowID, nullIfEmpty(msg.FromName), msg.PublishedAt, text).Scan(&commentID)
 	if err != nil {
 		return err
 	}
@@ -542,13 +527,13 @@ func upsertRootPost(ctx context.Context, pool *pgxpool.Pool, msg htmlMessage) (c
 
 	err = pool.QueryRow(opCtx, `
 insert into posts (
-  source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, updated_at
+  source, source_post_id, published_at, text, likes_count, views_count, comments_count, updated_at
 ) values (
-  'tg',$1,$2,$3,$4,$5,$6,$7, now()
+  'tg',$1,$2,$3,$4,$5,$6, now()
 )
 on conflict (source, source_post_id) do nothing
 returning id
-`, strconv.FormatInt(msg.ID, 10), msg.PublishedAt, text, nil, likes, nil, nil).Scan(&postID)
+`, strconv.FormatInt(msg.ID, 10), msg.PublishedAt, text, likes, nil, nil).Scan(&postID)
 	if err == nil {
 		return true, postID, publishedAt, nil
 	}

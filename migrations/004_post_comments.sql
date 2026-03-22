@@ -1,4 +1,5 @@
--- MUDRO 004_post_comments.sql
+-- MUDRO 003_post_comments.sql
+-- Комментарии к постам с привязкой к источнику (VK/TG).
 
 create table if not exists post_comments (
   id bigserial primary key,

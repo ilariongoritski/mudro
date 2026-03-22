@@ -26,6 +26,7 @@ func (s *Server) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// try insert; if already liked, delete instead
 	var liked bool
 	tag, err := s.pool.Exec(r.Context(),
 		`insert into post_user_likes (post_id, user_id) values ($1, $2) on conflict do nothing`,
@@ -37,6 +38,7 @@ func (s *Server) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tag.RowsAffected() == 0 {
+		// already liked — remove
 		_, err = s.pool.Exec(r.Context(),
 			`delete from post_user_likes where post_id = $1 and user_id = $2`,
 			postID, userID,
