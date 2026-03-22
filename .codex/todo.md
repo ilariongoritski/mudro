@@ -8,25 +8,18 @@
 
 ## P0 (сделать в первую очередь)
 
-- [ ] 2026-03-18 | P0 | area:go | Починить Go-тесты после рефакторинга auth
-  - Контекст: сигнатуры `NewServer` и `authRequest` изменились, тесты в `auth_handlers_test.go`, `server_integration_test.go`, `server_test.go`, `pkg/vercelapi/handler.go` не обновлены
-  - Следующий шаг: обновить тестовые вызовы `NewServer(pool, authH, adminH)` и `authRequest{Username: ...}`, прогнать `go test ./...`
-
-- [ ] 2026-03-18 | P0 | area:data | Загрузить реальный контент (VK+TG) в продакшен-БД на VPS
-  - Контекст: сейчас в БД только 3 seed-поста; архивы `data/tg-export/result.json` и `~/vk-export` есть на VPS
-  - Следующий шаг: запустить `cmd/tgload` и `cmd/vkimport` на VPS
-
-- [ ] 2026-02-25 | P0 | area:security | Ротация засвеченных секретов (Telegram/OpenAI)
+- [ ] 2026-03-22 | P0 | area:security | Ротация засвеченных секретов (Telegram/OpenAI)
   - Контекст: токены и ключи публиковались, риск компрометации высокий
+  - Прогресс 2026-03-22: секреты доступа удалены из `.codex/server-info.md`, но внешняя ротация ключей ещё не выполнена
   - Следующий шаг: перевыпустить токены/ключи и обновить `.env` на VPS
 
 ## P1 (ближайшие 1-3 дня)
 
-- [ ] 2026-03-18 | P1 | area:ops | Синхронизировать VPS-код с Git (pull + rebuild)
-  - Контекст: после починки тестов нужно обновить код на сервере
+- [ ] 2026-03-22 | P1 | area:ops | Синхронизировать VPS-код с Git (pull + rebuild)
+  - Контекст: после создания roadmap нужно обновить код на сервере
   - Следующий шаг: `git pull` на VPS + перезапуск Docker-контейнеров
 
-- [ ] 2026-03-18 | P1 | area:deploy | Настроить HTTPS через Let's Encrypt на VPS
+- [ ] 2026-03-22 | P1 | area:deploy | Настроить HTTPS через Let's Encrypt на VPS
   - Контекст: сайт работает по HTTP; нужен домен или subdomain
   - Следующий шаг: Nginx + Certbot, перевести frontend rewrites на HTTPS origin
 
@@ -52,6 +45,14 @@
 
 ## P2 (на неделю)
 
+- [ ] 2026-03-22 | P2 | area:devex | Setup golangci-lint + air (hot reload)
+  - Контекст: roadmap рекомендует добавить в Спринте 1
+  - Следующий шаг: создать `.golangci.yml` и `.air.toml`, добавить в CI
+
+- [ ] 2026-03-22 | P2 | area:ci | GitHub Actions CI pipeline
+  - Контекст: roadmap рекомендует добавить в Неделю 1
+  - Следующий шаг: создать `.github/workflows/ci.yml` (go test + golangci-lint + docker build)
+
 - [ ] 2026-03-18 | P2 | area:frontend-ui | Доработать Admin Panel UI
   - Контекст: список пользователей, управление ролями, просмотр очереди агента
   - Следующий шаг: спроектировать экран и реализовать
@@ -72,17 +73,33 @@
   - Контекст: покрытие тестами недостаточное
   - Следующий шаг: уточнить план и выполнить
 
-## Codex 5.4 (Агентский контур)
+## Roadmap Sprint 1 (2026-03-22 → 2026-04-20)
 
-- [ ] 2026-03-18 | P0 | area:agent | Восстановление тестов для Planner/Worker
-  - Контекст: Смена сигнатуры `NewServer` в `main.go` требует обновления всех интеграционных тестов.
-  - Ожидаемый результат: `go test ./internal/api/...` проходит без ошибок.
-- [ ] 2026-03-18 | P1 | area:agent | Запуск цикла воркеров на VPS
-  - Контекст: В очереди 41 задача, но воркеры остановлены.
-  - Ожидаемый результат: `mudro-agent` сервис в статусе `running` и обрабатывает задачи.
-- [ ] 2026-03-19 | P1 | area:agent | Настройка Telegram-каналов в планировщике
-  - Контекст: Нужно добавить новые источники контента через `Config`.
-  - Ожидаемый результат: Новые посты появляются в ленте автоматически.
+### Неделя 1 (2026-03-22 → 2026-03-28)
+- [ ] 2026-03-22 | Sprint1 | area:security | Ротация Telegram/OpenAI токенов
+- [ ] 2026-03-22 | Sprint1 | area:ops | HTTPS на VPS (Let's Encrypt)
+- [ ] 2026-03-22 | Sprint1 | area:devex | golangci-lint setup
+- [ ] 2026-03-22 | Sprint1 | area:devex | air (hot reload) setup
+- [ ] 2026-03-22 | Sprint1 | area:ci | GitHub Actions CI
+
+### Неделя 2 (2026-03-29 → 2026-04-04)
+- [ ] 2026-03-29 | Sprint1 | area:api | WebSocket endpoint `/api/ws`
+- [ ] 2026-03-29 | Sprint1 | area:api | Kafka consumer → WS broadcast
+- [ ] 2026-03-29 | Sprint1 | area:frontend | Frontend WS subscription
+- [ ] 2026-03-29 | Sprint1 | area:frontend-ui | Mobile responsive (feed page)
+
+### Неделя 3 (2026-04-05 → 2026-04-11)
+- [ ] 2026-04-05 | Sprint1 | area:ops | MinIO bucket setup
+- [ ] 2026-04-05 | Sprint1 | area:data | Media backfill URLs
+- [ ] 2026-04-05 | Sprint1 | area:frontend-ui | Admin panel UI (users list)
+- [ ] 2026-04-05 | Sprint1 | area:frontend-ui | Sticker packs UI (emoji picker)
+
+### Неделя 4 (2026-04-12 → 2026-04-20)
+- [ ] 2026-04-12 | Sprint1 | area:test | Unit tests (80% coverage)
+- [ ] 2026-04-12 | Sprint1 | area:test | Integration tests (WebSocket)
+- [ ] 2026-04-12 | Sprint1 | area:test | E2E smoke test (Playwright)
+- [ ] 2026-04-20 | Sprint1 | area:process | Спринт 1 ретроспектива
 
 ## Ссылка на стратегию
 - Масштабные цели и дорожная карта: `.codex/todo_big.md`
+- 90-дневный архитектурный план: `docs/architecture-roadmap-90d.md`
