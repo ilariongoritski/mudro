@@ -27,14 +27,14 @@ type usageEnvelope struct {
 }
 
 type usageEntry struct {
-	Timestamp        string `json:"ts"`
-	Model            string `json:"model"`
-	Path             string `json:"path"`
-	StatusCode       int    `json:"status_code"`
-	InputTokens      int64  `json:"input_tokens"`
-	OutputTokens     int64  `json:"output_tokens"`
-	TotalTokens      int64  `json:"total_tokens"`
-	UpstreamBaseURL  string `json:"upstream_base_url"`
+	Timestamp       string `json:"ts"`
+	Model           string `json:"model"`
+	Path            string `json:"path"`
+	StatusCode      int    `json:"status_code"`
+	InputTokens     int64  `json:"input_tokens"`
+	OutputTokens    int64  `json:"output_tokens"`
+	TotalTokens     int64  `json:"total_tokens"`
+	UpstreamBaseURL string `json:"upstream_base_url"`
 }
 
 type usageSummary struct {
@@ -47,6 +47,7 @@ type usageSummary struct {
 
 type app struct {
 	upstream  string
+	apiKey    string
 	usageLog  string
 	tokenYAML string
 	client    *http.Client
@@ -62,6 +63,7 @@ func main() {
 
 	srv := &app{
 		upstream:  upstream,
+		apiKey:    envOr("ANTHROPIC_API_KEY", envOr("MUDRO_CLAUDE_API_KEY", "")),
 		usageLog:  usageLog,
 		tokenYAML: tokenYAML,
 		client: &http.Client{
@@ -135,6 +137,7 @@ func (a *app) handleProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	copyHeaders(upstreamReq.Header, r.Header)
+	a.injectAuth(upstreamReq.Header)
 	upstreamReq.Host = ""
 
 	resp, err := a.client.Do(upstreamReq)
@@ -253,6 +256,17 @@ func copyHeaders(dst, src http.Header) {
 		for _, value := range values {
 			dst.Add(key, value)
 		}
+	}
+}
+
+func (a *app) injectAuth(headers http.Header) {
+	if a.apiKey == "" {
+		return
+	}
+	headers.Set("x-api-key", a.apiKey)
+	headers.Set("authorization", "Bearer "+a.apiKey)
+	if headers.Get("anthropic-version") == "" {
+		headers.Set("anthropic-version", "2023-06-01")
 	}
 }
 
