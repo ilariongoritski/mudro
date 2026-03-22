@@ -15,6 +15,7 @@ tmp/
 var/log/
 # generated outputs
 out/
+output/
 /bot
 .bin/
 .codex/logs/
@@ -45,5 +46,12 @@ output/db-comment-media-ids.txt
 # local Claude helper runtime files
 scripts/mcp/local/mudro-claude-repo-server.mjs
 scripts/mcp/local/mudro-mcp-claude-repo.ps1
+
+.claude/worktrees/
+.claude/settings.local.json.bak
+.kilocodemodes
+frontend.zip
+testu1.txt
+.skaro/state.yaml
 
 .vercel
