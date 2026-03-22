@@ -53,5 +53,7 @@ scripts/mcp/local/mudro-mcp-claude-repo.ps1
 frontend.zip
 testu1.txt
 .skaro/state.yaml
+__pycache__/
+*.pyc
 
 .vercel
