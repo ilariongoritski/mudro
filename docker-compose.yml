@@ -45,7 +45,7 @@ services:
       casino-db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${CASINO_API_PORT:-8081}:8081"
+      - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
     volumes:
       - ./:/app
     healthcheck:
