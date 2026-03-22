@@ -8,6 +8,9 @@ tmp/
 # secrets
 .env
 *.env
+.skaro/secrets.yaml
+.skaro/token_usage.yaml
+.skaro/usage_log.jsonl
 # local data and outputs
 var/log/
 # generated outputs
