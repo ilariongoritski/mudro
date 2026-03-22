@@ -6,6 +6,7 @@ import { PostCard } from '@/entities/post/ui/post-card/PostCard'
 import { PostDetailDrawer } from '@/entities/post/ui/post-detail-drawer/PostDetailDrawer'
 import { FeedControls } from '@/features/feed-controls/ui/FeedControls'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
+
 import './FeedWidget.css'
 
 interface FeedWidgetInnerProps {
@@ -130,7 +131,7 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
           <div className="feed-widget__empty-copy">
             <span className="feed-widget__state-eyebrow">Пусто</span>
             <h3>Под текущими фильтрами постов пока нет</h3>
-            <p>Такое бывает для пустой базы, жесткого source-фильтра или еще не синхронизированного архива.</p>
+            <p>Такое бывает для пустой базы, жёсткого source-фильтра или ещё не синхронизированного архива.</p>
           </div>
           <div className="feed-widget__empty-actions">
             <button type="button" onClick={() => refetch()}>
@@ -145,22 +146,24 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
           {items.map((post) => (
             <PostCard key={`${post.source}-${post.id}-${post.source_post_id}`} post={post} onOpen={setSelectedPost} />
           ))}
-          {isLoadingMore ? Array.from({ length: 3 }).map((_, i) => (
-             <article key={`skeleton-append-${i}`} className="feed-widget__skeleton-card">
-              <div className="feed-widget__skeleton-chip" />
-              <div className="feed-widget__skeleton-lines">
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="feed-widget__skeleton-media" />
-              <div className="feed-widget__skeleton-stats">
-                <span />
-                <span />
-                <span />
-              </div>
-            </article>
-          )) : null}
+          {isLoadingMore
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <article key={`skeleton-append-${i}`} className="feed-widget__skeleton-card">
+                  <div className="feed-widget__skeleton-chip" />
+                  <div className="feed-widget__skeleton-lines">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="feed-widget__skeleton-media" />
+                  <div className="feed-widget__skeleton-stats">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </article>
+              ))
+            : null}
         </div>
       ) : null}
 
@@ -168,7 +171,7 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
 
       {hasMore && !isLoadingMore ? (
         <button type="button" className="feed-widget__load-more" onClick={handleLoadMore}>
-          Показать еще
+          Показать ещё
         </button>
       ) : null}
 

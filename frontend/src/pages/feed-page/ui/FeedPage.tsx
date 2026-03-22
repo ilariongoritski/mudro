@@ -1,9 +1,11 @@
-import './FeedPage.css'
+import { Link } from 'react-router-dom'
+
 import { CasinoHeroStrip } from '@/features/casino/ui/CasinoHeroStrip'
 import { CasinoNavButton } from '@/features/casino/ui/CasinoNavButton'
-import { FeedWidget } from '@/widgets/feed/ui/FeedWidget'
-import { Link } from 'react-router-dom'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
+import { FeedWidget } from '@/widgets/feed/ui/FeedWidget'
+
+import './FeedPage.css'
 
 const sectionLinks = [
   { href: '#feed', label: 'Лента' },
@@ -37,14 +39,20 @@ export const FeedPage = () => {
           </Link>
           {!isAuthenticated && (
             <div className="feed-page-header__auth">
-              <Link to="/login" className="feed-page-header__link feed-page-header__link_auth">Вход</Link>
-              <Link to="/register" className="feed-page-header__link feed-page-header__link_auth feed-page-header__link_register">Регистрация</Link>
+              <Link to="/login" className="feed-page-header__link feed-page-header__link_auth">
+                Вход
+              </Link>
+              <Link to="/register" className="feed-page-header__link feed-page-header__link_auth feed-page-header__link_register">
+                Регистрация
+              </Link>
             </div>
           )}
           {isAuthenticated && (
-             <div className="feed-page-header__auth">
-                <Link to="/admin" className="feed-page-header__link feed-page-header__link_auth">Админ</Link>
-             </div>
+            <div className="feed-page-header__auth">
+              <Link to="/admin" className="feed-page-header__link feed-page-header__link_auth">
+                Админ
+              </Link>
+            </div>
           )}
         </nav>
       </header>
@@ -81,7 +89,7 @@ export const FeedPage = () => {
           <article className="feed-page-next__card">
             <span>Комментарии</span>
             <strong>Треды, реплаи и media внутри обсуждений</strong>
-            <p>Основа уже есть: комментарии, реакции и вложения. Дальше остается только расширять удобство работы с ними.</p>
+            <p>Основа уже есть: комментарии, реакции и вложения. Дальше остаётся только расширять удобство работы с ними.</p>
           </article>
         </div>
       </section>

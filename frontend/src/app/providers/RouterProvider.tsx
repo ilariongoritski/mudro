@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { createBrowserRouter, RouterProvider as RRProvider, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider as RRProvider } from 'react-router-dom'
 
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'

@@ -1,7 +1,8 @@
+import { setLimit, setQuery, setSort, setSource } from '../model/feedFiltersSlice'
 import type { FeedSort, FeedSource } from '@/entities/post/model/types'
-import { setLimit, setSort, setSource, setQuery } from '../model/feedFiltersSlice'
 import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
+
 import './FeedControls.css'
 
 const sourceOptions: Array<{ value: FeedSource; label: string; badge: string }> = [
@@ -47,10 +48,8 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
           <div className="feed-toolbar__user-status">
             {user ? (
               <div className="feed-user-badge">
-                <span className="feed-user-badge__email">{user.email}</span>
-                {user.isPremium && (
-                  <span className="feed-user-badge__premium">PREMIUM</span>
-                )}
+                <span className="feed-user-badge__email">{user.email ?? user.username}</span>
+                {user.isPremium && <span className="feed-user-badge__premium">PREMIUM</span>}
                 <span className="feed-user-badge__role">{user.role?.toUpperCase()}</span>
               </div>
             ) : (
@@ -93,6 +92,7 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
               dispatch(setSource('all'))
               dispatch(setSort('desc'))
               dispatch(setLimit(12))
+              dispatch(setQuery(''))
             }}
           >
             Сбросить фильтры

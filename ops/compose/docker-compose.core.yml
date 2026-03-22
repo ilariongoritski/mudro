@@ -61,7 +61,7 @@ services:
       retries: 20
 
   api:
-    image: golang:1.23
+    image: golang:1.24
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/feed-api/cmd"
@@ -91,7 +91,7 @@ services:
       retries: 12
 
   agent:
-    image: golang:1.23
+    image: golang:1.24
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/agent/cmd --mode worker --interval 15s"

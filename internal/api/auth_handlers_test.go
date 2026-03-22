@@ -22,11 +22,11 @@ func (s *MockService) Login(ctx context.Context, email, password string) (*auth.
 	return nil, "", auth.ErrInvalidCredentials
 }
 
-func (s *MockService) Register(ctx context.Context, email, password string) (*auth.User, error) {
+func (s *MockService) Register(ctx context.Context, username, email, password string) (*auth.User, error) {
 	if email == "exists@example.com" {
 		return nil, auth.ErrUserExists
 	}
-	return &auth.User{ID: 2, Email: &email, Role: "user"}, nil
+	return &auth.User{ID: 2, Username: username, Email: &email, Role: "user"}, nil
 }
 
 func (s *MockService) ValidateToken(token string) (map[string]interface{}, error) {
@@ -68,6 +68,19 @@ func TestHandleLogin_InvalidJSON(t *testing.T) {
 
 func TestHandleRegister_MissingLogin(t *testing.T) {
 	body, _ := json.Marshal(authRequest{Login: "", Password: "short"})
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	handlers := NewAuthHandlers(nil)
+	handlers.HandleRegister(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestHandleRegister_MissingEmail(t *testing.T) {
+	body, _ := json.Marshal(authRequest{Login: "demo", Password: "password123"})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(body))
 	rr := httptest.NewRecorder()
 

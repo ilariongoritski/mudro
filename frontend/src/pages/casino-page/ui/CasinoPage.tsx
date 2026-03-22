@@ -20,7 +20,7 @@ const betOptions = [10, 25, 50, 100]
 const formatCasinoTimestamp = (value: string) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
-    return 'Сейчас'
+    return 'Только что'
   }
 
   return new Intl.DateTimeFormat('ru-RU', {
@@ -74,15 +74,54 @@ export const CasinoPage = () => {
 
   const topSignal = useMemo(() => {
     if (!isAuthenticated) {
-      return 'Авторизуйся, чтобы открыть баланс, spins и history.'
+      return 'Войдите, чтобы открыть баланс, историю spins и полный игровой контур.'
     }
 
     if (isBalanceError) {
-      return 'Casino backend временно недоступен. Повторите запрос позже.'
+      return 'Casino backend временно недоступен. Повторите запрос позже или проверьте сервис.'
     }
 
-    return 'Виртуальная экономика внутри MUDRO с отдельным сервисным контуром.'
+    return 'Виртуальная экономика внутри MUDRO работает через отдельный casino-сервис и отдельную БД.'
   }, [isAuthenticated, isBalanceError])
+
+  const backendStatus = useMemo(() => {
+    if (!isAuthenticated) {
+      return 'auth required'
+    }
+    if (isBalanceFetching || isHistoryFetching) {
+      return 'syncing'
+    }
+    if (isBalanceError) {
+      return 'degraded'
+    }
+    return 'online'
+  }, [isAuthenticated, isBalanceError, isBalanceFetching, isHistoryFetching])
+
+  const statusLine = useMemo(() => {
+    if (spinFeedback) {
+      return spinFeedback
+    }
+    if (!isAuthenticated) {
+      return 'После входа страница покажет живой баланс, историю spins и управление ставкой.'
+    }
+    if (isBalanceFetching || isHistoryFetching) {
+      return 'Подключаем игровой контур и синхронизируем историю.'
+    }
+    if (isBalanceError) {
+      return 'Casino API не ответил. Повторите запрос или проверьте локальный сервис.'
+    }
+    return 'Игровой контур подключён. Можно запускать spin и менять ставку.'
+  }, [isAuthenticated, isBalanceError, isBalanceFetching, isHistoryFetching, spinFeedback])
+
+  const lastResultLabel = useMemo(() => {
+    if (isSpinning) {
+      return 'Идёт spin...'
+    }
+    if (spinFeedback) {
+      return 'См. статус'
+    }
+    return 'Готов к spin'
+  }, [isSpinning, spinFeedback])
 
   const handleSpin = async () => {
     if (!isAuthenticated || isSpinning) {
@@ -106,11 +145,11 @@ export const CasinoPage = () => {
       setSpinFeedback(
         response.win > 0
           ? `Выигрыш ${response.win} credits. Новый баланс ${response.balance}.`
-          : `Спин завершен. Баланс ${response.balance}.`,
+          : `Spin завершён. Баланс ${response.balance}.`,
       )
     } catch {
       setReels(reelFallback)
-      setSpinFeedback('Casino API недоступен. Как только backend подключится, эта витрина начнет работать без переделки.')
+      setSpinFeedback('Casino API временно недоступен. Проверьте backend и повторите spin.')
     }
   }
 
@@ -128,7 +167,7 @@ export const CasinoPage = () => {
     }
 
     if (!Number.isFinite(nextInitialBalance) || nextInitialBalance <= 0) {
-      setSpinFeedback('Seed balance должен быть положительным числом.')
+      setSpinFeedback('Стартовый баланс должен быть положительным числом.')
       return
     }
 
@@ -138,9 +177,9 @@ export const CasinoPage = () => {
         rtp_percent: nextRtp,
         initial_balance: nextInitialBalance,
       }).unwrap()
-      setSpinFeedback(`Casino config сохранён: RTP ${nextRtp}%, seed ${nextInitialBalance}.`)
+      setSpinFeedback(`Casino config сохранён: RTP ${nextRtp}%, стартовый баланс ${nextInitialBalance}.`)
     } catch {
-      setSpinFeedback('Не удалось сохранить casino config. Проверь backend/admin proxy.')
+      setSpinFeedback('Не удалось сохранить casino config. Проверьте admin-доступ и состояние backend-а.')
     }
   }
 
@@ -159,7 +198,7 @@ export const CasinoPage = () => {
               </Link>
             ) : (
               <button type="button" className="casino-page__primary-action" onClick={handleSpin} disabled={!canSpin}>
-                {isSpinning ? 'Идет spin...' : 'Запустить spin'}
+                {isSpinning ? 'Идёт spin...' : 'Запустить spin'}
               </button>
             )}
             <Link to="/" className="casino-page__secondary-action">
@@ -195,7 +234,7 @@ export const CasinoPage = () => {
             </article>
             <article>
               <span>Access</span>
-              <strong>{user?.role?.toUpperCase() ?? 'GUEST'}</strong>
+              <strong>{user?.role?.toUpperCase() ?? (isAuthenticated ? 'USER' : 'GUEST')}</strong>
             </article>
           </div>
           <div className="casino-page__stage-reels" aria-label="Slot machine reels">
@@ -249,16 +288,16 @@ export const CasinoPage = () => {
                 </div>
                 <div className="casino-page__summary-tile">
                   <span>Последний результат</span>
-                  <strong>{spinFeedback ? 'См. статус' : 'Ожидает spin'}</strong>
+                  <strong>{lastResultLabel}</strong>
                 </div>
                 <div className="casino-page__summary-tile">
                   <span>Backend статус</span>
-                  <strong>{isBalanceError ? 'degraded' : 'linked'}</strong>
+                  <strong>{backendStatus}</strong>
                 </div>
               </div>
 
               <div className="casino-page__status-line" role="status" aria-live="polite">
-                {spinFeedback ?? 'Пока backend не подключен, UI работает как интеграционная витрина и готов к реальным ответам API.'}
+                {statusLine}
               </div>
             </div>
 
@@ -268,7 +307,11 @@ export const CasinoPage = () => {
                 <h3>Последние spins</h3>
                 <div className="casino-page__history-list">
                   {history.length === 0 && !isHistoryFetching ? (
-                    <p className="casino-page__empty-copy">История появится после первых spins и подключения casino-service.</p>
+                    <p className="casino-page__empty-copy">
+                      {isAuthenticated
+                        ? 'Первые spins появятся здесь автоматически после игры.'
+                        : 'История станет доступна после входа в аккаунт.'}
+                    </p>
                   ) : null}
 
                   {history.map((item) => (
@@ -328,7 +371,7 @@ export const CasinoPage = () => {
                   />
                 </label>
                 <label className="casino-page__field">
-                  <span>Seed balance</span>
+                  <span>Стартовый баланс</span>
                   <input
                     type="number"
                     min="1"
@@ -347,7 +390,7 @@ export const CasinoPage = () => {
                   onClick={handleSaveConfig}
                   disabled={isSavingConfig || isConfigFetching || !configData}
                 >
-                  {isSavingConfig ? 'Сохранение...' : 'Сохранить config'}
+                  {isSavingConfig ? 'Сохраняем...' : 'Сохранить config'}
                 </button>
                 <span className="casino-page__admin-status">
                   {configData ? `Loaded config · updated ${formatCasinoTimestamp(configData.updated_at)}` : 'Config loading...'}

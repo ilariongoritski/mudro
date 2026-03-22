@@ -1,20 +1,26 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+
 import { useRegisterMutation } from '@/entities/session/api/authApi'
+import { setCredentials } from '@/entities/session/model/sessionSlice'
+
 import '@/pages/login-page/ui/Auth.css'
 
 export const RegisterPage = () => {
   const [login, setLogin] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [register, { isLoading, error }] = useRegisterMutation()
+  const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await register({ login, password }).unwrap()
-      // Redirect to login after successful register
-      navigate('/login', { replace: true })
+      const result = await register({ login, email, password }).unwrap()
+      dispatch(setCredentials(result))
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('Register failed', err)
     }
@@ -24,7 +30,7 @@ export const RegisterPage = () => {
     <div className="auth-container">
       <div className="auth-card">
         <h1>Регистрация</h1>
-        <p className="auth-subtitle">Присоединяйтесь к Mudro</p>
+        <p className="auth-subtitle">Создайте аккаунт и сразу войдите в Mudro</p>
         <form onSubmit={handleSubmit} className="auth-form">
           <input
             type="text"
@@ -35,16 +41,25 @@ export const RegisterPage = () => {
             className="auth-input"
           />
           <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="auth-input"
+          />
+          <input
             type="password"
             placeholder="Пароль (мин. 6 символов)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className="auth-input"
+            minLength={6}
           />
-          {error && <div className="auth-error">Ошибка регистрации. Возможно, логин уже занят.</div>}
+          {error && <div className="auth-error">Ошибка регистрации. Возможно, логин или email уже заняты.</div>}
           <button type="submit" disabled={isLoading} className="auth-button">
-            {isLoading ? 'Создание...' : 'Зарегистрироваться'}
+            {isLoading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
           </button>
         </form>
         <div className="auth-footer">

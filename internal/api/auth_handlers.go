@@ -38,6 +38,7 @@ func NewAuthHandlers(svc *auth.Service) *AuthHandlers {
 
 type authRequest struct {
 	Login    string `json:"login"`
+	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -45,6 +46,9 @@ type authRequest struct {
 func (r authRequest) principal() string {
 	if login := strings.TrimSpace(r.Login); login != "" {
 		return login
+	}
+	if username := strings.TrimSpace(r.Username); username != "" {
+		return username
 	}
 	return strings.TrimSpace(r.Email)
 }
@@ -66,7 +70,7 @@ type telegramAuthRequest struct {
 	InitData string `json:"initData"`
 }
 
-// HandleRegister registers a new user with username and password.
+// HandleRegister registers a new user and returns the session payload expected by the web app.
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -78,15 +82,20 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := req.principal()
-	if username == "" || len(req.Password) < 6 {
-		http.Error(w, "invalid username or password too short", http.StatusBadRequest)
+	email := strings.TrimSpace(req.Email)
+	if username == "" || email == "" || len(req.Password) < 6 {
+		http.Error(w, "username, email and password are required", http.StatusBadRequest)
+		return
+	}
+	if h.authSvc == nil {
+		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
 		return
 	}
 
-	user, err := h.authSvc.Register(r.Context(), username, req.Password)
+	user, err := h.authSvc.Register(r.Context(), username, email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrUserExists) {
-			http.Error(w, "username already taken", http.StatusConflict)
+			http.Error(w, "username or email already taken", http.StatusConflict)
 			return
 		}
 		log.Printf("auth register: %v", err)
@@ -94,11 +103,18 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	token, err := h.authSvc.IssueToken(user)
+	if err != nil {
+		log.Printf("auth register token: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "ok",
-		"user": meResponse{
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		Token: token,
+		User: meResponse{
 			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,

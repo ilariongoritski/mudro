@@ -71,7 +71,7 @@ export const CasinoMiniAppPage = () => {
       .unwrap()
       .then((result) => {
         dispatch(setCredentials(result))
-        setStatus('Telegram-профиль подключен.')
+        setStatus('Telegram-профиль подключён.')
       })
       .catch(() => {
         setStatus('Не удалось проверить Telegram-сессию.')
@@ -102,7 +102,7 @@ export const CasinoMiniAppPage = () => {
         setStatus(`Выигрыш +${response.win}. Баланс ${response.balance}.`)
         webApp?.HapticFeedback?.notificationOccurred('success')
       } else {
-        setStatus(`Спин завершен. Баланс ${response.balance}.`)
+        setStatus(`Spin завершён. Баланс ${response.balance}.`)
       }
     } catch {
       setReels(reelFallback)
@@ -158,8 +158,10 @@ export const CasinoMiniAppPage = () => {
     if (isBalanceError) {
       return 'Доступ есть, но casino backend временно недоступен.'
     }
-    return 'Игровой контур подключен к отдельному casino сервису.'
+    return 'Игровой контур подключён к отдельному casino сервису.'
   }, [isAuthenticated, isBalanceError, isBootstrapping, isTelegram])
+
+  const statusText = status ?? (user ? `Игрок: ${user.username}` : 'Ожидание авторизации')
 
   return (
     <main className={`casino-miniapp ${winPulse ? 'casino-miniapp_win' : ''}`}>
@@ -191,7 +193,10 @@ export const CasinoMiniAppPage = () => {
           <section className="casino-miniapp__stage">
             <div className="casino-miniapp__reels">
               {reels.map((symbol, index) => (
-                <article key={`${symbol}-${index}`} className={`casino-miniapp__reel ${isSpinning ? 'casino-miniapp__reel_spinning' : ''}`}>
+                <article
+                  key={`${symbol}-${index}`}
+                  className={`casino-miniapp__reel ${isSpinning ? 'casino-miniapp__reel_spinning' : ''}`}
+                >
                   <span>{symbol}</span>
                 </article>
               ))}
@@ -212,7 +217,7 @@ export const CasinoMiniAppPage = () => {
 
             <div className="casino-miniapp__actions">
               <button type="button" onClick={onSpin} disabled={!canSpin} className="casino-miniapp__primary">
-                {isSpinning ? 'Идет spin...' : `Spin ${bet}`}
+                {isSpinning ? 'Идёт spin...' : `Spin ${bet}`}
               </button>
               {!isAuthenticated ? (
                 <Link className="casino-miniapp__secondary" to="/login">
@@ -226,7 +231,7 @@ export const CasinoMiniAppPage = () => {
             </div>
 
             <p className="casino-miniapp__status" role="status" aria-live="polite">
-              {status ?? (user ? `Игрок: ${user.username}` : 'Ожидание авторизации')}
+              {statusText}
             </p>
           </section>
 
@@ -237,7 +242,9 @@ export const CasinoMiniAppPage = () => {
             </div>
             <div className="casino-miniapp__history-list">
               {history.length === 0 && !isHistoryFetching ? (
-                <p className="casino-miniapp__empty">История появится после первых spins.</p>
+                <p className="casino-miniapp__empty">
+                  {isAuthenticated ? 'История появится после первых spins.' : 'История станет доступна после входа.'}
+                </p>
               ) : null}
 
               {history.map((item) => (
