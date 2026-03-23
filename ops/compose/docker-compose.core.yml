@@ -67,7 +67,7 @@ services:
     command: sh -lc "/usr/local/go/bin/go run ./services/feed-api/cmd"
     environment:
       API_ADDR: ":8080"
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
       MUDRO_ROOT: /app
       MEDIA_ROOT: /app/data/nu
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
@@ -98,7 +98,7 @@ services:
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/agent/cmd --mode worker --interval 15s"
     environment:
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
       MUDRO_ROOT: /app
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
