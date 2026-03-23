@@ -24,6 +24,8 @@ Goal: use Claude Opus as the planning and review layer, while Codex applies chan
 - Gateway service helper: `scripts/openclaw/openclaw_gateway_user_service.sh`
 - Post-install checks: `scripts/openclaw/openclaw_post_install_checks.sh`
 - Root bootstrap: `scripts/openclaw/server_bootstrap_root.sh`
+- Tracked root-level installer: `ops/scripts/install_openclaw_systemd.sh`
+- Tracked root-level units: `ops/systemd/openclaw.service`, `ops/systemd/skaro.service`
 
 ## Notes
 
@@ -31,3 +33,4 @@ Goal: use Claude Opus as the planning and review layer, while Codex applies chan
 - Keep auxiliary files under `D:\mudr\_mudro-local`.
 - Use explicit UTF-8 for command output when text looks garbled.
 - If `systemd --user` is unavailable on a host, the gateway helper falls back to a `nohup` launch.
+- The tracked VPS path uses `/etc/openclaw/runtime/*.env` for secrets and `/var/lib/openclaw` for state/accounting.

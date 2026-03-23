@@ -1,0 +1,11 @@
+[Unit]
+Description=Run MUDRO agent planner every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=mudro-agent-planner.service
+
+[Install]
+WantedBy=timers.target

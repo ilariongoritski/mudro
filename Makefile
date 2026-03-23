@@ -196,10 +196,30 @@ validate-microservices:
 	python -m py_compile ./scripts/claude/run_role_matrix.py
 
 validate-systemd-templates:
+	bash -n ./ops/scripts/install_mudro_systemd.sh
 	bash -n ./ops/scripts/install_mudro_api_systemd.sh
+	bash -n ./ops/scripts/install_openclaw_systemd.sh
 	bash -n ./ops/scripts/harden_vps_db_auth.sh
+	bash -n ./scripts/openclaw/openclaw_gateway_systemd.sh
+	bash -n ./scripts/skaro/skaro_ui_linux.sh
 	test -f ./ops/systemd/mudro-api.service
+	test -f ./ops/systemd/mudro-bot.service
+	test -f ./ops/systemd/mudro-agent-worker.service
+	test -f ./ops/systemd/mudro-agent-planner.service
+	test -f ./ops/systemd/mudro-agent-planner.timer
+	test -f ./ops/systemd/openclaw.service
+	test -f ./ops/systemd/skaro.service
 	test -f ./ops/systemd/mudro-api.env.example
+	test -f ./ops/systemd/mudro-bot.env.example
+	test -f ./ops/systemd/mudro-agent.env.example
+	test -f ./ops/systemd/openclaw.env.example
+	test -f ./ops/systemd/skaro.env.example
+
+install-mudro-systemd:
+	bash ./ops/scripts/install_mudro_systemd.sh
+
+install-openclaw-systemd:
+	bash ./ops/scripts/install_openclaw_systemd.sh
 
 guard-main-clean:
 	$(GUARD_MAIN_CLEAN_SCRIPT)
@@ -331,7 +351,7 @@ agent-plan-once:
 	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
-	$(GO) run ./services/agent/cmd --mode once
+	$(GO) run ./services/agent/cmd --mode planner-once
 
 agent-plan:
 	@set -a; \

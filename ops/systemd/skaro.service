@@ -1,25 +1,23 @@
 [Unit]
-Description=MUDRO API service
+Description=Skaro dashboard
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=mudro
-Group=mudro
+User=openclaw
+Group=openclaw
 WorkingDirectory=/opt/mudro/app
-EnvironmentFile=-/etc/mudro/runtime/mudro-api.env
-Environment=HOME=/var/lib/mudro
-Environment=XDG_CACHE_HOME=/var/lib/mudro/.cache
-Environment=GOCACHE=/var/lib/mudro/go-build
-ExecStart=/opt/mudro/bin/mudro-api
+EnvironmentFile=-/etc/openclaw/runtime/skaro.env
+Environment=HOME=/home/openclaw
+ExecStart=/opt/mudro/app/scripts/skaro/skaro_ui_linux.sh
 Restart=on-failure
-RestartSec=3
+RestartSec=5
 UMask=0027
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
-ProtectHome=yes
+ProtectHome=false
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
@@ -30,7 +28,7 @@ RestrictRealtime=yes
 RestrictSUIDSGID=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 SystemCallFilter=@system-service
-ReadWritePaths=/var/lib/mudro /var/log/mudro
+ReadWritePaths=/var/lib/openclaw /var/log/openclaw /home/openclaw
 
 [Install]
 WantedBy=multi-user.target

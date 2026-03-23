@@ -14,7 +14,7 @@ import (
 )
 
 func Run() {
-	mode := flag.String("mode", "planner", "planner|worker|once|approve|reject")
+	mode := flag.String("mode", "planner", "planner|planner-once|worker|once|approve|reject")
 	interval := flag.Duration("interval", 1*time.Minute, "loop interval")
 	workerID := flag.String("worker-id", "agent-worker-1", "worker id for queue locks")
 	taskID := flag.Int64("task-id", 0, "task id for approve/reject mode")
@@ -49,6 +49,8 @@ func Run() {
 	switch *mode {
 	case "planner":
 		runPlannerLoop(repoRoot, q, *interval)
+	case "planner-once":
+		runPlannerOnce(repoRoot, q)
 	case "worker":
 		runWorkerLoop(w, *interval)
 	case "once":

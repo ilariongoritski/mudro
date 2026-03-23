@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/root/projects/mudro}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 APP_USER="${MUDRO_DB_APP_USER:-mudro_app}"
 APP_PASSWORD="${MUDRO_DB_APP_PASSWORD:?MUDRO_DB_APP_PASSWORD is required}"
 SUPERUSER_PASSWORD="${MUDRO_DB_SUPERUSER_PASSWORD:?MUDRO_DB_SUPERUSER_PASSWORD is required}"
 ENV_FILE="${PROJECT_DIR}/.env"
-SYSTEMD_UNIT_SOURCE="${PROJECT_DIR}/ops/systemd/mudro-api.service"
-SYSTEMD_UNIT_DEST="/etc/systemd/system/mudro-api.service"
 SYSTEMD_RUNTIME_DIR="${MUDRO_SYSTEMD_RUNTIME_DIR:-/etc/mudro/runtime}"
 SYSTEMD_ENV_FILE="${SYSTEMD_RUNTIME_DIR}/mudro-api.env"
 FIREWALL_UNIT="/etc/systemd/system/mudro-db-firewall.service"
@@ -63,15 +62,15 @@ SQL
 cat "${SQL_FILE}" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1 >/dev/null
 rm -f "${SQL_FILE}"
 
-if [[ -f "${SYSTEMD_UNIT_SOURCE}" ]]; then
-  install -m 644 "${SYSTEMD_UNIT_SOURCE}" "${SYSTEMD_UNIT_DEST}"
-fi
-
 install -d -m 755 "${SYSTEMD_RUNTIME_DIR}"
 cat > "${SYSTEMD_ENV_FILE}" <<EOF
+MUDRO_ENV=production
+MUDRO_ROOT=/opt/mudro/app
 DSN=${APP_DSN}
 API_ADDR=:8080
-MEDIA_ROOT=${PROJECT_DIR}/data/nu
+JWT_SECRET=change-me
+CASINO_SERVICE_URL=http://127.0.0.1:8081
+MEDIA_ROOT=/var/lib/mudro/media
 EOF
 chmod 600 "${SYSTEMD_ENV_FILE}"
 
@@ -93,7 +92,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
+ONLY=api NO_START=1 bash "${SCRIPT_DIR}/install_mudro_systemd.sh"
 systemctl enable --now mudro-db-firewall.service >/dev/null
 systemctl restart mudro-api
 docker compose up -d db >/dev/null

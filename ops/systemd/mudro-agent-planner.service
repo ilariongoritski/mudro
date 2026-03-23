@@ -1,20 +1,19 @@
 [Unit]
-Description=MUDRO API service
+Description=MUDRO agent planner (oneshot)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=oneshot
 User=mudro
 Group=mudro
+SupplementaryGroups=docker
 WorkingDirectory=/opt/mudro/app
-EnvironmentFile=-/etc/mudro/runtime/mudro-api.env
+EnvironmentFile=-/etc/mudro/runtime/mudro-agent.env
 Environment=HOME=/var/lib/mudro
 Environment=XDG_CACHE_HOME=/var/lib/mudro/.cache
 Environment=GOCACHE=/var/lib/mudro/go-build
-ExecStart=/opt/mudro/bin/mudro-api
-Restart=on-failure
-RestartSec=3
+ExecStart=/opt/mudro/bin/mudro-agent --mode planner-once
 UMask=0027
 NoNewPrivileges=yes
 PrivateTmp=yes
@@ -30,7 +29,7 @@ RestrictRealtime=yes
 RestrictSUIDSGID=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 SystemCallFilter=@system-service
-ReadWritePaths=/var/lib/mudro /var/log/mudro
+ReadWritePaths=/var/lib/mudro /var/log/mudro /opt/mudro/app/.codex /var/run/docker.sock
 
 [Install]
 WantedBy=multi-user.target
