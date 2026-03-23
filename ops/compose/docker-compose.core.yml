@@ -69,6 +69,7 @@ services:
       API_ADDR: ":8080"
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
       MUDRO_ROOT: /app
+      MEDIA_ROOT: /app/data/nu
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
       REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
@@ -84,6 +85,7 @@ services:
       - "${API_PORT:-8080}:8080"
     volumes:
       - ../../:/app
+      - ${MEDIA_ROOT_HOST:-../../data/nu}:/app/data/nu:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
       interval: 10s

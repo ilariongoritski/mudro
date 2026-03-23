@@ -15,6 +15,19 @@ const audioExt = /\.(mp3|ogg|wav|m4a|aac|flac)(?:$|[?#])/i;
 const docExt = /\.(pdf|doc|docx|txt|zip|rar|7z)(?:$|[?#])/i;
 const trailingCombiningMarks = /[\u0300-\u036f]+/g;
 
+const extraString = (item: MediaItem, ...keys: string[]): string => {
+  if (!item.extra) return "";
+
+  for (const key of keys) {
+    const value = item.extra[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+};
+
 const resolveApiOrigin = (): string | null => {
   const base = env.apiBaseUrl.trim();
   if (!base || base === "/") return null;
@@ -27,6 +40,9 @@ const resolveApiOrigin = (): string | null => {
 };
 
 export const resolveMediaKind = (item: MediaItem): MediaKind => {
+  const mediaType = extraString(item, "media_type");
+  const mimeType = extraString(item, "mime_type");
+
   if (item.is_image) return "image";
   if (item.is_video) return "video";
   if (item.is_audio) return "audio";
@@ -34,13 +50,21 @@ export const resolveMediaKind = (item: MediaItem): MediaKind => {
   if (item.is_link) return "link";
 
   const kind = (item.kind || "").toLowerCase();
-  if (["photo", "image", "gif"].includes(kind)) return "image";
-  if (kind === "video") return "video";
+  if (mimeType.startsWith("video/") || mediaType === "animation") return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType.startsWith("image/")) return "image";
+
+  if (["photo", "image"].includes(kind)) return "image";
+  if (["video", "animation"].includes(kind)) return "video";
+  if (kind === "gif") {
+    if (videoExt.test(`${item.url ?? ""} ${item.preview_url ?? ""}`)) return "video";
+    if (imageExt.test(`${item.preview_url ?? ""} ${item.url ?? ""}`)) return "image";
+  }
   if (kind === "audio" || kind === "voice") return "audio";
   if (["doc", "file", "document"].includes(kind)) return "document";
   if (kind === "link") return "link";
 
-  const probe = `${item.url ?? ""} ${item.title ?? ""}`.toLowerCase();
+  const probe = `${item.url ?? ""} ${item.preview_url ?? ""} ${item.title ?? ""} ${mediaType} ${mimeType}`.toLowerCase();
   if (imageExt.test(probe)) return "image";
   if (videoExt.test(probe)) return "video";
   if (audioExt.test(probe)) return "audio";
@@ -105,6 +129,12 @@ export const resolveMediaDisplayUrl = (item: MediaItem): string | undefined => {
     if (isImageUrl(mediaUrl)) return mediaUrl;
   }
 
+  return undefined;
+};
+
+export const resolveMediaPosterUrl = (item: MediaItem): string | undefined => {
+  const previewUrl = resolveMediaUrl(item.preview_url);
+  if (isImageUrl(previewUrl)) return previewUrl;
   return undefined;
 };
 

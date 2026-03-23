@@ -9,6 +9,7 @@ import {
   reactionLabel,
   resolveMediaDisplayUrl,
   resolveMediaKind,
+  resolveMediaPosterUrl,
   resolveMediaTitle,
   resolveMediaUrl,
 } from "@/entities/post/lib/postPresentation";
@@ -158,14 +159,24 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
                 const title = resolveMediaTitle(item);
                 const mediaUrl = resolveMediaUrl(item.url);
                 const displayUrl = resolveMediaDisplayUrl(item);
+                const posterUrl = resolveMediaPosterUrl(item);
 
                 return (
                   <article
                     key={`${item.url ?? item.title ?? item.kind}-${index}`}
                     className="post-drawer__media-card"
                   >
-                    {(kind === "image" || kind === "video") && displayUrl ? (
+                    {kind === "image" && displayUrl ? (
                       <img src={displayUrl} alt={title} loading="lazy" />
+                    ) : null}
+                    {kind === "video" && mediaUrl ? (
+                      <video
+                        src={mediaUrl}
+                        poster={posterUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
                     ) : null}
 
                     <div className="post-drawer__media-info">
@@ -226,14 +237,24 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
                           const title = resolveMediaTitle(item);
                           const mediaUrl = resolveMediaUrl(item.url);
                           const displayUrl = resolveMediaDisplayUrl(item);
+                          const posterUrl = resolveMediaPosterUrl(item);
 
                           return (
                             <article
                               key={`${comment.source_comment_id}-${item.url ?? item.title ?? item.kind}-${index}`}
                               className="post-drawer__comment-media-card"
                             >
-                              {(kind === "image" || kind === "video") && displayUrl ? (
+                              {kind === "image" && displayUrl ? (
                                 <img src={displayUrl} alt={title} loading="lazy" />
+                              ) : null}
+                              {kind === "video" && mediaUrl ? (
+                                <video
+                                  src={mediaUrl}
+                                  poster={posterUrl}
+                                  controls
+                                  playsInline
+                                  preload="metadata"
+                                />
                               ) : null}
 
                               <div className="post-drawer__comment-media-info">

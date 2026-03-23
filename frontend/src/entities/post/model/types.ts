@@ -6,6 +6,7 @@ export interface MediaItem {
   url?: string;
   preview_url?: string;
   title?: string;
+  extra?: Record<string, string | number | boolean | null>;
   width?: number;
   height?: number;
   position?: number;

@@ -7,6 +7,7 @@ import {
   reactionLabel,
   resolveMediaDisplayUrl,
   resolveMediaKind,
+  resolveMediaPosterUrl,
   resolveMediaTitle,
   resolveMediaUrl,
 } from "@/entities/post/lib/postPresentation";
@@ -93,6 +94,7 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
             const title = resolveMediaTitle(item);
             const mediaUrl = resolveMediaUrl(item.url);
             const displayUrl = resolveMediaDisplayUrl(item);
+            const posterUrl = resolveMediaPosterUrl(item);
             const showOverlay = hiddenMediaCount > 0 && index === visibleMedia.length - 1;
 
             return (
@@ -100,8 +102,18 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
                 key={`${item.url ?? item.title ?? item.kind}-${index}`}
                 className="post-media-card"
               >
-                {(kind === "image" || kind === "video") && displayUrl ? (
+                {kind === "image" && displayUrl ? (
                   <img src={displayUrl} loading="lazy" alt={title} />
+                ) : null}
+                {kind === "video" && mediaUrl ? (
+                  <video
+                    src={mediaUrl}
+                    poster={posterUrl}
+                    preload="metadata"
+                    muted
+                    loop
+                    playsInline
+                  />
                 ) : null}
                 {showOverlay ? (
                   <span className="post-media-card__more">+{hiddenMediaCount}</span>
@@ -205,5 +217,4 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
     </article>
   );
 };
-
 
