@@ -41,7 +41,7 @@ export function getRequestedCwd(body: unknown): string | undefined {
 }
 
 export function buildAllowedTools(mode: RunMode, allowBash: boolean): string[] {
-  const tools = mode === "edit" ? ["Read", "Glob", "Edit"] : ["Read", "Glob"];
+  const tools = mode === "edit" ? ["Read", "Glob", "Edit", "Write"] : ["Read", "Glob"];
 
   if (allowBash) {
     tools.push("Bash");

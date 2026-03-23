@@ -4,6 +4,7 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 
 const apiProxyTarget = process.env.MUDRO_API_PROXY_TARGET ?? 'http://127.0.0.1:8080'
+const bffProxyTarget = process.env.MUDRO_BFF_PROXY_TARGET ?? 'http://127.0.0.1:8086'
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
@@ -26,6 +27,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/movie-catalog': {
+        target: bffProxyTarget,
+        changeOrigin: true,
+      },
       '/api': apiProxyTarget,
       '/healthz': apiProxyTarget,
       '/feed': apiProxyTarget,

@@ -119,6 +119,55 @@ services:
       timeout: 5s
       retries: 5
 
+  movie-catalog:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "/usr/local/go/bin/go run ./services/movie-catalog/cmd"
+    environment:
+      MOVIE_CATALOG_ADDR: ":8091"
+      MOVIE_CATALOG_DB_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable&search_path=movie_catalog,public"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8091:8091"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8091/healthz | grep -q '\"status\":\"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  bff-web:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "/usr/local/go/bin/go run ./services/bff-web/cmd"
+    environment:
+      BFF_WEB_ADDR: ":8086"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
+      MUDRO_ROOT: /app
+      BFF_WEB_API_BASE_URL: "${BFF_WEB_API_BASE_URL:-http://api:8080}"
+      MOVIE_CATALOG_URL: "http://movie-catalog:8091"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      movie-catalog:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8086:8086"
+    volumes:
+      - ../../:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8086/api/bff/web/v1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
 volumes:
   pgdata_prod:
   redis_prod:

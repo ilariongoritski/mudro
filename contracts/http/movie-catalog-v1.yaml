@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: movie-catalog API
+  version: 1.0.0
+  description: Read-only movie catalog staging API for MUDROTOP.
+servers:
+  - url: http://127.0.0.1:8091
+paths:
+  /healthz:
+    get:
+      summary: Service health
+      operationId: getMovieCatalogHealth
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Database unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/movie-catalog/genres:
+    get:
+      summary: List available genres
+      operationId: listMovieCatalogGenres
+      responses:
+        '200':
+          description: Genres response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenreListResponse'
+  /api/movie-catalog/movies:
+    get:
+      summary: List filtered movies
+      operationId: listMovieCatalogMovies
+      parameters:
+        - in: query
+          name: year_min
+          schema:
+            type: integer
+        - in: query
+          name: duration_min
+          schema:
+            type: integer
+        - in: query
+          name: include_genre
+          schema:
+            type: string
+        - in: query
+          name: exclude_genres
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Movie page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoviePage'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    GenreOption:
+      type: object
+      required: [value, label]
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+    GenreListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenreOption'
+    MovieSummary:
+      type: object
+      required: [id, name, genres]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        alternative_name:
+          type: string
+        year:
+          type: integer
+        duration:
+          type: integer
+        rating:
+          type: number
+          format: float
+        poster_url:
+          type: string
+        description:
+          type: string
+        kp_url:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+    MoviePage:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovieSummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer

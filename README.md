@@ -1,229 +1,210 @@
-# MUDRO - microservices-first монорепа (Go + Postgres + React)
+# MUDRO
 
-MUDRO - это монорепозиторий с активным runtime-контуром в `services/*`, отдельной casino-подсистемой, UI в `frontend/`, операционными CLI в `tools/*`, и архивной зоной в `legacy/old/*`.
+MUDRO is a microservices-first monorepo for feed ingestion, agent workflows, Telegram operations, casino runtime, frontend UI, and data import tooling.
 
-## Что сейчас считается каноном
+The repository is already in an active transition to `services/*`, `tools/*`, and `ops/*`. The canonical local runtime is the `core` contour under `ops/compose`, while legacy and transitional paths are still present for compatibility and recovery.
 
-- Активные runtime-сервисы:
-  - `services/feed-api`
-  - `services/agent`
-  - `services/bot`
-  - `services/casino`
-- Frontend:
-  - `frontend/` - React + TypeScript UI для ленты, casino и orchestration screens
-- Legacy-контур (не используется по умолчанию):
-  - `legacy/old/services/reporter-old`
-- Runtime-папки `cmd/api|agent|bot|reporter` выведены в `legacy/old/cmd-runtime/*`.
-- `cmd/*` в активной зоне - это compatibility forwarding для CLI в `tools/*`.
+## Canonical State
 
-Подробная структура:
-- [docs/service-catalog.md](docs/service-catalog.md)
-- [docs/repository-topology.md](docs/repository-topology.md)
-- [docs/repo-layout.md](docs/repo-layout.md)
+Active runtime services:
+- `services/feed-api`
+- `services/agent`
+- `services/bot`
+- `services/casino`
 
-## Требования
+Additive and migration-stage services:
+- `services/api-gateway`
+- `services/bff-web`
+- `services/auth-api`
+- `services/orchestration-api`
 
-- Docker + Docker Compose
-- Go 1.22+
-- Windows: WSL2 + Docker Desktop (WSL integration)
+Key repository zones:
+- `services/` long-running services
+- `tools/` import, backfill, and maintenance CLI
+- `internal/` shared Go packages
+- `contracts/` HTTP and event contracts
+- `migrations/` SQL migrations
+- `frontend/` React + TypeScript + Vite application
+- `ops/` compose, runbooks, scripts, nginx, systemd
+- `legacy/old/` old runtime pieces kept for transition and reference
 
-## Быстрый старт (локально)
+## Requirements
+
+- Docker and Docker Compose
+- Go `1.24`
+- Node.js and npm for `frontend/` and `tools/opus-gateway`
+- PostgreSQL is normally started through Docker Compose
+- Windows + WSL2 is a supported local development setup
+
+Primary local DSN:
+
+```text
+postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
+```
+
+## Quick Start
+
+Canonical local bootstrap:
 
 ```bash
 make core-up
 make dbcheck-core
 make migrate-runtime
 make tables-core
+make health-runtime
+```
+
+Useful follow-up checks:
+
+```bash
+make core-ps
 make test-active
 make count-posts-core
 ```
 
-Краткий health loop:
-
-```bash
-make health-runtime
-```
-
-Канонический DSN для локалки: `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
-
-## Структура репозитория
-
-- `services/` - runtime-сервисы
-- `tools/` - importers/backfill/maintenance CLI
-- `internal/` - общая доменная и прикладная логика
-- `contracts/` - контракты HTTP и событий
-- `ops/` - compose, runbooks, ops-скрипты, env-описания
-- `platform/agent-control/` - правила, политики, профили LLM-агентов
-- `legacy/old/` - архивная зона (Old)
-- `migrations/` - SQL-миграции
-- `frontend/` - React + TypeScript
-
-## Канонические точки запуска
-
-```bash
-go run ./services/feed-api/cmd
-go run ./services/agent/cmd
-go run ./services/bot/cmd
-go run ./services/casino/cmd
-```
-
-Legacy reporter (только при явной необходимости):
-
-```bash
-go run ./legacy/old/services/reporter-old/cmd
-# или
-make legacy-report-run
-```
-
-## Makefile: основные цели
-
-- `make health` - базовый health loop
-- `make bot-run` - запуск Telegram bot
-- `make agent-plan-once` - единичный проход planner
-- `make agent-plan` - planner в цикле
-- `make agent-work` - worker в цикле
-- `make agent-approve TASK_ID=<id>`
-- `make agent-reject TASK_ID=<id> REASON='...'`
-- `make media-backfill`
-- `make comment-backfill`
-- `make tg-csv-import CSV=/abs/path/file.csv`
-- `make tg-comments-csv-import CSV=/abs/path/file.csv`
-- `make tg-comment-media-import DIR=/abs/path/dir`
-- `make guard-main-clean` - check that `main`/`master` is clean before release work
-- `make memento`
-
-## CLI-контур (`tools/*`)
-
-### Importers
-
-- `tools/importers/vkimport`
-- `tools/importers/tgimport`
-- `tools/importers/tgload`
-- `tools/importers/tgcsvimport`
-- `tools/importers/tgcommentsimport`
-- `tools/importers/tgcommentscsvimport`
-- `tools/importers/tgcommentmediaimport`
-- `tools/importers/tghtmlimport`
-
-Примеры:
-
-```bash
-go run ./tools/importers/vkimport/cmd -dir ~/vk-export -dsn "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
-go run ./tools/importers/tgimport/cmd -in result.json -out feed_items.json
-go run ./tools/importers/tgload/cmd -in feed_items.json -dsn "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
-```
-
-### Backfill
-
-- `tools/backfill/mediabackfill`
-- `tools/backfill/commentbackfill`
-
-### Maintenance
-
-- `tools/maintenance/memento`
-- `tools/maintenance/tgdedupe`
-- `tools/maintenance/tgrootmerge`
+Expected local endpoints:
+- API health: `http://127.0.0.1:8080/healthz`
+- Frontend dev server: `http://127.0.0.1:5173`
 
 ## Frontend
 
-Папка: `frontend/`
+Frontend lives in [`frontend/`](frontend/).
 
 ```bash
 cd frontend
 npm.cmd install
 npm.cmd run dev
-npm.cmd run build
+```
+
+Additional frontend commands:
+
+```bash
 npm.cmd run lint
+npm.cmd run build
 ```
 
-## Compose-профили
+The frontend dev server proxies API requests to `http://127.0.0.1:8080`.
 
-- Core: `ops/compose/docker-compose.core.yml`
-- Legacy: `ops/compose/docker-compose.legacy.yml`
+See also: [`frontend/README.md`](frontend/README.md)
 
-Проверка конфигурации:
+## Runtime Contours
+
+Use the right contour for the right task:
+
+- [`ops/compose/docker-compose.core.yml`](ops/compose/docker-compose.core.yml)
+  Canonical local runtime for `db`, `redis`, `kafka/redpanda`, `api`, and `agent`.
+- [`ops/compose/docker-compose.services.yml`](ops/compose/docker-compose.services.yml)
+  Additive microservice layer for `auth-api`, `orchestration-api`, `bff-web`, and `api-gateway`.
+- [`docker-compose.yml`](docker-compose.yml)
+  Separate simplified contour for `db + casino-db + casino-api`. Useful for focused casino work and some legacy/recovery scenarios, but not the main entry path for the whole runtime.
+
+## Direct Entrypoints
+
+When you need to run services directly:
 
 ```bash
-docker compose -f ops/compose/docker-compose.core.yml config
-docker compose -f ops/compose/docker-compose.legacy.yml config
+go run ./services/feed-api/cmd
+go run ./services/agent/cmd
+go run ./services/bot/cmd
+go run ./services/casino/cmd/casino
 ```
 
-## Контракты
-
-- HTTP: `contracts/http/feed-api.yaml`
-- Events: `contracts/events/agent-task-events.yaml`
-
-## Agent governance
-
-Gateway-файл: `AGENTS.md`
-
-Каноничные правила и профили:
-- `platform/agent-control/AGENTS.core.md`
-- `platform/agent-control/policies/*`
-- `platform/agent-control/profiles/*`
-- `platform/agent-control/services-map.yaml`
-
-## Операционные документы
-
-- Runbook: `ops/runbooks/ops-runbook.md`
-- Worker autonomy: `docs/worker-autonomy.md`
-- Microservices architecture: `docs/microservices-architecture.md`
-- Microservices blueprint (March 2026): `docs/microservices-blueprint-2026-03.md`
-- Migration policy: `docs/migration-policy.md`
-
-## Примечания
-
-- `VK` в проекте считается snapshot-only источником.
-- Публичный API-контракт и миграции БД в этом этапе не ломались; менялась структура репозитория и контуры запуска.
-- Все устаревшее и неиспользуемое должно уезжать в `legacy/old/*` с фиксацией в `legacy/old/manifest.yaml`.
-
-## Runtime Bootstrap (P0)
-
-Use these commands as the canonical local bootstrap path:
+Useful make targets:
 
 ```bash
-make core-up
-make dbcheck-core
-make migrate-runtime
-make tables-core
-make test-active
-make count-posts-core
+make bot-run
+make agent-plan-once
+make agent-plan
+make agent-work
+make casino-run
 ```
 
-Full health loop:
+## Import, Backfill, and Maintenance
+
+The repository contains operational CLI tooling under [`tools/`](tools/), including:
+
+- Telegram imports
+- VK imports
+- comment/media backfill
+- dedupe and merge maintenance utilities
+
+Examples:
 
 ```bash
-make health-runtime
+make tg-csv-import CSV=/path/to/export.csv
+make tg-comments-csv-import CSV=/path/to/comments.csv
+make tg-comment-media-import DIR=/path/to/media
+make comment-backfill
+make media-backfill
 ```
 
-Backward compatibility:
+## Opus Gateway
+
+MUDRO includes a local HTTP sidecar for running `Opus` against this repository using your own `ANTHROPIC_API_KEY`.
+
+Location:
+- [`tools/opus-gateway/`](tools/opus-gateway/)
+
+What it does:
+- listens on `127.0.0.1:8788` by default
+- uses the official `@anthropic-ai/claude-code` SDK
+- defaults to `claude-opus-4-1-20250805` unless overridden by `OPUS_GATEWAY_MODEL` or `ANTHROPIC_MODEL`
+- keeps the agent inside the repo root
+- supports `read-only` and `edit` runs
+- optionally enables a tightly allowlisted `Bash`
+
+Install and run from the repo root:
 
 ```bash
-make health
+npm run opus-gateway:install
+npm run opus-gateway
 ```
 
-## Local Demo (No Vercel)
+Environment:
 
-Terminal 1:
+```text
+ANTHROPIC_API_KEY=...
+OPUS_GATEWAY_PORT=8788
+OPUS_GATEWAY_MODEL=claude-opus-4-1-20250805
+```
+
+Health check:
 
 ```bash
-make demo-up
+curl http://127.0.0.1:8788/healthz
 ```
 
-`make demo-up` now also seeds the local demo feed from `data/nu/feed_items.json` when `posts` is still empty.
-
-Terminal 2:
+Run a task:
 
 ```bash
-npm.cmd --prefix frontend run dev
+curl -X POST http://127.0.0.1:8788/v1/run ^
+  -H "Content-Type: application/json" ^
+  -d "{\"prompt\":\"Объясни структуру services/feed-api\",\"mode\":\"read-only\"}"
 ```
 
-Check:
+Important:
+- this gateway is a local sidecar HTTP service, not a native extension point for the built-in subagents of this Codex chat
+- `ANTHROPIC_API_KEY` must stay outside the repository
+- `read-only` runs go through Claude Code `plan` permission mode; `edit` runs use `acceptEdits`
+- logs are written under `var/log/opus-gateway/`
 
-```bash
-make demo-check
-```
+See also: [`tools/opus-gateway/README.md`](tools/opus-gateway/README.md)
 
-Open:
-- `http://127.0.0.1:5173`
-- `http://127.0.0.1:8080/healthz`
+## Legacy and Transitional Areas
+
+This repository is still in migration. The following areas exist intentionally:
+
+- [`legacy/old/`](legacy/old/)
+- [`cmd/`](cmd/)
+- [`ops/compose/docker-compose.legacy.yml`](ops/compose/docker-compose.legacy.yml)
+
+Treat them as compatibility or recovery paths unless a task explicitly targets them.
+
+## Where To Look Next
+
+- [`docs/service-catalog.md`](docs/service-catalog.md)
+- [`docs/repository-topology.md`](docs/repository-topology.md)
+- [`docs/repo-layout.md`](docs/repo-layout.md)
+- [`docs/agent-workflows.md`](docs/agent-workflows.md)
+- [`ops/runbooks/ops-runbook.md`](ops/runbooks/ops-runbook.md)
+- [`Makefile`](Makefile)

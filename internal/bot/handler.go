@@ -36,6 +36,7 @@ func RegisterBotCommands(botAPI *tgbotapi.BotAPI) error {
 		{Command: "actions10", Description: "Задача/проблемы/выполнения/доработки"},
 		{Command: "actions1h", Description: "Путь за час: проблемы и решения"},
 		{Command: "commits3", Description: "3 коммита: суть изменений на русском"},
+		{Command: "movies", Description: "Каталог фильмов 🎬"},
 	}
 
 	config := tgbotapi.NewSetMyCommands(commands...)
@@ -105,6 +106,8 @@ func HandleCommands(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		handleActions1H(bot, update)
 	case "commits3":
 		handleCommits3(bot, update)
+	case "movies":
+		handleMovies(bot, update)
 	default:
 		handleUnknown(bot, update)
 	}

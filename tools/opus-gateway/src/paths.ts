@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { promises as fs } from "node:fs";
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const DEFAULT_MODEL = "claude-opus-4-1-20250805";
 
 export function getRepoRoot(): string {
   return process.env.OPUS_GATEWAY_REPO_ROOT
@@ -22,7 +23,7 @@ export function getPort(): number {
 }
 
 export function getDefaultModel(): string {
-  return process.env.OPUS_GATEWAY_MODEL?.trim() || "opus";
+  return process.env.OPUS_GATEWAY_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
 }
 
 export async function resolveWorkingDirectory(repoRoot: string, requestedCwd?: string): Promise<string> {

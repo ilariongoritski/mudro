@@ -36,7 +36,7 @@ test("normalizeRunRequest rejects invalid mode", () => {
 
 test("buildAllowedTools enables edit and bash only when requested", () => {
   assert.deepEqual(buildAllowedTools("read-only", false), ["Read", "Glob"]);
-  assert.deepEqual(buildAllowedTools("edit", true), ["Read", "Glob", "Edit", "Bash"]);
+  assert.deepEqual(buildAllowedTools("edit", true), ["Read", "Glob", "Edit", "Write", "Bash"]);
 });
 
 test("isAllowedBashCommand accepts only the allowlist", () => {

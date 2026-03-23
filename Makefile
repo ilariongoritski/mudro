@@ -24,7 +24,8 @@ ENV_AGENT ?= env/agent.env
 ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
-RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_AUTH_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CASINO_MIGRATION)
+MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
+RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_AUTH_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CASINO_MIGRATION) $(MOVIE_CATALOG_MIGRATION)
 
 ifeq ($(wildcard $(GO)),)
 GO := go
@@ -294,6 +295,19 @@ demo-check:
 	else \
 		echo "frontend: not reachable from current shell (start in this shell or open http://127.0.0.1:5173 if frontend runs in Windows host)"; \
 	fi
+
+movie-catalog-run:
+	$(GO) run ./services/movie-catalog/cmd
+
+movie-catalog-migrate:
+	@if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
+		cat "$(MOVIE_CATALOG_MIGRATION)" | $(CORE_COMPOSE) exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; \
+	else \
+		$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MOVIE_CATALOG_MIGRATION)"; \
+	fi
+
+bff-web-run:
+	$(GO) run ./services/bff-web/cmd
 
 worker-loop:
 	./ops/scripts/worker_autonomy_loop.sh

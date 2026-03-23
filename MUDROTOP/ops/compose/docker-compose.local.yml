@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mudrotop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: movie_catalog
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d movie_catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - movie_catalog_pgdata:/var/lib/postgresql/data
+
+volumes:
+  movie_catalog_pgdata:

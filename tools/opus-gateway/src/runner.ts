@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-code";
-import { buildAllowedTools, buildSystemPrompt, isAllowedBashCommand } from "./validation.js";
 import { ensurePathInsideRepo, getDefaultModel } from "./paths.js";
+import { buildAllowedTools, buildSystemPrompt, isAllowedBashCommand } from "./validation.js";
 import type { NormalizedRunRequest, RunResult, ToolSummary } from "./types.js";
 
 type SdkMessage = {
@@ -13,6 +13,15 @@ type SdkMessage = {
     tool_name?: string;
     tool_input?: unknown;
   }>;
+};
+
+type CanUseToolOptions = {
+  signal: AbortSignal;
+  suggestions?: unknown;
+  blockedPath?: string;
+  decisionReason?: string;
+  toolUseID: string;
+  agentID?: string;
 };
 
 export async function runClaudeTask(repoRoot: string, request: NormalizedRunRequest): Promise<RunResult> {
@@ -40,7 +49,7 @@ export async function runClaudeTask(repoRoot: string, request: NormalizedRunRequ
       prompt: request.prompt,
       options: {
         allowedTools,
-        canUseTool: async (toolName: string, input: unknown) => {
+        canUseTool: async (toolName: string, input: unknown, _options: CanUseToolOptions) => {
           try {
             validateToolUse(repoRoot, request, allowedToolNames, toolSummary, toolName, input);
             return {
@@ -64,7 +73,7 @@ export async function runClaudeTask(repoRoot: string, request: NormalizedRunRequ
         cwd: request.cwd,
         maxTurns: request.maxTurns,
         model,
-        permissionMode: request.mode === "edit" ? "acceptEdits" : "default",
+        permissionMode: request.mode === "edit" ? "acceptEdits" : "plan",
         appendSystemPrompt: buildSystemPrompt(repoRoot, request)
       }
     });
