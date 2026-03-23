@@ -44,8 +44,7 @@ make count-posts-core
 make health-runtime
 ```
 
-Канонический DSN для локалки:
-`postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
+Канонический DSN для локалки: `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`
 
 ## Структура репозитория
 

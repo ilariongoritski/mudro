@@ -1,0 +1,10 @@
+{
+  "name": "mudro-tools",
+  "private": true,
+  "scripts": {
+    "opus-gateway:install": "npm --prefix tools/opus-gateway install",
+    "opus-gateway": "npm --prefix tools/opus-gateway run start",
+    "opus-gateway:test": "npm --prefix tools/opus-gateway run test",
+    "opus-gateway:check": "npm --prefix tools/opus-gateway run check"
+  }
+}

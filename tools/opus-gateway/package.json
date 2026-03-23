@@ -1,0 +1,21 @@
+{
+  "name": "@mudro/opus-gateway",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "check": "tsc --noEmit",
+    "test": "tsx --test test/validation.test.ts test/server.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.108"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

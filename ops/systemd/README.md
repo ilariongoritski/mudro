@@ -1,97 +1,45 @@
-# MUDRO tracked systemd runtime
+# Systemd runtime templates
 
-This directory tracks the VPS runtime contracts for:
+Tracked `systemd` templates in this directory cover two runtime groups:
+
+## Core MUDRO stack
 
 - `mudro-api.service`
 - `mudro-bot.service`
 - `mudro-agent-worker.service`
 - `mudro-agent-planner.service`
 - `mudro-agent-planner.timer`
-- `openclaw.service`
-- `skaro.service`
 
-## Goal
+Runtime env files on VPS:
+- `/etc/mudro/runtime/mudro-api.env`
+- `/etc/mudro/runtime/mudro-bot.env`
+- `/etc/mudro/runtime/mudro-agent.env`
 
-Keep the server runtime reproducible and prevent drift between:
-
-- tracked repo config
-- `/etc/systemd/system/*.service`
-- `/etc/mudro/runtime/*.env`
-- `/etc/openclaw/runtime/*.env`
-
-## Core MUDRO runtime
-
-Core services run as the dedicated `mudro` user and use:
-
-- app tree: `/opt/mudro/app`
-- binaries: `/opt/mudro/bin`
-- runtime env: `/etc/mudro/runtime`
-- writable state/cache: `/var/lib/mudro`
-- logs: `/var/log/mudro`
-
-Install or update the core stack from a checked-out repo on the VPS:
+Installer:
 
 ```bash
 bash ops/scripts/install_mudro_systemd.sh
 ```
 
-API-only compatibility path:
+## Worker plane
 
-```bash
-bash ops/scripts/install_mudro_api_systemd.sh
-```
+- `claudeusageproxy.service`
+- `openclaw.service`
+- `skaro.service`
 
-## OpenClaw / Skaro worker plane
+Runtime env files on VPS:
+- `/etc/openclaw/runtime/claudeusageproxy.env`
+- `/etc/openclaw/runtime/openclaw.env`
+- `/etc/openclaw/runtime/skaro.env`
 
-Worker-plane services run as the dedicated `openclaw` user and use:
-
-- runtime env: `/etc/openclaw/runtime`
-- writable state: `/var/lib/openclaw`
-- logs: `/var/log/openclaw`
-
-Install tracked root-level units after the core MUDRO app tree is already deployed:
+Installer:
 
 ```bash
 bash ops/scripts/install_openclaw_systemd.sh
 ```
 
-## Validation
-
-Run local static validation before pushing:
-
-```bash
-make validate-systemd-templates
-```
-
-On the VPS:
-
-```bash
-systemctl daemon-reload
-systemctl status mudro-api mudro-bot mudro-agent-worker mudro-agent-planner.timer
-systemctl status openclaw skaro
-```
-
 ## Notes
 
-- Real secrets stay out of git.
-- `mudro-bot` and `mudro-agent` write operational files into `/opt/mudro/app/.codex`, so the installer keeps only that subtree writable.
-- `mudro-bot` and `mudro-agent` may need Docker socket access for current control-plane commands. The installer adds `mudro` to the `docker` group if that group exists.
-
-## Media contract
-
-The API serves `/media/*` from `MEDIA_ROOT`.
-
-The database stores media references in:
-
-- `media_assets.original_url`
-- `media_assets.preview_url`
-- `post_media_links`
-- `comment_media_links`
-
-The intended shape is:
-
-- relative paths like `photos/file.jpg` or `stickers/file.webp` live in the database
-- API normalizes them to `/media/...`
-- `MEDIA_ROOT` points to the host directory that actually contains those files
-
-For the hardened VPS layout, prefer a dedicated media path such as `/var/lib/mudro/media` and set `MEDIA_ROOT` explicitly in `/etc/mudro/runtime/mudro-api.env`.
+1. Keep real secrets only in VPS runtime env files.
+2. Do not commit server-local overrides and drop-ins.
+3. `OpenClaw` and `Skaro` should use the local `claudeusageproxy` for accounting when the worker plane is deployed on VPS.

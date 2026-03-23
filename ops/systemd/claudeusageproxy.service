@@ -1,6 +1,6 @@
 [Unit]
-Description=OpenClaw gateway
-After=network-online.target claudeusageproxy.service
+Description=Claude usage proxy
+After=network-online.target
 Wants=network-online.target
 
 [Service]
@@ -8,9 +8,9 @@ Type=simple
 User=openclaw
 Group=openclaw
 WorkingDirectory=/opt/mudro/app
-EnvironmentFile=-/etc/openclaw/runtime/openclaw.env
+EnvironmentFile=-/etc/openclaw/runtime/claudeusageproxy.env
 Environment=HOME=/home/openclaw
-ExecStart=/opt/mudro/app/scripts/openclaw/openclaw_gateway_systemd.sh
+ExecStart=/opt/mudro/app/scripts/openclaw/claudeusageproxy_systemd.sh
 Restart=on-failure
 RestartSec=5
 UMask=0027
