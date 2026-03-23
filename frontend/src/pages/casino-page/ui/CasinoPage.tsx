@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -51,15 +51,13 @@ export const CasinoPage = () => {
     isError: isBalanceError,
   } = useGetCasinoBalanceQuery(undefined, { skip: shouldSkipCasinoQueries })
 
-  const {
-    data: historyData,
-    isFetching: isHistoryFetching,
-  } = useGetCasinoHistoryQuery(8, { skip: shouldSkipCasinoQueries })
+  const { data: historyData, isFetching: isHistoryFetching } = useGetCasinoHistoryQuery(8, {
+    skip: shouldSkipCasinoQueries,
+  })
 
-  const {
-    data: configData,
-    isFetching: isConfigFetching,
-  } = useGetCasinoConfigQuery(undefined, { skip: shouldSkipCasinoQueries || !isAdmin })
+  const { data: configData, isFetching: isConfigFetching } = useGetCasinoConfigQuery(undefined, {
+    skip: shouldSkipCasinoQueries || !isAdmin,
+  })
 
   const [spinCasino, { isLoading: isSpinning }] = useSpinCasinoMutation()
   const [updateCasinoConfig, { isLoading: isSavingConfig }] = useUpdateCasinoConfigMutation()
@@ -68,8 +66,7 @@ export const CasinoPage = () => {
   const rtp = balanceData?.rtp ?? configData?.rtp_percent
   const history = historyData?.items ?? []
   const resolvedRtpDraft = rtpDraft ?? (configData ? String(configData.rtp_percent) : '')
-  const resolvedInitialBalanceDraft =
-    initialBalanceDraft ?? (configData ? String(configData.initial_balance) : '')
+  const resolvedInitialBalanceDraft = initialBalanceDraft ?? (configData ? String(configData.initial_balance) : '')
   const canSpin = isAuthenticated && !isSpinning && bet > 0 && balance >= bet
 
   const topSignal = useMemo(() => {
@@ -108,7 +105,7 @@ export const CasinoPage = () => {
       return 'Подключаем игровой контур и синхронизируем историю.'
     }
     if (isBalanceError) {
-      return 'Casino API не ответил. Повторите запрос или проверьте локальный сервис.'
+      return 'Casino API не ответил. Проверьте backend или повторите spin позже.'
     }
     return 'Игровой контур подключён. Можно запускать spin и менять ставку.'
   }, [isAuthenticated, isBalanceError, isBalanceFetching, isHistoryFetching, spinFeedback])
@@ -210,8 +207,8 @@ export const CasinoPage = () => {
           </div>
 
           <nav className="casino-page__mode-bar" aria-label="Режимы casino">
-            <a href="#play">Play</a>
-            <a href="#history">History</a>
+            <a href="#play">Играть</a>
+            <a href="#history">История</a>
             {isAdmin ? <a href="#admin">Admin</a> : null}
           </nav>
         </div>
@@ -225,7 +222,7 @@ export const CasinoPage = () => {
           <div className="casino-page__stage-ring" />
           <div className="casino-page__stage-metrics">
             <article>
-              <span>Balance</span>
+            <span>Баланс</span>
               <strong>{isBalanceFetching ? '...' : balance}</strong>
             </article>
             <article>
@@ -233,7 +230,7 @@ export const CasinoPage = () => {
               <strong>{typeof rtp === 'number' ? `${rtp}%` : 'Admin'}</strong>
             </article>
             <article>
-              <span>Access</span>
+            <span>Доступ</span>
               <strong>{user?.role?.toUpperCase() ?? (isAuthenticated ? 'USER' : 'GUEST')}</strong>
             </article>
           </div>
@@ -253,7 +250,7 @@ export const CasinoPage = () => {
       <ErrorBoundary
         fallback={
           <section className="casino-page__surface casino-page__surface_fallback" role="alert">
-            <span className="casino-page__kicker">Casino runtime</span>
+            <span className="casino-page__kicker">Игровой runtime</span>
             <h2>Временный сбой игрового интерфейса</h2>
             <p>Обновите страницу или откройте Telegram Mini App. Основная лента продолжает работать.</p>
           </section>
@@ -264,7 +261,7 @@ export const CasinoPage = () => {
             <div className="casino-page__surface casino-page__surface_main">
               <div className="casino-page__surface-head">
                 <div>
-                  <span className="casino-page__kicker">Game control</span>
+                  <span className="casino-page__kicker">Игровой контроль</span>
                   <h2>Один слот, быстрый цикл, управляемый RTP и чистая интеграция в основной UI.</h2>
                 </div>
                 <div className="casino-page__bet-row" aria-label="Bet controls">
@@ -303,7 +300,7 @@ export const CasinoPage = () => {
 
             <aside className="casino-page__surface casino-page__surface_side" id="history">
               <div className="casino-page__side-block">
-                <span className="casino-page__kicker">History</span>
+                <span className="casino-page__kicker">История</span>
                 <h3>Последние spins</h3>
                 <div className="casino-page__history-list">
                   {history.length === 0 && !isHistoryFetching ? (
@@ -330,7 +327,7 @@ export const CasinoPage = () => {
               </div>
 
               <div className="casino-page__side-block">
-                <span className="casino-page__kicker">Why this shape</span>
+                <span className="casino-page__kicker">Почему так</span>
                 <ul className="casino-page__signal-list">
                   <li>Отдельный вход в продукт, без отдельного бренда.</li>
                   <li>Glass + neon слой только там, где он усиливает сценарий.</li>
@@ -350,7 +347,7 @@ export const CasinoPage = () => {
             >
               <div className="casino-page__surface-head">
                 <div>
-                  <span className="casino-page__kicker">Admin panel</span>
+                  <span className="casino-page__kicker">Панель администратора</span>
                   <h2>Тонкая настройка RTP и стартового баланса участников.</h2>
                 </div>
                 <p className="casino-page__admin-note">
@@ -393,7 +390,7 @@ export const CasinoPage = () => {
                   {isSavingConfig ? 'Сохраняем...' : 'Сохранить config'}
                 </button>
                 <span className="casino-page__admin-status">
-                  {configData ? `Loaded config · updated ${formatCasinoTimestamp(configData.updated_at)}` : 'Config loading...'}
+                  {configData ? `Конфиг загружен · обновлён ${formatCasinoTimestamp(configData.updated_at)}` : 'Загружаем config...'}
                 </span>
               </div>
             </motion.section>

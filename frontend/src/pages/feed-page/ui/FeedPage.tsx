@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 
 import { CasinoHeroStrip } from '@/features/casino/ui/CasinoHeroStrip'
 import { CasinoNavButton } from '@/features/casino/ui/CasinoNavButton'
@@ -34,8 +34,8 @@ export const FeedPage = () => {
             </a>
           ))}
           <CasinoNavButton />
-          <Link to="/orchestration" className="feed-page-header__link">
-            Оркестрация
+          <Link to="/orchestration#bridge" className="feed-page-header__link">
+            Карта bridge
           </Link>
           {!isAuthenticated && (
             <div className="feed-page-header__auth">
@@ -56,6 +56,44 @@ export const FeedPage = () => {
           )}
         </nav>
       </header>
+
+      <section className="feed-page-hero mudro-fade-up" aria-label="MUDRO overview">
+        <div className="feed-page-hero__copy">
+          <span className="feed-page-hero__eyebrow">MUDRO workspace</span>
+          <h1 className="feed-page-hero__title">Единая лента, control plane и изолированный casino-слой.</h1>
+          <p className="feed-page-hero__lead">
+            Это домашняя поверхность проекта: архив, фильтры, переход в orchestration и отдельный игровой экран без
+            смешивания runtime-слоёв. Локальный Claude Opus bridge и Magic MCP описаны в control plane.
+          </p>
+
+          <div className="feed-page-hero__actions">
+            <Link to="/orchestration#bridge" className="feed-page-hero__action">
+              Открыть bridge map
+            </Link>
+            <Link to="/casino" className="feed-page-hero__action feed-page-hero__action_secondary">
+              Открыть casino
+            </Link>
+          </div>
+        </div>
+
+        <div className="feed-page-hero__rail" aria-label="Платформенные сигналы">
+          <article className="feed-page-hero__tile">
+            <span>Feed API</span>
+            <strong>Live archive</strong>
+            <p>Показывает поток постов и медиа без потери контекста.</p>
+          </article>
+          <article className="feed-page-hero__tile">
+            <span>Opus bridge</span>
+            <strong>Local reasoning</strong>
+            <p>Планирование, ревью и большие изменения идут локально через ключ.</p>
+          </article>
+          <article className="feed-page-hero__tile">
+            <span>Magic MCP</span>
+            <strong>Context & UI</strong>
+            <p>Используется для визуальных и контекстных ориентиров, а не как runtime.</p>
+          </article>
+        </div>
+      </section>
 
       <section className="feed-page-live mudro-fade-up" id="feed" aria-label="Живая лента Mudro">
         <FeedWidget />
@@ -84,7 +122,7 @@ export const FeedPage = () => {
           <article className="feed-page-next__card">
             <span>Реакции</span>
             <strong>Живые лайки, статусы чтения и действия на уровне Telegram-паттернов</strong>
-            <p>После стабилизации экрана сюда естественно ложатся пользовательские лайки и более живой social-функционал.</p>
+            <p>После стабилизации экрана сюда естественно ложатся пользовательские действия и более живой social-функционал.</p>
           </article>
           <article className="feed-page-next__card">
             <span>Комментарии</span>

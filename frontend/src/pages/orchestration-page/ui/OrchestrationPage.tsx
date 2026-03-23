@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -56,19 +56,19 @@ const fallbackStatus = (now: Date) =>
     dashboard_url: SKARO_DASHBOARD_URL,
     api_endpoint: '/api/orchestration/status',
     state: [
-      'Claude drafts plans and reviews in English.',
-      'Codex applies changes locally and keeps main canonical.',
-      'Skaro is the planning and validation cockpit.',
+      'Локальный ключ Opus отвечает за планирование, ревью и большие изменения.',
+      'Codex применяет изменения в репозиторий и держит main каноничным.',
+      'Skaro используется как cockpit для статуса, валидации и контекстного контроля.',
     ],
     todo: [
-      'Connect the backend orchestration status endpoint.',
-      'Expose token usage and run history from the local runtime.',
-      'Add a local-only Skaro Claude profile launcher under D:\\mudr\\_mudro-local.',
+      'Подключить боевой backend endpoint orchestration status.',
+      'Показать usage по токенам и историю запусков локального runtime.',
+      'Добавить локальный launcher профиля Skaro Claude под D:\\mudr\\_mudro-local.',
     ],
     done: [
-      'Frontend orchestration route is in place.',
-      'Feed navigation now points to the control surface.',
-      'Local-only orchestration rules are documented.',
+      'Маршрут orchestration уже есть на фронтенде.',
+      'Навигация из ленты ведёт в control plane.',
+      'Правила локальной orchestration-схемы уже задокументированы.',
     ],
     status: [
       { label: 'API', value: 'fallback', tone: 'warn' },
@@ -79,13 +79,30 @@ const fallbackStatus = (now: Date) =>
   })
 
 const quickActions = [
-  { label: 'Open feed', to: '/' },
-  { label: 'Open casino mini app', to: '/tma/casino' },
-  { label: 'Open Skaro dashboard', href: SKARO_DASHBOARD_URL, external: true },
+  { label: 'Открыть ленту', to: '/' },
+  { label: 'Открыть casino mini app', to: '/tma/casino' },
+  { label: 'Открыть Skaro dashboard', href: SKARO_DASHBOARD_URL, external: true },
 ] as const satisfies ReadonlyArray<
   | { label: string; to: string; external?: false }
   | { label: string; href: string; external: true }
 >
+
+const bridgeCards = [
+  {
+    title: 'Локальный Opus',
+    text: 'Это основной reasoning-layer: план, архитектура, code review и тяжёлые итерации идут через локальный ключ и не смешиваются с UI-runtime.',
+  },
+  {
+    title: 'Magic MCP',
+    text: 'Используется как визуальный и контекстный помощник: паттерны интерфейсов, layout inspiration и точечная проверка shell. Он не заменяет Opus и не пишет в runtime.',
+  },
+  {
+    title: 'MUDRO runtime',
+    text: 'Локальные сервисы работают отдельно: feed-api, auth-api, orchestration-api и casino. Фронтенд только показывает состояние и вызывает нужные API.',
+  },
+]
+
+const bridgeFlow = ['Запрос', 'Opus план', 'Codex apply', 'Magic UI check', 'main']
 
 export const OrchestrationPage = () => {
   const [moscowNow, setMoscowNow] = useState(() => new Date())
@@ -130,16 +147,16 @@ export const OrchestrationPage = () => {
           <span className="orchestration-page__brand-mark">M</span>
           <div className="orchestration-page__brand-copy">
             <strong>Orchestration</strong>
-            <small>control plane for MUDRO</small>
+            <small>control plane для MUDRO</small>
           </div>
         </div>
 
         <div className="orchestration-page__top-actions">
           <button type="button" className="orchestration-page__ghost-action" onClick={() => refetch()}>
-            Refresh
+            Обновить
           </button>
           <Link to="/" className="orchestration-page__ghost-action">
-            Feed
+            Лента
           </Link>
           <Link to="/tma/casino" className="orchestration-page__ghost-action">
             Casino
@@ -152,10 +169,10 @@ export const OrchestrationPage = () => {
           <span className={`orchestration-page__status-chip orchestration-page__status-chip_${apiState}`}>
             {apiState === 'live' ? 'API live' : apiState === 'refreshing' ? 'API refresh' : 'API offline'}
           </span>
-          <h1>Центр управления субагентами, статусом и локальным оркестратором.</h1>
+          <h1>Центр управления Opus, Magic MCP и локальным runtime MUDRO.</h1>
           <p>
             Этот экран собирает текущую ветку, commit, время Москвы, ссылку на Skaro и рабочие списки для планирования
-            и исполнения. Если backend еще не отдает статус, страница показывает local fallback без пустых блоков.
+            и исполнения. Если backend ещё не отдаёт статус, страница показывает локальный fallback без пустых блоков.
           </p>
 
           <div className="orchestration-page__actions">
@@ -208,9 +225,39 @@ export const OrchestrationPage = () => {
 
       {isError ? (
         <div className="orchestration-page__notice">
-          Backend endpoint is not available yet. Showing local fallback so the control surface stays usable.
+          Backend endpoint пока недоступен. Показываем локальный fallback, чтобы control surface оставался рабочим.
         </div>
       ) : null}
+
+      <section className="orchestration-page__bridge" id="bridge" aria-label="Связка Opus, Magic MCP и runtime">
+        <div className="orchestration-page__section-head">
+          <span className="orchestration-page__panel-kicker">Bridge map</span>
+          <h2>Как связаны Opus, Magic MCP и локальный runtime</h2>
+          <p>
+            Локальный Claude Opus ключ — это слой reasoning: он собирает план, делает ревью и ведёт большие изменения.
+            Magic MCP подключается только как визуальный и контекстный MCP для UI-паттернов, layout inspiration и
+            проверки shell. Runtime и бизнес-логика живут отдельно в Go-сервисах MUDRO.
+          </p>
+        </div>
+
+        <div className="orchestration-page__bridge-grid">
+          {bridgeCards.map((card) => (
+            <article key={card.title} className="orchestration-page__bridge-card">
+              <span className="orchestration-page__panel-kicker">{card.title}</span>
+              <p>{card.text}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="orchestration-page__bridge-flow" aria-label="Схема работы">
+          {bridgeFlow.map((step, index) => (
+            <span key={step} className={`orchestration-page__bridge-chip ${index === 0 ? 'orchestration-page__bridge-chip_accent' : ''}`}>
+              {step}
+              {index < bridgeFlow.length - 1 ? <span className="orchestration-page__bridge-arrow">→</span> : null}
+            </span>
+          ))}
+        </div>
+      </section>
 
       <section className="orchestration-page__panels" aria-label="Orchestration workspace">
         <motion.article
@@ -238,7 +285,7 @@ export const OrchestrationPage = () => {
         >
           <div className="orchestration-page__panel-head">
             <span className="orchestration-page__panel-kicker">Todo</span>
-            <h2>Что еще надо соединить</h2>
+            <h2>Что ещё надо соединить</h2>
           </div>
           <ol className="orchestration-page__list orchestration-page__list_ordered">
             {status.todo.map((item) => (
@@ -271,8 +318,8 @@ export const OrchestrationPage = () => {
           transition={{ delay: 0.2 }}
         >
           <div className="orchestration-page__panel-head">
-            <span className="orchestration-page__panel-kicker">Статус</span>
-            <h2>Сигналы и быстрые ссылки</h2>
+            <span className="orchestration-page__panel-kicker">Сигналы</span>
+            <h2>Статус и быстрые ссылки</h2>
           </div>
           <dl className="orchestration-page__status-grid">
             {status.status.map((item) => (

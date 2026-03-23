@@ -1,11 +1,17 @@
-import { Home, Film, MessageCircle, User, LogIn, LogOut } from 'lucide-react'
-import { NavLink } from 'react-router'
+﻿import { Film, Home, LogIn, LogOut, MessageCircle, Sparkles, TabletSmartphone, User, Workflow } from 'lucide-react'
+import { Link, NavLink } from 'react-router'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { logout } from '@/features/auth/model/authSlice'
 import { cn } from '@/shared/lib/utils'
 
-const navItems = [
-  { to: '/', icon: Home, label: 'Лента' },
+const primaryNavItems = [
+  { to: '/', icon: Home, label: 'Лента', description: 'Единый архив' },
+  { to: '/orchestration', icon: Workflow, label: 'Control plane', description: 'Opus + Magic' },
+  { to: '/casino', icon: Sparkles, label: 'Casino', description: 'Изолированный runtime' },
+  { to: '/tma/casino', icon: TabletSmartphone, label: 'Mini app', description: 'Telegram surface' },
+]
+
+const secondaryNavItems = [
   { to: '/movies', icon: Film, label: 'Фильмы' },
   { to: '/chat', icon: MessageCircle, label: 'Чат' },
   { to: '/profile', icon: User, label: 'Профиль' },
@@ -17,47 +23,86 @@ export const Sidebar = () => {
   const user = useAppSelector((state) => state.auth.user)
 
   return (
-    <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-mudro-pink text-white font-bold text-lg">
-          M
-        </span>
-        <span className="flex flex-col leading-tight">
-          <strong className="text-sm font-semibold text-mudro-text">Mudro</strong>
-          <small className="text-xs text-mudro-muted">живой архив</small>
+    <aside className="mudro-sidebar hidden md:flex">
+      <div className="mudro-sidebar__brand">
+        <span className="mudro-sidebar__brand-mark">M</span>
+        <span className="mudro-sidebar__brand-copy">
+          <strong>Mudro</strong>
+          <small>Локальный control plane</small>
         </span>
       </div>
 
-      <nav className="flex flex-col gap-1 px-3 mt-2 flex-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-mudro-pink/10 text-mudro-pink'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-              )
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+      <div className="mudro-sidebar__section">
+        <span className="mudro-sidebar__section-label">Рабочая зона</span>
+        <nav className="mudro-sidebar__nav">
+          {primaryNavItems.map(({ to, icon: Icon, label, description }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) => cn('mudro-sidebar__link', isActive && 'mudro-sidebar__link_active')}
+            >
+              <span className="mudro-sidebar__link-icon">
+                <Icon size={18} />
+              </span>
+              <span className="mudro-sidebar__link-copy">
+                <strong>{label}</strong>
+                <span>{description}</span>
+              </span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
 
-      <div className="px-3 py-4 border-t border-slate-100 space-y-2">
+      <div className="mudro-sidebar__section">
+        <span className="mudro-sidebar__section-label">Дополнительно</span>
+        <nav className="mudro-sidebar__nav">
+          {secondaryNavItems.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) => cn('mudro-sidebar__link', isActive && 'mudro-sidebar__link_active')}
+            >
+              <span className="mudro-sidebar__link-icon">
+                <Icon size={18} />
+              </span>
+              <span className="mudro-sidebar__link-copy">
+                <strong>{label}</strong>
+                <span>Вторичный экран</span>
+              </span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      <div className="mudro-sidebar__bridge">
+        <span className="mudro-sidebar__section-label">Связка</span>
+        <strong>Claude Opus ↔ Magic MCP</strong>
+        <p>
+          Локальный Opus ключ отвечает за reasoning и изменения. Magic MCP помогает с контекстом и визуальными
+          паттернами, но браузер видит только status surface.
+        </p>
+        <div className="mudro-sidebar__bridge-flow" aria-label="Схема связки">
+          <span className="mudro-sidebar__bridge-chip mudro-sidebar__bridge-chip_accent">Opus</span>
+          <span className="mudro-sidebar__bridge-chip">MCP</span>
+          <span className="mudro-sidebar__bridge-chip">MUDRO</span>
+        </div>
+        <Link to="/orchestration#bridge" className="mudro-sidebar__bridge-link">
+          Карта bridge
+        </Link>
+      </div>
+
+      <div className="mudro-sidebar__footer">
         {token ? (
-          <div className="flex items-center justify-between px-2">
-            <span className="text-sm font-medium text-slate-700 truncate">
-              {user?.username ?? 'User'}
+          <div className="mudro-sidebar__user">
+            <span className="mudro-sidebar__user-copy">
+              <strong>{user?.username ?? 'Пользователь'}</strong>
+              <small>{user?.email ?? 'В системе'}</small>
             </span>
             <button
               onClick={() => dispatch(logout())}
-              className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+              className="mudro-sidebar__logout"
               title="Выйти"
             >
               <LogOut size={16} />
@@ -66,22 +111,20 @@ export const Sidebar = () => {
         ) : (
           <NavLink
             to="/auth"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-mudro-pink/10 text-mudro-pink'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-              )
-            }
+            className={({ isActive }) => cn('mudro-sidebar__link', isActive && 'mudro-sidebar__link_active')}
           >
-            <LogIn size={18} />
-            Войти
+            <span className="mudro-sidebar__link-icon">
+              <LogIn size={18} />
+            </span>
+            <span className="mudro-sidebar__link-copy">
+              <strong>Войти</strong>
+              <span>Открыть аккаунт</span>
+            </span>
           </NavLink>
         )}
-        <span className="inline-flex items-center gap-1.5 text-xs text-mudro-muted px-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          MVP · server live
+        <span className="mudro-sidebar__live">
+          <span className="mudro-sidebar__live-dot" />
+          MVP live
         </span>
       </div>
     </aside>
