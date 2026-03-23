@@ -21,6 +21,15 @@ if [[ ! -d "${MUDRO_APP_ROOT}" ]]; then
   exit 1
 fi
 
+for script in \
+  "${MUDRO_APP_ROOT}/scripts/openclaw/openclaw_gateway_systemd.sh" \
+  "${MUDRO_APP_ROOT}/scripts/skaro/skaro_ui_linux.sh" \
+  "${MUDRO_APP_ROOT}/scripts/openclaw/openclaw_install_user.sh"; do
+  if [[ -f "${script}" ]]; then
+    chmod 755 "${script}"
+  fi
+done
+
 if ! id -u "${OPENCLAW_USER}" >/dev/null 2>&1; then
   useradd --system --create-home --home-dir "/home/${OPENCLAW_USER}" --shell /usr/sbin/nologin "${OPENCLAW_USER}"
 fi

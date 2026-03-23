@@ -68,6 +68,25 @@ sync_repo_tree() {
   fi
 }
 
+ensure_executable_scripts() {
+  local script
+  for script in \
+    "${APP_DIR}/ops/scripts/install_mudro_systemd.sh" \
+    "${APP_DIR}/ops/scripts/install_openclaw_systemd.sh" \
+    "${APP_DIR}/ops/scripts/install_mudro_api_systemd.sh" \
+    "${APP_DIR}/ops/scripts/harden_vps_db_auth.sh" \
+    "${APP_DIR}/scripts/openclaw/openclaw_gateway_systemd.sh" \
+    "${APP_DIR}/scripts/skaro/skaro_ui_linux.sh" \
+    "${APP_DIR}/scripts/openclaw/openclaw_install_user.sh" \
+    "${APP_DIR}/scripts/openclaw/openclaw_gateway_user_service.sh" \
+    "${APP_DIR}/scripts/openclaw/openclaw_post_install_checks.sh" \
+    "${APP_DIR}/scripts/openclaw/server_bootstrap_root.sh"; do
+    if [[ -f "${script}" ]]; then
+      chmod 755 "${script}"
+    fi
+  done
+}
+
 build_binary() {
   local name="$1"
   local target="$2"
@@ -154,6 +173,7 @@ ensure_root
 ensure_system_user
 ensure_directories
 sync_repo_tree
+ensure_executable_scripts
 
 if has_service api; then
   build_binary "mudro-api" "./services/feed-api/cmd"
