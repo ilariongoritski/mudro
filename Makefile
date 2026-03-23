@@ -191,8 +191,15 @@ validate-contracts:
 validate-microservices:
 	$(MAKE) test-active
 	$(MAKE) validate-contracts
+	$(MAKE) validate-systemd-templates
 	docker compose -f $(CORE_COMPOSE_FILE) -f $(SERVICES_COMPOSE_FILE) config >/dev/null
 	python -m py_compile ./scripts/claude/run_role_matrix.py
+
+validate-systemd-templates:
+	bash -n ./ops/scripts/install_mudro_api_systemd.sh
+	bash -n ./ops/scripts/harden_vps_db_auth.sh
+	test -f ./ops/systemd/mudro-api.service
+	test -f ./ops/systemd/mudro-api.env.example
 
 guard-main-clean:
 	$(GUARD_MAIN_CLEAN_SCRIPT)

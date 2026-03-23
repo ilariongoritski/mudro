@@ -1,0 +1,17 @@
+[Unit]
+Description=MUDRO API service
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/mudro
+EnvironmentFile=-/etc/mudro/runtime/mudro-api.env
+Environment=API_ADDR=:8080
+ExecStart=/usr/local/bin/mudro-api
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

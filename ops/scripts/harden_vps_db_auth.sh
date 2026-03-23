@@ -6,8 +6,10 @@ APP_USER="${MUDRO_DB_APP_USER:-mudro_app}"
 APP_PASSWORD="${MUDRO_DB_APP_PASSWORD:?MUDRO_DB_APP_PASSWORD is required}"
 SUPERUSER_PASSWORD="${MUDRO_DB_SUPERUSER_PASSWORD:?MUDRO_DB_SUPERUSER_PASSWORD is required}"
 ENV_FILE="${PROJECT_DIR}/.env"
-SERVICE_DROPIN_DIR="/etc/systemd/system/mudro-api.service.d"
-SERVICE_DROPIN_FILE="${SERVICE_DROPIN_DIR}/10-dsn.conf"
+SYSTEMD_UNIT_SOURCE="${PROJECT_DIR}/ops/systemd/mudro-api.service"
+SYSTEMD_UNIT_DEST="/etc/systemd/system/mudro-api.service"
+SYSTEMD_RUNTIME_DIR="${MUDRO_SYSTEMD_RUNTIME_DIR:-/etc/mudro/runtime}"
+SYSTEMD_ENV_FILE="${SYSTEMD_RUNTIME_DIR}/mudro-api.env"
 FIREWALL_UNIT="/etc/systemd/system/mudro-db-firewall.service"
 APP_DSN="postgres://${APP_USER}:${APP_PASSWORD}@localhost:5433/gallery?sslmode=disable"
 
@@ -61,11 +63,20 @@ SQL
 cat "${SQL_FILE}" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1 >/dev/null
 rm -f "${SQL_FILE}"
 
-install -d -m 755 "${SERVICE_DROPIN_DIR}"
-cat > "${SERVICE_DROPIN_FILE}" <<EOF
-[Service]
-Environment=DSN=${APP_DSN}
+if [[ -f "${SYSTEMD_UNIT_SOURCE}" ]]; then
+  install -m 644 "${SYSTEMD_UNIT_SOURCE}" "${SYSTEMD_UNIT_DEST}"
+fi
+
+install -d -m 755 "${SYSTEMD_RUNTIME_DIR}"
+cat > "${SYSTEMD_ENV_FILE}" <<EOF
+DSN=${APP_DSN}
+API_ADDR=:8080
+MEDIA_ROOT=${PROJECT_DIR}/data/nu
 EOF
+chmod 600 "${SYSTEMD_ENV_FILE}"
+
+rm -f /etc/systemd/system/mudro-api.service.d/10-dsn.conf
+rmdir /etc/systemd/system/mudro-api.service.d 2>/dev/null || true
 
 cat > "${FIREWALL_UNIT}" <<'EOF'
 [Unit]
@@ -98,6 +109,7 @@ done
 curl -fsS http://127.0.0.1:8080/healthz >/dev/null
 
 echo "[ok] mudro-api DSN switched to ${APP_USER}"
+echo "[ok] mudro-api runtime env synced to ${SYSTEMD_ENV_FILE}"
 echo "[ok] docker db port now follows compose bind on localhost only"
 echo "[ok] inbound tcp/5433 is blocked outside loopback by systemd-managed iptables rule"
 echo "[ok] mudro-api healthz passed"
