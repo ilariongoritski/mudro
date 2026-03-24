@@ -23,7 +23,14 @@ func CasinoBotToken() string {
 }
 
 func CasinoDemoMode() bool {
-	return parseBool(os.Getenv("CASINO_DEMO_MODE"))
+	if !parseBool(os.Getenv("CASINO_DEMO_MODE")) {
+		return false
+	}
+	// Refuse demo mode when a real bot token is configured (production safety).
+	if CasinoBotToken() != "" {
+		return false
+	}
+	return true
 }
 
 func CasinoAdminKey() string {

@@ -138,13 +138,19 @@ func (s *Server) withAdmin(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func withCORS(next http.Handler) http.Handler {
+	allowed := AllowedOrigins()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if origin != "" {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Init-Data, X-Admin-Key")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			for _, a := range allowed {
+				if origin == a {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+					w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Init-Data, X-Admin-Key")
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+					break
+				}
+			}
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(204)
@@ -439,6 +445,8 @@ func (s *Server) handleAdminRtpProfiles(w http.ResponseWriter, r *http.Request) 
 		}
 
 		ClearRtpCache("")
+		adminKey := r.Header.Get("X-Admin-Key")
+		log.Printf("[AUDIT] RTP profile upsert: id=%s name=%q rtp=%.2f isDefault=%v by=%s", id, body.Name, body.Rtp, body.IsDefault, maskKey(adminKey))
 		writeJSON(w, 200, map[string]string{"id": id})
 
 	default:
@@ -451,7 +459,8 @@ func (s *Server) handleAdminRtpProfiles(w http.ResponseWriter, r *http.Request) 
 			}
 			_, _ = s.pool.Exec(ctx, `DELETE FROM casino_rtp_profiles WHERE id = $1`, id)
 			ClearRtpCache("")
-			writeJSON(w, 200, map[string]string{"ok": "true"})
+			adminKey := r.Header.Get("X-Admin-Key")
+			log.Printf("[AUDIT] RTP profile deleted: id=%s by=%s", id, maskKey(adminKey))
 		} else {
 			writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
 		}
@@ -492,4 +501,11 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(data)
+}
+
+func maskKey(key string) string {
+	if len(key) <= 4 {
+		return "***"
+	}
+	return key[:4] + "***"
 }
