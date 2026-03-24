@@ -10,5 +10,9 @@ export async function getJSON<T>(input: string, signal?: AbortSignal): Promise<T
     throw new Error(`HTTP ${response.status}`)
   }
 
-  return response.json() as Promise<T>
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new Error(`Failed to parse JSON from ${input}`)
+  }
 }
