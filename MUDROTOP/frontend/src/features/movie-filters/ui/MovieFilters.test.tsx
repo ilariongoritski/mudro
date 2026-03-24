@@ -1,9 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { MovieFilters } from '@/features/movie-filters/ui/MovieFilters'
 
 describe('MovieFilters', () => {
+  afterEach(cleanup)
+
   it('applies explicit button-driven filters', () => {
     const onApply = vi.fn()
     const onReset = vi.fn()

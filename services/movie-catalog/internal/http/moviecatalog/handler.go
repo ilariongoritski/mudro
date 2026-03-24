@@ -113,6 +113,9 @@ func decodeQuery(r *http.Request) (domain.MovieQuery, error) {
 		if err != nil || value < 1 {
 			return domain.MovieQuery{}, errors.New("page_size must be a positive integer")
 		}
+		if value > 100 {
+			return domain.MovieQuery{}, errors.New("page_size must not exceed 100")
+		}
 		query.PageSize = value
 	}
 

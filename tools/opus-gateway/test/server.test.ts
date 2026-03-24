@@ -1,14 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { createGatewayServer } from "../src/server.js";
 import type { NormalizedRunRequest, RunResult } from "../src/types.js";
 
+const testRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
 test("healthz reports missing api key", async () => {
   const server = createGatewayServer({
     env: {},
-    repoRoot: "D:\\mudr\\mudro11"
+    repoRoot: testRepoRoot
   });
 
   server.listen(0, "127.0.0.1");
@@ -53,7 +57,7 @@ test("v1/run forwards normalized request to runner", async () => {
     env: {
       ANTHROPIC_API_KEY: "test-key"
     },
-    repoRoot: "D:\\mudr\\mudro11",
+    repoRoot: testRepoRoot,
     runner
   });
 
@@ -109,7 +113,7 @@ test("v1/run returns 409 while another request is active", async () => {
     env: {
       ANTHROPIC_API_KEY: "test-key"
     },
-    repoRoot: "D:\\mudr\\mudro11",
+    repoRoot: testRepoRoot,
     runner
   });
 

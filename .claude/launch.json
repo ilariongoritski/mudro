@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "frontend-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1"],
       "port": 5173,
       "cwd": "frontend"
     },
@@ -31,6 +31,13 @@
       "runtimeExecutable": "make",
       "runtimeArgs": ["core-up"],
       "port": 5433
+    },
+    {
+      "name": "mudrotop-frontend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1"],
+      "port": 5173,
+      "cwd": "MUDROTOP/frontend"
     }
   ]
 }
