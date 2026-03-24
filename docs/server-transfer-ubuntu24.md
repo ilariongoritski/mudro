@@ -1,25 +1,31 @@
-# Server Transfer Runbook (Ubuntu 24.04)
+# Server Transfer Runbook (Ubuntu 24.04, VPS-First)
 
-Цель: быстро перенести `mudro` на новый VPS и подключить Vercel к внешней БД.
+Цель: безопасно подготовить новый VPS под основной runtime `MUDRO` без хранения секретов в репозитории.
+
+## 0) Сначала ротация секретов
+- старый пароль сервера и API key панели считаются скомпрометированными
+- перевыпустить их вне репозитория
+- не сохранять новые значения в tracked-файлах
 
 ## 1) Базовая подготовка VPS
-
-Под root (первый вход по паролю):
+Первый вход допустим под `root`, но только как bootstrap-шаг.
 
 ```bash
 apt-get update
-apt-get install -y ca-certificates curl git make ufw fail2ban docker.io docker-compose-plugin
+apt-get install -y ca-certificates curl git make rsync ufw fail2ban docker.io docker-compose-plugin nginx certbot python3-certbot-nginx
 systemctl enable --now docker
 ```
 
-Создать рабочего пользователя:
+## 2) Создать `admin` и подготовить общий путь проекта
 
 ```bash
 adduser admin
 usermod -aG sudo,docker admin
+mkdir -p /srv/mudro
+chown admin:admin /srv/mudro
 ```
 
-Добавить SSH-ключ пользователю `admin`:
+## 3) Добавить SSH-ключ пользователю `admin`
 
 ```bash
 mkdir -p /home/admin/.ssh
@@ -31,7 +37,13 @@ chmod 600 /home/admin/.ssh/authorized_keys
 chown -R admin:admin /home/admin/.ssh
 ```
 
-## 2) Минимальный SSH hardening
+Проверить:
+
+```bash
+ssh admin@<VPS_IP>
+```
+
+## 4) Только после проверки ключа отключить root/password SSH
 
 ```bash
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -39,83 +51,111 @@ sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart ssh
 ```
 
-Проверить вход новым пользователем:
-
-```bash
-ssh admin@<VPS_IP>
-```
-
-## 3) Firewall (черновой, но безопасный минимум)
+## 5) Firewall: только `22/80/443`
 
 ```bash
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw allow 5433/tcp
 ufw --force enable
-ufw status
+ufw status verbose
 ```
 
-Если БД не нужна снаружи напрямую, лучше НЕ открывать `5433/tcp`.
+`5433/tcp` наружу не открывать.
 
-## 4) Деплой проекта на VPS
+## 6) Деплой проекта в `/srv/mudro`
 
 Под `admin`:
 
 ```bash
-mkdir -p ~/projects
-cd ~/projects
-git clone git@github.com:ilariongoritski/mudro.git
-cd mudro
+git clone git@github.com:goritskimihail/mudro.git /srv/mudro
+cd /srv/mudro
 ```
 
-Заполнить переменные окружения:
-- `.env` (быстрый путь), либо
-- `env/common.env`, `env/api.env`, `env/agent.env`, `env/reporter.env`, `env/bot.env`, `env/db.env`.
+## 7) Подготовить runtime env-файлы
+Создать локальные серверные файлы из шаблонов:
+- `env/common.env`
+- `env/api.env`
+- `env/agent.env`
+- `env/reporter.env`
+- `env/db.env`
+- `env/casino.env`
+- `env/storage.env`
 
-Поднять локальный контур:
+Минимальный способ:
 
 ```bash
-make up
-docker compose ps
-make dbcheck
-make migrate
-make tables
-make test
-make count-posts
+cp env/common.env.example env/common.env
+cp env/api.env.example env/api.env
+cp env/agent.env.example env/agent.env
+cp env/reporter.env.example env/reporter.env
+cp env/db.env.example env/db.env
+cp env/casino.env.example env/casino.env
+cp env/storage.env.example env/storage.env
 ```
 
-## 5) DSN для Vercel
+После этого вручную заполнить реальные секреты и DSN внутри `env/*.env`.
 
-В `Vercel -> Project Settings -> Environment Variables` добавить:
-- `DSN=postgres://<USER>:<PASSWORD>@<VPS_IP>:5433/gallery?sslmode=disable`
-
-Если используешь managed Postgres с TLS:
-- `sslmode=require`
-
-Важно: для Vercel нельзя использовать `localhost` в `DSN`.
-
-## 6) Проверка Vercel после DSN
-
-После обновления env сделать redeploy (CLI или Dashboard), затем проверить:
+## 8) Поднять основной runtime
 
 ```bash
-curl -i https://<vercel-domain>/healthz
-curl -i "https://<vercel-domain>/feed?limit=2"
+cd /srv/mudro
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml ps
+curl -fsS http://127.0.0.1:8080/healthz
 ```
 
 Ожидание:
-- `/healthz` -> `200 {"status":"ok"}`
-- `/feed` -> `200` (HTML-лента), не `500`
+- `db`, `api`, `agent`, `redis`, `kafka`, `minio`, `casino-*` подняты
+- `healthz` отвечает `{"status":"ok"}`
 
-## 7) Частые ошибки
+## 9) Развернуть frontend через nginx
 
-1. `/feed` возвращает `500` в Vercel:
-   - в проекте не задан `DSN` для Production.
+Если frontend собирается прямо на VPS, сначала нужен установленный Node.js.
 
-2. Vercel URL возвращает `401 Authentication Required`:
-   - включен `Deployment Protection` (`Vercel Authentication`).
+```bash
+cd /srv/mudro/frontend
+npm run build
+cd /srv/mudro
+sudo bash scripts/ops/deploy_vps_frontend.sh
+```
 
-3. Не удается подключиться по SSH:
-   - ключ не добавлен в `/home/admin/.ssh/authorized_keys`,
-   - или отключен вход паролем до проверки входа по ключу.
+Проверка:
+
+```bash
+curl -fsS http://127.0.0.1/healthz
+curl -I http://127.0.0.1/
+```
+
+## 10) Закрыть БД в loopback-only и выделить app-role
+
+```bash
+export MUDRO_DB_APP_PASSWORD='<strong password>'
+export MUDRO_DB_SUPERUSER_PASSWORD='<strong password>'
+sudo -E bash scripts/ops/harden_vps_db_auth.sh
+```
+
+Проверка:
+
+```bash
+docker compose -f docker-compose.prod.yml ps db api agent
+curl -fsS http://127.0.0.1:8080/healthz
+sudo ss -lntp | grep 5433
+```
+
+## 11) HTTPS
+Когда домен уже указывает на VPS:
+
+```bash
+sudo certbot --nginx -d <domain> --non-interactive --agree-tos -m <email>
+```
+
+## 12) Частые ошибки
+1. `docker compose -f docker-compose.prod.yml up -d` падает:
+   - отсутствует один из `env/*.env`
+2. `curl http://127.0.0.1:8080/healthz` не отвечает:
+   - проверить `docker compose -f docker-compose.prod.yml logs api --tail=100`
+3. `curl http://127.0.0.1/healthz` не отвечает:
+   - проверить `sudo systemctl status nginx --no-pager`
+4. `ssh admin@<VPS_IP>` не работает:
+   - не отключать парольный вход до успешной проверки ключа

@@ -39,9 +39,7 @@ type SpinRecord struct {
 }
 
 type SpinResult struct {
-	Balance int64        `json:"balance"`
-	Config  Config       `json:"config,omitempty"`
-	History []SpinRecord `json:"history,omitempty"`
-	Symbols []string     `json:"symbols,omitempty"`
-	Win     int64        `json:"win,omitempty"`
+	Balance int64    `json:"balance"`
+	Symbols []string `json:"symbols"`
+	Win     int64    `json:"win"`
 }

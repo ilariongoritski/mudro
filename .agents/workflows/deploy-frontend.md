@@ -1,35 +1,33 @@
 ---
-description: Деплой фронтенда на VPS (сборка + копирование static файлов)
+description: Деплой frontend на VPS через server-side rollout script
 ---
 
-# Деплой Frontend на VPS
+# Deploy Frontend
 
-Собирает production-бандл и деплоит через rsync/scp на VPS nginx.
-
-## Предварительные условия
-- SSH-доступ к VPS `91.218.113.247`
-- Nginx настроен на раздачу из `/var/www/mudro/frontend`
+## Контракт
+- Что делаем: собираем `frontend/dist`, затем обновляем `nginx`-контур на VPS
+- Что считаем успехом: frontend раздается из `/var/www/mudro/frontend`, `/healthz` отвечает
+- Риск: краткий даунтайм во время restart `nginx`
 
 ## Шаги
-
-1. Установить зависимости и собрать бандл:
+1. Собрать бандл:
 ```powershell
 cd d:\mudr\mudro11-main\frontend
 npm.cmd ci
 npm.cmd run build
 ```
 
-2. Залить на сервер (через scp из PowerShell):
-```powershell
-scp -r d:\mudr\mudro11-main\frontend\dist\* admin@91.218.113.247:/var/www/mudro/frontend/
+2. На VPS выполнить server-side rollout:
+```bash
+export MUDRO_SERVER_HOST="91.218.113.247"
+export MUDRO_SERVER_USER="admin"
+export MUDRO_PROJECT_DIR="/srv/mudro"
+
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && sudo bash scripts/ops/deploy_vps_frontend.sh"
 ```
 
-3. Проверить, что сайт отдается:
-```powershell
-curl http://91.218.113.247/healthz
+3. Smoke-check:
+```bash
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -fsS http://127.0.0.1/healthz"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -I http://127.0.0.1/"
 ```
-
-## Критерии успеха
-- `npm run build` завершается без ошибок
-- Файлы появились в `/var/www/mudro/frontend/` на сервере
-- `curl /healthz` возвращает `{"status":"ok"}`

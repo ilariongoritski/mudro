@@ -50,6 +50,17 @@ Expected output:
 5. `Codex` фиксирует результат в `.codex/logs/...` и `.codex/state.md`.
 6. Только после валидации изменения могут идти в `main`.
 
+## VPS-control specialization
+Если текущий чат используется как пульт управления VPS, `Codex` остается главным control plane, а подзадачи делегируются специализированным субагентам:
+- `VPS Auditor` — статус `docker compose`, `nginx`, `healthz`, порты, дисковая/память
+- `Config Reviewer` — сверка ops-доков, `docker-compose.prod.yml`, `env/*.env.example`, `scripts/ops/*`
+- `Incident Analyst` — сбор логов, сверка симптома с known failure modes, подготовка одного безопасного retry
+
+Инварианты:
+- субагенты начинают с read-only анализа
+- изменение состояния VPS без явного разрешения владельца не выполняется
+- итоговый ответ пользователю и финальное решение по risky operations всегда формирует `Codex`
+
 ## Важные ограничения
 - `Claude Opus` не пишет напрямую в tracked файлы репозитория.
 - Все изменения в коде/конфигах делает локальный `Codex`.

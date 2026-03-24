@@ -10,10 +10,12 @@
 - `env/bot.env` — только bot (`TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `API_BASE_URL`)
 - `env/casino.env` — только casino service (`CASINO_ADDR`, `CASINO_DSN`, `CASINO_INITIAL_COINS`, `CASINO_RTP_BPS`, `CASINO_MAX_BET`)
 - `env/db.env` — только db (`POSTGRES_PASSWORD`, `POSTGRES_PORT`)
+- `env/storage.env` — только object storage / backup (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`)
 
 Дополнительно:
 - `env/api.env` поддерживает distributed rate limiting через Redis (`REDIS_RATE_LIMIT_ENABLED`, `REDIS_ADDR`, ...)
 - `env/common.env` и `env/agent.env` содержат Kafka runtime-переменные (`KAFKA_ENABLED`, `KAFKA_BROKERS`, `KAFKA_TOPIC_TASKS`)
+- `docker-compose.prod.yml` ожидает реальные локальные `env/*.env` и больше не должен опираться на продовые секреты в tracked-файлах
 
 Шаблоны лежат рядом в `*.env.example`.
 

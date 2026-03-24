@@ -2,12 +2,13 @@ services:
   db:
     image: postgres:16
     restart: unless-stopped
+    env_file:
+      - ./env/db.env
     environment:
       POSTGRES_DB: gallery
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
     healthcheck:
@@ -19,12 +20,13 @@ services:
   casino-db:
     image: postgres:16
     restart: unless-stopped
+    env_file:
+      - ./env/db.env
     environment:
       POSTGRES_DB: mudro_casino
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:${CASINO_POSTGRES_PORT:-5434}:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - casino_pgdata_prod:/var/lib/postgresql/data
     healthcheck:
@@ -38,21 +40,17 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./services/casino/cmd/casino"
-    environment:
-      CASINO_ADDR: ":8081"
-      CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
-      CASINO_INITIAL_COINS: "${CASINO_INITIAL_COINS:-2500}"
-      CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
-      CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
+    env_file:
+      - ./env/casino.env
     depends_on:
       casino-db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
+      - "127.0.0.1:8082:8081"
     volumes:
       - ./:/app
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\\\"status\\\":\\\"ok\\\"\\\\|\\\"status\\\": \\\"ok\\\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -62,7 +60,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_prod:/data
     healthcheck:
@@ -92,7 +90,7 @@ services:
       - --advertise-kafka-addr
       - "PLAINTEXT://kafka:9092"
     ports:
-      - "127.0.0.1:${KAFKA_PORT:-9092}:9092"
+      - "127.0.0.1:9092:9092"
     volumes:
       - kafka_prod:/var/lib/redpanda/data
     healthcheck:
@@ -106,18 +104,9 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/api"
-    environment:
-      API_ADDR: ":8080"
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      JWT_SECRET: "${JWT_SECRET:-}"
-      MUDRO_ROOT: /app
-      API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
-      API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
-      REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
-      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
-      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
-      REDIS_DB: "${REDIS_DB:-0}"
-      CASINO_SERVICE_URL: "http://casino-api:8081"
+    env_file:
+      - ./env/common.env
+      - ./env/api.env
     depends_on:
       db:
         condition: service_healthy
@@ -128,11 +117,11 @@ services:
       casino-api:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${API_PORT:-8081}:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./:/app
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\\\"status\\\":\\\"ok\\\"\\\\|\\\"status\\\": \\\"ok\\\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -142,13 +131,9 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/agent --mode worker --interval 15s"
-    environment:
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ROOT: /app
-      KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
-      KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
-      KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
-      KAFKA_CLIENT_ID: "${KAFKA_CLIENT_ID:-mudro-agent}"
+    env_file:
+      - ./env/common.env
+      - ./env/agent.env
     depends_on:
       db:
         condition: service_healthy
@@ -169,13 +154,9 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: sh -c "go run ./cmd/reporter"
-    environment:
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ROOT: /app
-      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN:-}"
-      REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
-      REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
-      API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
+    env_file:
+      - ./env/common.env
+      - ./env/reporter.env
     depends_on:
       db:
         condition: service_healthy
@@ -193,12 +174,11 @@ services:
     image: minio/minio:RELEASE.2024-06-22T05-26-45Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-admin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-MudroAdmin2026}"
+    env_file:
+      - ./env/storage.env
     ports:
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_prod:/data
     healthcheck:

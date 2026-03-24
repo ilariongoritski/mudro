@@ -9,61 +9,40 @@ description: Управление Docker Compose сервисами проект
 
 | Файл | Среда | Сервисы |
 |------|-------|---------|
-| `docker-compose.yml` | Локальная разработка | `db` (Postgres 15, порт 5433) |
-| `docker-compose.prod.yml` | VPS production | `db`, `api`, `agent`, `reporter` |
+| `docker-compose.yml` | локальная разработка | `db`, `casino-db`, `casino-api` |
+| `docker-compose.prod.yml` | VPS-first runtime | `db`, `casino-db`, `casino-api`, `redis`, `kafka`, `api`, `agent`, `reporter`, `minio` |
 
-## Команды локально (PowerShell)
+## Prod runtime
+- проект на VPS: `/srv/mudro`
+- прод-контур читает секреты только из локальных `env/*.env`
+- `api` публикуется на `127.0.0.1:8080`
+- `db` публикуется только на `127.0.0.1:5433`
 
-### Поднять / остановить
+## Команды локально
 ```powershell
-# Из корня проекта
-docker compose up -d          # поднять
-docker compose down            # остановить (без удаления данных)
-docker compose ps              # статус контейнеров
+docker compose up -d
+docker compose ps
+docker compose logs --tail=100
+docker compose exec -T db psql -U postgres -d gallery -c "select 1;"
 ```
 
-### Логи
-```powershell
-docker compose logs --tail=100           # последние 100 строк всех сервисов
-docker compose logs db --tail=50         # только БД
-docker compose logs --follow             # live tail
-```
-
-### Рестарт БД
-```powershell
-docker compose restart db
-docker compose exec -T db pg_isready -U postgres  # проверка готовности
-```
-
-### Очистка (ОПАСНО — требует подтверждения владельца!)
-```powershell
-# docker compose down -v   # ⛔ удаляет volume с данными!
-```
-
-## Команды на VPS (через SSH)
-
+## Команды на VPS
 ```bash
 cd /srv/mudro
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs api --tail=100
 docker compose -f docker-compose.prod.yml restart api
+docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -d gallery -c "select 1;"
 ```
-
-## Health Check контейнера БД
-```powershell
-docker compose exec -T db psql -U postgres -d gallery -c "select 1;"
-```
-Ожидаемый результат: `1` без ошибок.
 
 ## Типичные проблемы
-
-| Проблема | Решение |
-|----------|---------|
-| `port 5433 already in use` | `docker compose down` или найти процесс: `netstat -ano \| findstr 5433` |
-| `Cannot connect to Docker daemon` | Проверить что Docker Desktop запущен |
-| Контейнер `unhealthy` | `docker compose logs db --tail=30` и перезапустить |
+| Проблема | Действие |
+|----------|----------|
+| `env file ... not found` | создать отсутствующий `env/*.env` из `*.env.example` |
+| `Cannot connect to Docker daemon` | проверить Docker daemon и права пользователя |
+| контейнер `unhealthy` | посмотреть `logs`, затем сделать один безопасный restart |
 
 ## Инварианты безопасности
-- **Никогда** не запускать `docker compose down -v` без подтверждения
-- **Никогда** не менять порт `5433` без обновления всех DSN
-- На VPS порт `5432` (внутренний) привязан только к loopback
+- никогда не запускать `docker compose down -v` без подтверждения
+- не хранить секреты в `docker-compose.prod.yml`
+- на VPS использовать только `env/*.env`, а не tracked `.env`

@@ -50,10 +50,10 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 
 	var user User
 	err = s.pool.QueryRow(ctx, `
-		INSERT INTO users (username, password_hash, role, created_at)
-		VALUES ($1, $2, 'user', NOW())
-		RETURNING id, username, role, created_at
-	`, username, string(hash)).Scan(&user.ID, &user.Username, &user.Role, &user.CreatedAt)
+		INSERT INTO users (username, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, 'user', NOW(), NOW())
+		RETURNING id, username, email, role, created_at
+	`, username, string(hash)).Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "users_username_key") {
@@ -69,9 +69,9 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 func (s *Service) Login(ctx context.Context, login, password string) (*User, string, error) {
 	var user User
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, username, password_hash, role, created_at
+		SELECT id, username, email, password_hash, role, created_at
 		FROM users WHERE username = $1 OR email = $1
-	`, login).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Role, &user.CreatedAt)
+	`, login).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

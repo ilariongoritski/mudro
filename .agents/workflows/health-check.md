@@ -1,47 +1,30 @@
 ---
-description: Полный health check проекта mudro (backend + frontend + БД)
+description: Полный health check mudro для локального и VPS-first контура
 ---
 
 # Health Check
 
-Проверка работоспособности всего контура mudro локально.
+## Контракт
+- Что проверяем: compose, БД, API, frontend/nginx
+- Что считаем успехом: `healthz=ok`, БД доступна, frontend отдается
+- Риск: read-only, безопасно
 
-## Шаги
-
-// turbo-all
-
-1. Проверить что Docker запущен и контейнер БД поднят:
+## Локальный контур
 ```powershell
 docker compose -f d:\mudr\mudro11-main\docker-compose.yml ps
-```
-
-2. Если контейнер не запущен, поднять:
-```powershell
-docker compose -f d:\mudr\mudro11-main\docker-compose.yml up -d
-```
-
-3. Проверить подключение к БД:
-```powershell
 docker compose -f d:\mudr\mudro11-main\docker-compose.yml exec -T db psql -U postgres -d gallery -c "select 1;"
-```
-
-4. Проверить наличие таблиц:
-```powershell
 docker compose -f d:\mudr\mudro11-main\docker-compose.yml exec -T db psql -U postgres -d gallery -c "\dt"
-```
-
-5. Проверить количество постов:
-```powershell
-docker compose -f d:\mudr\mudro11-main\docker-compose.yml exec -T db psql -U postgres -d gallery -c "select source, count(*) from posts group by source;"
-```
-
-6. Проверить фронтенд сборку:
-```powershell
 cd d:\mudr\mudro11-main\frontend && npm.cmd run build
 ```
 
-## Критерии успеха
-- Docker контейнер `db` в статусе `healthy`
-- `select 1` = ok
-- Таблица `posts` существует
-- `npm run build` завершается без ошибок
+## VPS-first контур
+```bash
+export MUDRO_SERVER_HOST="91.218.113.247"
+export MUDRO_SERVER_USER="admin"
+export MUDRO_PROJECT_DIR="/srv/mudro"
+
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f docker-compose.prod.yml ps"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -fsS http://127.0.0.1:8080/healthz"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -fsS http://127.0.0.1/healthz"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -d gallery -c 'select count(*) from posts;'"
+```

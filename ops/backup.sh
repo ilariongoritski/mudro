@@ -3,15 +3,24 @@ set -eo pipefail
 
 echo "=== MUDRO PostgreSQL Backup to MinIO ==="
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ENV_DIR="${ENV_DIR:-${PROJECT_DIR}/env}"
+
+set -a
+[ -f "${ENV_DIR}/db.env" ] && . "${ENV_DIR}/db.env"
+[ -f "${ENV_DIR}/storage.env" ] && . "${ENV_DIR}/storage.env"
+set +a
+
 DB_USER="${POSTGRES_USER:-postgres}"
-DB_PASS="${POSTGRES_PASSWORD:-postgres}"
+DB_PASS="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 DB_NAME="${POSTGRES_DB:-gallery}"
 DB_HOST="${POSTGRES_HOST:-127.0.0.1}"
-DB_PORT="${POSTGRES_PORT:-5433}" # Local exposed port, or 5432 if inside network
+DB_PORT="${POSTGRES_PORT:-5433}"
 
 MINIO_ENDPOINT="http://127.0.0.1:9000"
-MINIO_USER="${MINIO_ROOT_USER:-admin}"
-MINIO_PASS="${MINIO_ROOT_PASSWORD:-MudroAdmin2026}"
+MINIO_USER="${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}"
+MINIO_PASS="${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}"
 MINIO_BUCKET="backups"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

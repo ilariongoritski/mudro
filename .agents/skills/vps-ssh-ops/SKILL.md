@@ -5,83 +5,86 @@ description: Безопасное управление VPS-сервером пр
 
 # Skill: VPS / SSH Operations
 
-## Параметры сервера
-- **IP:** `91.218.113.247`
-- **OS:** Ubuntu 24.04
-- **Рабочая копия:** `/srv/mudro`
-- **Сервисы (systemd):** `mudro-api`, `mudro-bot`, `mudro-reporter` (может быть выключен)
-- **Пользователь для SSH:** `admin` (или `root` с ключом)
+Используй этот skill, когда задача относится к VPS runtime, `nginx`, `docker-compose.prod.yml`, логам или security-аудиту.
 
-## Безопасные операции (без подтверждения)
-
-### Проверка статуса сервисов
+## Канонические переменные
 ```bash
-ssh admin@91.218.113.247 "systemctl status mudro-api mudro-bot --no-pager"
+export MUDRO_SERVER_HOST="91.218.113.247"
+export MUDRO_SERVER_USER="admin"
+export MUDRO_PROJECT_DIR="/srv/mudro"
+export MUDRO_COMPOSE_FILE="docker-compose.prod.yml"
 ```
 
-### Логи сервисов
+## Режимы
+
+### `audit`
 ```bash
-ssh admin@91.218.113.247 "journalctl -u mudro-api --no-pager -n 50"
-ssh admin@91.218.113.247 "journalctl -u mudro-bot --no-pager -n 30"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f ${MUDRO_COMPOSE_FILE} ps"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -fsS http://127.0.0.1:8080/healthz"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "sudo systemctl status nginx --no-pager"
 ```
 
-### Health check API
+### `runtime`
 ```bash
-ssh admin@91.218.113.247 "curl -s http://127.0.0.1:8080/healthz"
-```
-Ожидаемый ответ: `{"status":"ok"}`
-
-### Диск и память
-```bash
-ssh admin@91.218.113.247 "df -h / && free -h"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f ${MUDRO_COMPOSE_FILE} ps api agent reporter db"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f ${MUDRO_COMPOSE_FILE} exec -T db psql -U postgres -d gallery -c 'select count(*) from posts;'"
 ```
 
-### Docker на сервере
+### `deploy`
 ```bash
-ssh admin@91.218.113.247 "docker ps --format 'table {{.Names}}\t{{.Status}}'"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && git pull --ff-only origin main"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "cd ${MUDRO_PROJECT_DIR} && docker compose -f ${MUDRO_COMPOSE_FILE} up -d --build"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "curl -fsS http://127.0.0.1:8080/healthz"
 ```
 
-### UFW статус
+### `security`
 ```bash
-ssh admin@91.218.113.247 "sudo ufw status verbose"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "sudo ufw status verbose"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "sudo ss -lntp"
+ssh "${MUDRO_SERVER_USER}@${MUDRO_SERVER_HOST}" "sudo grep -E '^(PasswordAuthentication|PermitRootLogin)' /etc/ssh/sshd_config"
 ```
 
-## Операции, требующие осторожности
+## Роутинг субагентов
+- `VPS Auditor`
+  - отвечает за `audit` и `runtime`
+  - работает только read-only
+  - возвращает: статус, точные команды, критерий успеха, замеченные риски
+- `Deploy Reviewer`
+  - отвечает за `deploy`
+  - сначала проверяет последовательность `git pull -> compose up -d --build -> smoke-check`
+  - не делает destructive rollback без явного подтверждения
+- `Incident Analyst`
+  - отвечает за `incident`
+  - собирает логи, локализует failure point, предлагает один безопасный retry
+  - если retry не помог, обязан эскалировать владельцу
+- `Security Reviewer`
+  - отвечает за `security`
+  - проверяет firewall, sshd, loopback-only DB, отсутствие секретов в tracked tree
+  - не меняет `sshd_config`, `ufw`, `iptables` без явного разрешения
 
-### Рестарт API (безопасно, но вызывает даунтайм ~2с)
-```bash
-ssh admin@91.218.113.247 "sudo systemctl restart mudro-api"
-```
+## Handoff contract
+Каждый субагент обязан вернуть:
+1. `Mode`
+2. `Goal`
+3. `Commands`
+4. `Success Criteria`
+5. `Risk / Stop Condition`
 
-### Обновить код на сервере (git pull)
-```bash
-ssh admin@91.218.113.247 "cd /srv/mudro && git pull origin main"
-```
+## Что можно без подтверждения
+- read-only статус compose, `nginx`, `healthz`, `df -h`, `free -h`
+- логи `docker compose logs` и `journalctl`
+- один безопасный retry `docker compose restart api`
 
-### Пересобрать и перезапустить API
-```bash
-ssh admin@91.218.113.247 "cd /srv/mudro && go build -o /usr/local/bin/mudro-api ./cmd/api && sudo systemctl restart mudro-api"
-```
-
-## ⛔ Запрещено без подтверждения владельца
-- Изменение `sshd_config`, UFW правил, `iptables`
-- Удаление файлов из `/srv`, `/etc`, `/var/lib`, `/root`, `/home`
+## Что требует подтверждения
+- изменение `sshd_config`, `ufw`, `iptables`
+- изменение SSH-ключей, паролей, panel API key
 - `docker compose down -v`
-- Изменение паролей и SSH-ключей
-- Изменение systemd unit-файлов
+- изменение systemd unit-файлов
+- destructive DB-операции
 
-## SSH из PowerShell (Windows)
-```powershell
-# Не использовать WSL-ключи из /mnt/c (ошибка прав 0777)
-# Использовать нативный PowerShell ssh:
-ssh -i $env:USERPROFILE\.ssh\id_rsa admin@91.218.113.247 "команда"
-```
-
-## Типичные проблемы
-
-| Проблема | Диагностика | Решение |
-|----------|-------------|---------|
-| API не отвечает | `systemctl status mudro-api` | `sudo systemctl restart mudro-api` |
-| БД недоступна | `docker ps`, `pg_isready` | `docker compose up -d db` |
-| Диск заполнен | `df -h /`, `du -sh /var/log/*` | Очистить логи Docker: `docker system prune` |
-| SSH таймаут | Проверить UFW: `ufw status` | Убедиться что порт 22 открыт |
+## Ожидаемый контракт ответа
+На любой VPS-запрос нужно вернуть:
+1. что проверяем или меняем
+2. точные команды
+3. критерий успеха
+4. риск или stop-condition

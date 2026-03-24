@@ -1,120 +1,123 @@
 # Ops Runbook
 
 ## Цель
-Быстрый и детерминированный подъем локального контура `mudro` после ребута/сбоя.
+Быстрый и детерминированный подъем локального и VPS-first контура `mudro` после ребута, сбоя или deploy.
 
-## Предусловия
-- рабочая директория: `~/projects/mudro`
-- Docker daemon доступен
-- Go установлен (`go version`)
+## Источники истины
+- `docs/vps-control-chat.md` — контракт управляющего чата
+- `docker-compose.prod.yml` — основной VPS runtime
+- `scripts/ops/*` — прикладные ops-скрипты
+- `Makefile` — локальный и сервисный baseline
 
-## Стандартный recovery (2-3 минуты)
-1. Поднять БД:
+## Канонические пути
+- локально: `~/projects/mudro`
+- на VPS: `/srv/mudro`
+
+## Локальный recovery (2-3 минуты)
+1. Поднять локальный контур:
+   - `make health`
+2. Если нужен пошаговый прогон:
    - `make up`
-2. Проверить контейнер:
    - `docker compose ps`
-   - ожидается: `mudro-db-1` в статусе `healthy`
-3. Проверить БД:
    - `make dbcheck`
-4. Применить миграции:
    - `make migrate`
-   - `make migrate-agent`
-   - `make migrate-comments`
-   - `make migrate-media`
-   - `make migrate-comment-model`
-5. Проверить таблицы:
    - `make tables`
-6. Проверить тесты:
    - `make test`
-7. Санити-проверка данных:
    - `make count-posts`
 
 Критерий готовности:
 - `dbcheck` OK
-- таблицы `posts`, `post_comments`, `post_reactions`, `media_assets`, `comment_reactions`, `agent_queue` существуют
+- таблицы `posts`, `post_comments`, `media_assets`, `agent_queue` существуют
 - `make test` проходит
 
-## Политика источников
-- `VK` считать архивным snapshot-источником: повторные регулярные обновления VK не планируются.
-- Живой импорт и актуализация теперь относятся только к `Telegram`-контуру.
-
-## Частые сбои и действия
-
-### Frontend на VPS через nginx
-Цель: держать основной MVP frontend прямо на VPS, а не только на внешнем preview-хостинге.
-
-Ожидаемая схема:
-- `nginx` слушает `:80`
-- статика frontend лежит в `/var/www/mudro/frontend`
+## VPS-First Runtime
+Основной серверный контур:
+- `docker-compose.prod.yml`
+- `nginx` раздает frontend из `/var/www/mudro/frontend`
 - `nginx` проксирует `/api`, `/media`, `/healthz` на `127.0.0.1:8080`
+- Postgres опубликован только на `127.0.0.1:5433`
 
+Базовые проверки на VPS:
+
+```bash
+cd /srv/mudro
+docker compose -f docker-compose.prod.yml ps
+curl -fsS http://127.0.0.1:8080/healthz
+sudo systemctl status nginx --no-pager
+```
+
+## Frontend на VPS через nginx
 Разовый rollout:
-1. локально собрать frontend:
+1. собрать frontend:
    - `cd frontend`
    - `npm.cmd run build`
-2. загрузить проект на VPS или хотя бы актуальный `frontend/dist`
-3. на VPS запустить:
-   - `bash /root/projects/mudro/scripts/ops/deploy_vps_frontend.sh`
-4. проверить:
+2. на VPS запустить:
+   - `bash /srv/mudro/scripts/ops/deploy_vps_frontend.sh`
+3. проверить:
    - `curl -fsS http://127.0.0.1/healthz`
    - `curl -I http://127.0.0.1/`
-   - `ss -lntp | grep ':80'`
+   - `sudo ss -lntp | grep ':80'`
 
 Результат:
-- сайт открывается по `http://<server-ip>/`
-- API и media продолжают жить на том же VPS, но уже за reverse proxy
-- Vercel перестает быть обязательной точкой входа для MVP
+- сайт открывается с VPS
+- `nginx` стал основной публичной точкой входа
+- Vercel больше не обязателен как runtime
 
-### 0) Hardening Postgres на VPS
-Цель: не держать публично доступный `postgres/postgres` на `0.0.0.0:5433`.
+## Hardening Postgres на VPS
+Цель: не держать публично доступный `postgres/postgres` и не использовать `.env` в tracked workflow.
 
 Базовый безопасный контур:
-- БД снаружи слушает только `127.0.0.1:5433`
-- сервисы приложения ходят не под `postgres`, а под отдельным `mudro_app`
-- пароль `postgres` на VPS не должен оставаться дефолтным
-- хост дополнительно режет входящий `tcp/5433` вне loopback через systemd-managed `iptables` rule
+- БД слушает только `127.0.0.1:5433`
+- приложение ходит под отдельным `mudro_app`
+- пароль `postgres` хранится только в `env/db.env` на VPS
+- входящий `tcp/5433` режется вне loopback
 
 Разовый шаг на VPS:
 1. задать секреты в shell:
    - `export MUDRO_DB_APP_PASSWORD='<strong password>'`
    - `export MUDRO_DB_SUPERUSER_PASSWORD='<strong password>'`
 2. запустить:
-   - `bash scripts/ops/harden_vps_db_auth.sh`
+   - `sudo -E bash scripts/ops/harden_vps_db_auth.sh`
 3. проверить:
-   - `systemctl status mudro-api --no-pager`
+   - `docker compose -f docker-compose.prod.yml ps db api agent`
    - `curl -fsS http://127.0.0.1:8080/healthz`
-   - `ss -lntp | grep 5433`
+   - `sudo ss -lntp | grep 5433`
 
 Ожидаемый результат:
-- `mudro-api` работает
-- `5433` слушает только `127.0.0.1`
-- в journal Postgres больше нет внешнего auth-шума по публичному порту
+- `api` и `agent` поднимаются на `env/*.env`
+- `5433` слушает только loopback
+- внешний auth-шум по Postgres исчезает
 
-### 1) Docker socket permission denied
+## Частые сбои и действия
+
+### Docker socket permission denied
 Симптом:
 - `permission denied while trying to connect to the Docker daemon socket ...`
 
-Действия диагностики:
+Диагностика:
 - `id`
 - `groups`
 - `ls -l /var/run/docker.sock`
 - `docker version`
 
-Если запускаешь из ограниченной среды (sandbox/Codex), повторить команды вне sandbox или с разрешенным Docker-доступом.
-
-### 2) Конфликт порта `:8080` у API
+### Конфликт порта `:8080`
 Симптом:
 - `listen tcp :8080: bind: address already in use`
 
 Действия:
-1. `ss -ltnp | grep ':8080' || true`
-2. `ps -eo pid,ppid,cmd | grep -E '/tmp/go-build.*/exe/api|go run ./cmd/api' | grep -v grep || true`
-3. `kill <PID...>`
-4. если не остановились: `kill -9 <PID...>`
-5. Проверка: `ps -eo pid,ppid,cmd | grep -E '/tmp/go-build.*/exe/api|go run ./cmd/api' | grep -v grep || true`
-6. Перезапуск API: `/usr/local/go/bin/go run ./cmd/api`
-7. Проверка: `curl -fsS http://localhost:8080/healthz`
+1. `sudo ss -ltnp | grep ':8080' || true`
+2. `docker compose -f docker-compose.prod.yml ps`
+3. `docker compose -f docker-compose.prod.yml logs api --tail=100`
+4. безопасный retry:
+   - `docker compose -f docker-compose.prod.yml restart api`
+
+### Frontend отвечает, API нет
+Проверить:
+- `curl -fsS http://127.0.0.1:8080/healthz`
+- `sudo systemctl status nginx --no-pager`
+- `docker compose -f docker-compose.prod.yml logs api --tail=100`
 
 ## Ежедневная дисциплина
-- минимум 1 осмысленный `commit` + `push` в рабочую ветку
-- проверка: `git log --since='today 00:00' --oneline`
+- минимум один осмысленный `commit` и `push` в рабочую ветку
+- перед deploy: `git pull --ff-only`
+- после deploy: `docker compose -f docker-compose.prod.yml ps` и `curl -fsS http://127.0.0.1:8080/healthz`
