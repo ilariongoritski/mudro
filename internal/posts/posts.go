@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path"
 	"strings"
 	"time"
 
 	commentdb "github.com/goritskimihail/mudro/internal/commentmodel"
 	mediadb "github.com/goritskimihail/mudro/internal/media"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -48,7 +46,7 @@ type Post struct {
 	LikesCount    int             `json:"likes_count"`
 	ViewsCount    *int            `json:"views_count,omitempty"`
 	CommentsCount *int            `json:"comments_count,omitempty"`
-	Reactions     map[string]int  `json:"reactions,omitempty"`
+	Reactions     map[string]int   `json:"reactions,omitempty"`
 	Comments      []Comment       `json:"comments,omitempty"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
@@ -60,7 +58,7 @@ type Comment struct {
 	AuthorName      string          `json:"author_name,omitempty"`
 	PublishedAt     string          `json:"published_at"`
 	Text            string          `json:"text,omitempty"`
-	Reactions       map[string]int  `json:"reactions,omitempty"`
+	Reactions       map[string]int   `json:"reactions,omitempty"`
 	Media           json.RawMessage `json:"media,omitempty"`
 }
 
@@ -85,12 +83,64 @@ type Reaction struct {
 	Raw   string `json:"raw"`
 }
 
-func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source string, sortOrder SortOrder, query string) ([]Post, *Cursor, error) {
-	var (
-		rows pgx.Rows
-		err  error
-	)
+func (s *Service) CountVisiblePosts(ctx context.Context) (int64, error) {
+	q := `SELECT count(*) FROM posts`
+	args := make([]any, 0, 1)
+	if len(s.tgVisiblePostIDs) > 0 {
+		args = append(args, s.tgVisiblePostIDs)
+		q += fmt.Sprintf(` WHERE (source <> 'tg' OR source_post_id = any($%d))`, len(args))
+	}
+	var count int64
+	if err := s.pool.QueryRow(ctx, q, args...).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
 
+func (s *Service) LoadSourceStats(ctx context.Context) ([]SourceStat, error) {
+	q := `SELECT source, count(*) FROM posts`
+	args := make([]any, 0, 1)
+	if len(s.tgVisiblePostIDs) > 0 {
+		args = append(args, s.tgVisiblePostIDs)
+		q += fmt.Sprintf(` WHERE (source <> 'tg' OR source_post_id = any($%d))`, len(args))
+	}
+	q += ` GROUP BY source ORDER BY source`
+
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []SourceStat
+	for rows.Next() {
+		var st SourceStat
+		if err := rows.Scan(&st.Source, &st.Posts); err != nil {
+			return nil, err
+		}
+		stats = append(stats, st)
+	}
+	return stats, rows.Err()
+}
+
+func ParseMediaItems(raw json.RawMessage) []MediaItem {
+	items := mediadb.ParseLegacyJSON(raw)
+	out := make([]MediaItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, MediaItem{
+			Kind:       item.Kind,
+			URL:        item.URL,
+			PreviewURL: item.PreviewURL,
+			Title:      item.Title,
+			Width:      item.Width,
+			Height:     item.Height,
+			Position:   item.Position,
+		})
+	}
+	return out
+}
+
+func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source string, sortOrder SortOrder, query string) ([]Post, *Cursor, error) {
 	order := "desc"
 	comparator := "<"
 	if sortOrder == SortAsc {
@@ -98,48 +148,8 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 		comparator = ">"
 	}
 
-	if page != nil {
-		offset := (*page - 1) * limit
-		args := []any{}
-		q := `
-			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
-			from posts
-		`
-		whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
-		args = nextArgs
-		q += whereSQL
-		args = append(args, limit, offset)
-		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
-		rows, err = s.pool.Query(ctx, q, args...)
-	} else {
-		base := `
-			select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
-			from posts
-		`
-		if beforeTS == nil || beforeID == nil {
-			args := []any{}
-			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
-			args = nextArgs
-			q += whereSQL
-			args = append(args, limit)
-			q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
-			rows, err = s.pool.Query(ctx, q, args...)
-		} else {
-			args := []any{}
-			q := base
-			whereSQL, nextArgs := s.buildPostsVisibilityWhere(source, query, args)
-			args = nextArgs
-			if whereSQL == "" {
-				q += " where "
-			} else {
-				q += whereSQL + " and "
-			}
-			args = append(args, *beforeTS, *beforeID, limit)
-			q += fmt.Sprintf("(published_at, id) %s ($%d, $%d) order by published_at %s, id %s limit $%d", comparator, len(args)-2, len(args)-1, order, order, len(args))
-			rows, err = s.pool.Query(ctx, q, args...)
-		}
-	}
+	q, args, useCursor := s.buildPostsQuery(source, query, page, beforeTS, beforeID, limit, order, comparator)
+	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -187,8 +197,43 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 		posts[i].Comments = commentsMap[posts[i].ID]
 	}
 
+	if !useCursor {
+		return posts, nil, nil
+	}
+
 	last := posts[len(posts)-1]
 	return posts, &Cursor{BeforeTS: last.PublishedAt, BeforeID: last.ID}, nil
+}
+
+func (s *Service) buildPostsQuery(source, query string, page *int, beforeTS *time.Time, beforeID *int64, limit int, order, comparator string) (string, []any, bool) {
+	base := `
+		select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
+		from posts
+	`
+	args := make([]any, 0, 4)
+	whereSQL, args := s.buildPostsVisibilityWhere(source, query, args)
+	q := base + whereSQL
+
+	if page != nil {
+		offset := (*page - 1) * limit
+		args = append(args, limit, offset)
+		q += fmt.Sprintf(" order by published_at %s, id %s limit $%d offset $%d", order, order, len(args)-1, len(args))
+		return q, args, false
+	}
+
+	if beforeTS != nil && beforeID != nil {
+		if whereSQL == "" {
+			q += " where "
+		} else {
+			q += " and "
+		}
+		args = append(args, *beforeTS, *beforeID)
+		q += fmt.Sprintf("(published_at, id) %s ($%d, $%d)", comparator, len(args)-1, len(args))
+	}
+
+	args = append(args, limit)
+	q += fmt.Sprintf(" order by published_at %s, id %s limit $%d", order, order, len(args))
+	return q, args, beforeTS != nil && beforeID != nil
 }
 
 func (s *Service) buildPostsVisibilityWhere(source, query string, args []any) (string, []any) {
@@ -266,10 +311,10 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		select id, post_id, source_comment_id, source_parent_comment_id, author_name, published_at, text, reactions, media
+		select comment_id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
 		from post_comments
 		where post_id = any($1)
-		order by post_id asc, published_at asc, id asc
+		order by post_id asc, published_at asc, comment_id asc
 	`, postIDs)
 	if err != nil {
 		if commentdb.IsUndefinedTableErr(err) {
@@ -279,230 +324,42 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 	defer rows.Close()
 
-	type commentRow struct {
-		commentID       int64
-		postID          int64
-		sourceCommentID string
-		parentCommentID *string
-		authorName      *string
-		publishedAt     time.Time
-		text            *string
-		reactionsRaw    []byte
-		mediaRaw        json.RawMessage
-	}
-
-	staged := make([]commentRow, 0, len(postIDs))
-	commentIDs := make([]int64, 0, len(postIDs))
 	for rows.Next() {
-		var row commentRow
-		if err := rows.Scan(&row.commentID, &row.postID, &row.sourceCommentID, &row.parentCommentID, &row.authorName, &row.publishedAt, &row.text, &row.reactionsRaw, &row.mediaRaw); err != nil {
+		var (
+			commentID       int64
+			postID          int64
+			parentCommentID *string
+			authorName      *string
+			publishedAt     time.Time
+			text            *string
+			reactionsRaw    []byte
+			mediaRaw        []byte
+		)
+		if err := rows.Scan(&commentID, &postID, &parentCommentID, &authorName, &publishedAt, &text, &reactionsRaw, &mediaRaw); err != nil {
 			return nil, err
 		}
-		staged = append(staged, row)
-		commentIDs = append(commentIDs, row.commentID)
+
+		comment := Comment{SourceCommentID: fmt.Sprintf("%d", commentID), PublishedAt: publishedAt.UTC().Format(time.RFC3339)}
+		if parentCommentID != nil {
+			comment.ParentCommentID = strings.TrimSpace(*parentCommentID)
+		}
+		if authorName != nil {
+			comment.AuthorName = strings.TrimSpace(*authorName)
+		}
+		if text != nil {
+			comment.Text = *text
+		}
+		if len(reactionsRaw) > 0 {
+			_ = json.Unmarshal(reactionsRaw, &comment.Reactions)
+		}
+		if len(mediaRaw) > 0 {
+			comment.Media = append(json.RawMessage(nil), mediaRaw...)
+		}
+
+		out[postID] = append(out[postID], comment)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
-	normalizedCommentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
-	if err != nil {
-		return nil, err
-	}
-	normalizedCommentReactions, err := commentdb.LoadCommentReactions(ctx, s.pool, commentIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, row := range staged {
-		reactions := parseReactionsJSON(row.reactionsRaw)
-		if nr, ok := normalizedCommentReactions[row.commentID]; ok && len(nr) > 0 {
-			reactions = nr
-		}
-
-		mediaRaw := row.mediaRaw
-		if nm, ok := normalizedCommentMedia[row.commentID]; ok && len(nm) > 0 {
-			mediaRaw = nm
-		}
-
-		c := Comment{
-			SourceCommentID: row.sourceCommentID,
-			ParentCommentID: ptrString(row.parentCommentID),
-			AuthorName:      ptrString(row.authorName),
-			PublishedAt:     row.publishedAt.Format(time.RFC3339),
-			Text:            ptrString(row.text),
-			Reactions:       reactions,
-			Media:           mediaRaw,
-		}
-		out[row.postID] = append(out[row.postID], c)
-	}
 	return out, nil
-}
-
-func parseReactionsJSON(raw []byte) map[string]int {
-	if len(raw) == 0 {
-		return nil
-	}
-	var out map[string]int
-	_ = json.Unmarshal(raw, &out)
-	return out
-}
-
-func ptrString(v *string) string {
-	if v == nil {
-		return ""
-	}
-	return strings.TrimSpace(*v)
-}
-
-func ParseMediaItems(raw json.RawMessage) []MediaItem {
-	items := mediadb.ParseLegacyJSON(raw)
-	out := make([]MediaItem, 0, len(items))
-	for _, item := range items {
-		out = append(out, MediaItem{
-			Kind:       normalizeMediaKind(item.Kind, anyString(item.Extra, "media_type"), anyString(item.Extra, "mime_type"), item.URL, item.Title),
-			URL:        NormalizeMediaURL(item.URL),
-			PreviewURL: NormalizeMediaURL(item.PreviewURL),
-			Title:      item.Title,
-			Width:      item.Width,
-			Height:     item.Height,
-			Position:   item.Position,
-		})
-	}
-	return out
-}
-
-func NormalizeMediaURL(raw string) string {
-	s := strings.TrimSpace(raw)
-	if s == "" {
-		return ""
-	}
-	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
-		return s
-	}
-	if strings.Contains(s, "://") {
-		return ""
-	}
-	if strings.HasPrefix(s, "/") {
-		return s
-	}
-	return "/media/" + s
-}
-
-func (s *Service) LoadSourceStats(ctx context.Context) ([]SourceStat, error) {
-	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
-	rows, err := s.pool.Query(ctx, `
-		select source, count(*) as posts
-		from posts`+whereSQL+`
-		group by source
-		order by posts desc, source asc
-	`, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []SourceStat
-	for rows.Next() {
-		var st SourceStat
-		if err := rows.Scan(&st.Source, &st.Posts); err != nil {
-			return nil, err
-		}
-		out = append(out, st)
-	}
-	return out, rows.Err()
-}
-
-func (s *Service) CountVisiblePosts(ctx context.Context) (int64, error) {
-	var count int64
-	args := []any{}
-	whereSQL, args := s.buildPostsVisibilityWhere("", "", args)
-	err := s.pool.QueryRow(ctx, `select count(*) from posts`+whereSQL, args...).Scan(&count)
-	return count, err
-}
-
-func anyString(m map[string]any, keys ...string) string {
-	if len(m) == 0 {
-		return ""
-	}
-	for _, key := range keys {
-		raw, ok := m[key]
-		if !ok || raw == nil {
-			continue
-		}
-		switch v := raw.(type) {
-		case string:
-			return strings.TrimSpace(v)
-		case []byte:
-			return strings.TrimSpace(string(v))
-		default:
-			return strings.TrimSpace(fmt.Sprint(v))
-		}
-	}
-	return ""
-}
-
-func normalizeMediaKind(kindRaw, mediaType, mimeType, url, title string) string {
-	candidates := []string{kindRaw, mediaType, mimeType, url, title}
-	for _, candidate := range candidates {
-		kind := strings.ToLower(strings.TrimSpace(candidate))
-		if kind == "" {
-			continue
-		}
-		switch {
-		case strings.Contains(kind, "video"):
-			return "video"
-		case strings.Contains(kind, "audio"):
-			return "audio"
-		case strings.Contains(kind, "gif") || strings.Contains(kind, "sticker"):
-			return "gif"
-		case strings.Contains(kind, "photo") || strings.Contains(kind, "image"):
-			return "photo"
-		case strings.Contains(kind, "doc") || strings.Contains(kind, "document") || strings.HasSuffix(kind, ".pdf"):
-			return "doc"
-		case strings.Contains(kind, "link") || strings.Contains(kind, "url"):
-			return "link"
-		case strings.Contains(kind, "mp4") || strings.Contains(kind, "webm"):
-			return "video"
-		case strings.Contains(kind, "mp3") || strings.Contains(kind, "m4a") || strings.Contains(kind, "ogg"):
-			return "audio"
-		case strings.Contains(kind, "jpg") || strings.Contains(kind, "jpeg") || strings.Contains(kind, "png") || strings.Contains(kind, "webp"):
-			return "photo"
-		}
-	}
-	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(url)), "http") {
-		if strings.Contains(strings.ToLower(url), ".mp4") || strings.Contains(strings.ToLower(url), ".webm") {
-			return "video"
-		}
-		if strings.Contains(strings.ToLower(url), ".mp3") || strings.Contains(strings.ToLower(url), ".m4a") || strings.Contains(strings.ToLower(url), ".ogg") {
-			return "audio"
-		}
-		if strings.Contains(strings.ToLower(url), ".pdf") {
-			return "doc"
-		}
-		if strings.Contains(strings.ToLower(url), ".jpg") || strings.Contains(strings.ToLower(url), ".jpeg") || strings.Contains(strings.ToLower(url), ".png") || strings.Contains(strings.ToLower(url), ".webp") || strings.Contains(strings.ToLower(url), ".gif") {
-			return "photo"
-		}
-	}
-	return ""
-}
-
-func guessMediaTitle(raw string) string {
-	s := strings.TrimSpace(raw)
-	if s == "" {
-		return ""
-	}
-	if idx := strings.IndexAny(s, "?#"); idx >= 0 {
-		s = s[:idx]
-	}
-	s = strings.TrimRight(s, "/")
-	if s == "" {
-		return ""
-	}
-	base := path.Base(s)
-	if base == "." || base == "/" || base == "" {
-		return ""
-	}
-	return base
 }
