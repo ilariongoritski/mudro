@@ -77,7 +77,7 @@ func TestAssetKeyStableForSameAsset(t *testing.T) {
 func TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset(t *testing.T) {
 	raw := json.RawMessage(`[
 	  {"kind":"photo","url":"photos/a.jpg","position":2},
-	  {"kind":"photo","url":"photos/b.jpg"},
+	  {"kind":"photo","url":"photos/b.jpg","position":2},
 	  {"kind":"photo","url":"photos/c.jpg"}
 	]`)
 
@@ -94,5 +94,20 @@ func TestParseLegacyJSONAssignsUniqueAutoPositionsAfterExplicitOffset(t *testing
 	}
 	if items[2].Position != 4 {
 		t.Fatalf("items[2].Position = %d, want 4", items[2].Position)
+	}
+}
+
+func TestParseLegacyJSONSkipsEmptyRows(t *testing.T) {
+	raw := json.RawMessage(`[
+	  {},
+	  {"kind":"photo","url":"photos/a.jpg"}
+	]`)
+
+	items := ParseLegacyJSON(raw)
+	if len(items) != 1 {
+		t.Fatalf("len(items) = %d, want 1", len(items))
+	}
+	if items[0].Kind != "photo" {
+		t.Fatalf("unexpected item: %+v", items[0])
 	}
 }

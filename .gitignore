@@ -58,3 +58,13 @@ __pycache__/
 
 .vercel
 .kilocode/
+
+# compiled binaries
+*.exe
+mudro.exe
+
+# external repos / VS Code extensions dropped into tree
+pixel-agents/
+
+# npm cache
+frontend/npm-cache/

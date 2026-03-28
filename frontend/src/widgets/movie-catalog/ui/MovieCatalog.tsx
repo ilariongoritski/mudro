@@ -1,4 +1,4 @@
-import { Button } from '@/shared/ui/Button'
+import { Button } from '@/shared/ui/button'
 import type { MoviePage } from '@/entities/movie/model/types'
 
 type Props = {
@@ -74,10 +74,10 @@ export const MovieCatalog = ({ page, isLoading, isError, onPrevious, onNext }: P
           Страница {page.page} из {totalPages}. Всего фильмов: {page.total}
         </div>
         <div className="catalog-pagination__actions">
-          <Button tone="neutral" type="button" onClick={onPrevious} disabled={page.page <= 1}>
+          <Button variant="outline" type="button" onClick={onPrevious} disabled={page.page <= 1}>
             Назад
           </Button>
-          <Button tone="neutral" type="button" onClick={onNext} disabled={page.page >= totalPages}>
+          <Button variant="outline" type="button" onClick={onNext} disabled={page.page >= totalPages}>
             Вперёд
           </Button>
         </div>

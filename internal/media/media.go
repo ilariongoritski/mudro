@@ -43,27 +43,10 @@ func ParseLegacyJSON(raw json.RawMessage) []Item {
 	usedPositions := make(map[int]struct{}, len(decoded))
 	nextPosition := 1
 	for _, row := range decoded {
-		extra := anyMap(row, "extra", "Extra")
-		item := Item{
-			Kind:       strings.ToLower(strings.TrimSpace(anyString(row, "kind", "Kind"))),
-			URL:        strings.TrimSpace(anyString(row, "url", "URL")),
-			PreviewURL: strings.TrimSpace(anyString(row, "preview_url", "PreviewURL")),
-			Title:      strings.TrimSpace(anyString(row, "title", "Title")),
-			Width:      anyInt(row, "width", "Width"),
-			Height:     anyInt(row, "height", "Height"),
-			Position:   anyInt(row, "position", "Position"),
-			Extra:      extra,
-		}
-		if item.Title == "" {
-			item.Title = strings.TrimSpace(anyString(extra, "file_name", "filename", "title"))
-		}
-		if item.Title == "" {
-			item.Title = guessMediaTitle(item.URL)
-		}
-		if item.Kind == "" && item.URL == "" && item.PreviewURL == "" && item.Title == "" && len(item.Extra) == 0 {
+		item, ok := parseLegacyItem(row)
+		if !ok {
 			continue
 		}
-
 		if item.Position <= 0 || hasPosition(usedPositions, item.Position) {
 			for hasPosition(usedPositions, nextPosition) {
 				nextPosition++
@@ -78,6 +61,30 @@ func ParseLegacyJSON(raw json.RawMessage) []Item {
 		}
 	}
 	return items
+}
+
+func parseLegacyItem(row map[string]any) (Item, bool) {
+	extra := anyMap(row, "extra", "Extra")
+	item := Item{
+		Kind:       strings.ToLower(strings.TrimSpace(anyString(row, "kind", "Kind"))),
+		URL:        strings.TrimSpace(anyString(row, "url", "URL")),
+		PreviewURL: strings.TrimSpace(anyString(row, "preview_url", "PreviewURL")),
+		Title:      strings.TrimSpace(anyString(row, "title", "Title")),
+		Width:      anyInt(row, "width", "Width"),
+		Height:     anyInt(row, "height", "Height"),
+		Position:   anyInt(row, "position", "Position"),
+		Extra:      extra,
+	}
+	if item.Title == "" {
+		item.Title = strings.TrimSpace(anyString(extra, "file_name", "filename", "title"))
+	}
+	if item.Title == "" {
+		item.Title = guessMediaTitle(item.URL)
+	}
+	if item.Kind == "" && item.URL == "" && item.PreviewURL == "" && item.Title == "" && len(item.Extra) == 0 {
+		return Item{}, false
+	}
+	return item, true
 }
 
 func hasPosition(used map[int]struct{}, position int) bool {

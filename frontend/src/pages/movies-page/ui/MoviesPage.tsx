@@ -3,14 +3,18 @@ import { useTelegramWebApp } from '@/features/telegram-miniapp/hooks/useTelegram
 
 const MoviesPage = () => {
   const { isTelegram, themeParams } = useTelegramWebApp()
-  
+
   return (
-    <div 
-      style={isTelegram ? { 
-        backgroundColor: themeParams?.bg_color,
-        color: themeParams?.text_color,
-        minHeight: '100vh'
-      } : undefined}
+    <div
+      style={
+        isTelegram
+          ? {
+              backgroundColor: themeParams?.bg_color,
+              color: themeParams?.text_color,
+              minHeight: '100vh',
+            }
+          : undefined
+      }
     >
       <MovieCatalogPage />
     </div>

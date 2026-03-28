@@ -215,6 +215,18 @@ func JWTSecret() string {
 	return envOr("JWT_SECRET", "mudro-dev-secret-change-me")
 }
 
+// ValidateJWTSecret returns an error if the JWT secret is the insecure default
+// and the environment looks like production.
+func ValidateJWTSecret() error {
+	if JWTSecret() == "mudro-dev-secret-change-me" && isProductionLikeEnv(MudroEnv()) {
+		return fmt.Errorf("JWT_SECRET must be explicitly set in production (MUDRO_ENV=%q)", MudroEnv())
+	}
+	if len(JWTSecret()) < 16 {
+		return fmt.Errorf("JWT_SECRET is too short (got %d chars, min 16)", len(JWTSecret()))
+	}
+	return nil
+}
+
 func MudroEnv() string {
 	return strings.ToLower(strings.TrimSpace(os.Getenv("MUDRO_ENV")))
 }
@@ -240,12 +252,18 @@ func ValidateRuntimeDSN(service, dsn string) error {
 	if parsed.Scheme == "" {
 		return fmt.Errorf("%s DSN parse: missing scheme", service)
 	}
-
-	user := ""
-	if parsed.User != nil {
-		user = strings.ToLower(strings.TrimSpace(parsed.User.Username()))
+	if parsed.Scheme != "postgres" && parsed.Scheme != "postgresql" {
+		return fmt.Errorf("%s DSN parse: unsupported scheme %q", service, parsed.Scheme)
 	}
-	if user != "postgres" {
+	if parsed.Host == "" {
+		return fmt.Errorf("%s DSN parse: missing host", service)
+	}
+	if parsed.User == nil {
+		return nil
+	}
+
+	user := strings.ToLower(strings.TrimSpace(parsed.User.Username()))
+	if user == "" || user != "postgres" {
 		return nil
 	}
 
@@ -259,12 +277,19 @@ func ValidateRuntimeDSN(service, dsn string) error {
 	return fmt.Errorf("%s runtime refuses superuser DSN for non-local host %q", service, host)
 }
 
+func ValidateMovieCatalogRuntime() error {
+	return ValidateRuntimeDSN("movie-catalog", DSN())
+}
+
 func ValidateRuntime(service string, requiredEnv ...string) error {
 	if err := ValidateRequiredEnv(requiredEnv...); err != nil {
 		return fmt.Errorf("%s config invalid: %w", service, err)
 	}
 	if err := ValidateRuntimeDSN(service, DSN()); err != nil {
 		return err
+	}
+	if err := ValidateJWTSecret(); err != nil {
+		return fmt.Errorf("%s: %w", service, err)
 	}
 	return nil
 }

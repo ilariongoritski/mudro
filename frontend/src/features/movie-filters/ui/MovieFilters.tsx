@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button } from '@/shared/ui/Button'
+import { Button } from '@/shared/ui/button'
 import type { GenreOption, MovieQuery } from '@/entities/movie/model/types'
 
 type Props = {
@@ -102,11 +102,11 @@ export const MovieFilters = ({ genres, value, onApply, onReset }: Props) => {
       </div>
 
       <div className="filters-actions">
-        <Button tone="primary" type="submit">
+        <Button variant="default" type="submit">
           Применить
         </Button>
         <Button
-          tone="secondary"
+          variant="secondary"
           type="button"
           onClick={() => {
             setDraft(toDraft({ page: 1, pageSize: value.pageSize }))

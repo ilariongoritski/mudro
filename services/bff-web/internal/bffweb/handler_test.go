@@ -10,15 +10,16 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/posts"
+	"github.com/goritskimihail/mudro/pkg/models"
 )
 
 type fakeTimeline struct {
-	items []posts.Post
-	next  *posts.Cursor
+	items []models.Post
+	next  *models.Cursor
 	err   error
 }
 
-func (f fakeTimeline) LoadPosts(_ context.Context, _ *time.Time, _ *int64, _ *int, _ int, _ string, _ posts.SortOrder, _ string) ([]posts.Post, *posts.Cursor, error) {
+func (f fakeTimeline) LoadPosts(_ context.Context, _ *time.Time, _ *int64, _ *int, _ int, _ string, _ models.SortOrder, _ string) ([]models.Post, *models.Cursor, error) {
 	return f.items, f.next, f.err
 }
 

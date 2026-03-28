@@ -2,7 +2,6 @@ package moviecatalog
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/goritskimihail/mudro/internal/catalog/domain"
 	"github.com/goritskimihail/mudro/internal/catalog/service"
+	"github.com/goritskimihail/mudro/pkg/httputil"
 )
 
 type Handler struct {
@@ -142,11 +142,9 @@ func parseList(chunks []string) []string {
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	httputil.WriteJSON(w, status, payload)
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+	httputil.WriteJSON(w, status, map[string]string{"error": message})
 }

@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/posts"
+	"github.com/goritskimihail/mudro/pkg/httputil"
+	"github.com/goritskimihail/mudro/pkg/models"
 )
 
 type TimelineLoader interface {
-	LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source string, sortOrder posts.SortOrder, query string) ([]posts.Post, *posts.Cursor, error)
+	LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source string, sortOrder models.SortOrder, query string) ([]models.Post, *models.Cursor, error)
 }
 
 type Handler struct {
@@ -75,7 +76,7 @@ func (h *Handler) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	limit := parseLimit(r.URL.Query().Get("limit"))
 	source := strings.TrimSpace(r.URL.Query().Get("source"))
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	items, next, err := h.timeline.LoadPosts(r.Context(), nil, nil, nil, limit, source, posts.SortDesc, query)
+	items, next, err := h.timeline.LoadPosts(r.Context(), nil, nil, nil, limit, source, models.SortDesc, query)
 	if err != nil {
 		http.Error(w, "failed to load timeline", http.StatusInternalServerError)
 		return
@@ -164,43 +165,19 @@ func (h *Handler) proxyGET(w http.ResponseWriter, r *http.Request, upstreamPath 
 }
 
 func parseLimit(raw string) int {
-	const (
-		defaultLimit = 20
-		maxLimit     = 100
-	)
-	if strings.TrimSpace(raw) == "" {
-		return defaultLimit
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(raw))
-	if err != nil || n <= 0 {
-		return defaultLimit
-	}
-	if n > maxLimit {
-		return maxLimit
-	}
-	return n
+	return httputil.ParseLimit(raw, 20, 100)
 }
 
 func copySelectedHeaders(dst, src http.Header, keys ...string) {
-	for _, key := range keys {
-		if value := strings.TrimSpace(src.Get(key)); value != "" {
-			dst.Set(key, value)
-		}
-	}
+	httputil.CopyHeaders(dst, src, keys...)
 }
 
 func copyHeaders(dst, src http.Header) {
-	for key, values := range src {
-		for _, value := range values {
-			dst.Add(key, value)
-		}
-	}
+	httputil.CopyAllHeaders(dst, src)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	httputil.WriteJSON(w, status, payload)
 }
 
 func (h *Handler) String() string {

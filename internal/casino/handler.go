@@ -3,12 +3,17 @@ package casino
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/goritskimihail/mudro/pkg/httputil"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -52,7 +57,12 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/casino/admin/rtp/profiles", s.withAdmin(s.handleAdminRtpProfiles))
 	mux.HandleFunc("/api/casino/admin/users", s.withAdmin(s.handleAdminUsers))
 
-	return withCORS(mux)
+	return httputil.CORS(httputil.CORSConfig{
+		EnvVar:           "CASINO_ALLOWED_ORIGINS",
+		DefaultOrigins:   []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080", "http://127.0.0.1:8080"},
+		AllowHeaders:     []string{"Content-Type", "X-Init-Data", "X-Admin-Key"},
+		AllowCredentials: true,
+	})(mux)
 }
 
 // ── Middleware ──
@@ -84,6 +94,12 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 				writeJSON(w, 401, map[string]string{"error": "Unauthorized", "message": err.Error()})
 				return
 			}
+		}
+
+		// Enforce auth_date TTL (1 hour)
+		if auth.AuthDate > 0 && time.Since(time.Unix(auth.AuthDate, 0)) > 1*time.Hour {
+			writeJSON(w, 401, map[string]string{"error": "Unauthorized", "message": "expired initData"})
+			return
 		}
 
 		ctx := context.WithValue(r.Context(), authContextKey, auth)
@@ -129,7 +145,7 @@ func (s *Server) withAdmin(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		key := r.Header.Get("X-Admin-Key")
-		if key != expected {
+		if subtle.ConstantTimeCompare([]byte(key), []byte(expected)) != 1 {
 			writeJSON(w, 401, map[string]string{"error": "Unauthorized"})
 			return
 		}
@@ -137,34 +153,19 @@ func (s *Server) withAdmin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func withCORS(next http.Handler) http.Handler {
-	allowed := AllowedOrigins()
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" {
-			for _, a := range allowed {
-				if origin == a {
-					w.Header().Set("Access-Control-Allow-Origin", origin)
-					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-					w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Init-Data, X-Admin-Key")
-					w.Header().Set("Access-Control-Allow-Credentials", "true")
-					break
-				}
-			}
-		}
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(204)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
 
 // ── Handlers ──
 
 func (s *Server) handleDevInitData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
+		return
+	}
+	// Block in production-like environments regardless of CASINO_DEMO_MODE.
+	env := strings.ToLower(strings.TrimSpace(os.Getenv("MUDRO_ENV")))
+	switch env {
+	case "prod", "production", "stage", "staging":
+		writeJSON(w, 403, map[string]string{"error": "Forbidden", "message": "Dev endpoint disabled in " + env})
 		return
 	}
 	if !CasinoDemoMode() {
@@ -498,9 +499,7 @@ func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 // ── Helpers ──
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
+	httputil.WriteJSON(w, status, data)
 }
 
 func maskKey(key string) string {

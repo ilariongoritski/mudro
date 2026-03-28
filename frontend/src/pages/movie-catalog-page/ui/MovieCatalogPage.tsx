@@ -42,7 +42,9 @@ export const MovieCatalogPage = () => {
   useEffect(() => {
     const controller = new AbortController()
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsError(false)
 
     fetchMovieCatalog(deferredQuery, controller.signal)

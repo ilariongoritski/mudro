@@ -34,9 +34,25 @@ func NewWSHub() *WSHub {
 }
 
 func (h *WSHub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		http.Error(w, "missing userId", http.StatusBadRequest)
+	// Authenticate WebSocket connection via initData query param.
+	initData := r.URL.Query().Get("initData")
+	var userID string
+
+	if initData != "" {
+		auth, err := ValidateInitData(CasinoBotToken(), initData)
+		if err != nil {
+			http.Error(w, "unauthorized: invalid initData", http.StatusUnauthorized)
+			return
+		}
+		userID = auth.UserID
+	} else if CasinoDemoMode() {
+		// Allow unauthenticated connections only in demo mode.
+		userID = r.URL.Query().Get("userId")
+		if userID == "" {
+			userID = "tg_700001234"
+		}
+	} else {
+		http.Error(w, "unauthorized: initData required", http.StatusUnauthorized)
 		return
 	}
 

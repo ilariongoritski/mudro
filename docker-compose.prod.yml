@@ -34,10 +34,11 @@ services:
       retries: 20
 
   casino-api:
-    image: golang:1.24
+    build:
+      context: .
+      args:
+        SERVICE: services/casino/cmd/casino
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "go run ./services/casino/cmd/casino"
     environment:
       CASINO_ADDR: ":8081"
       CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
@@ -49,8 +50,6 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
-    volumes:
-      - ./:/app
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
       interval: 10s
@@ -102,17 +101,19 @@ services:
       retries: 20
 
   api:
-    image: golang:1.24
+    build:
+      context: .
+      args:
+        SERVICE: cmd/api
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "go run ./cmd/api"
     environment:
       API_ADDR: ":8080"
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      JWT_SECRET: "${JWT_SECRET:-}"
-      MUDRO_ROOT: /app
+      JWT_SECRET: "${JWT_SECRET}"
+      MUDRO_ENV: "${MUDRO_ENV:-production}"
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
+      API_ALLOWED_ORIGINS: "${API_ALLOWED_ORIGINS:-}"
       REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
       REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
       REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
@@ -129,8 +130,6 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8080"
-    volumes:
-      - ./:/app
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
       interval: 10s
@@ -138,13 +137,15 @@ services:
       retries: 12
 
   agent:
-    image: golang:1.24
+    build:
+      context: .
+      args:
+        SERVICE: services/agent/cmd
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "go run ./cmd/agent --mode worker --interval 15s"
+    command: ["/service", "--mode", "worker", "--interval", "15s"]
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ROOT: /app
+      MUDRO_ENV: "${MUDRO_ENV:-production}"
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
       KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
@@ -156,35 +157,34 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-    volumes:
-      - ./:/app
     healthcheck:
-      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./services/agent/cmd'"]
+      test: ["CMD-SHELL", "ps -ef | grep -q '[/]service'"]
       interval: 20s
       timeout: 5s
       retries: 5
 
   reporter:
-    image: golang:1.24
+    build:
+      context: .
+      args:
+        SERVICE: services/bot/cmd
     restart: unless-stopped
-    working_dir: /app
-    command: sh -c "go run ./cmd/reporter"
     environment:
       DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ROOT: /app
-      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN:-}"
+      MUDRO_ENV: "${MUDRO_ENV:-production}"
+      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN}"
       REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
       REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
       API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+      TELEGRAM_ALLOWED_USERNAME: "${TELEGRAM_ALLOWED_USERNAME}"
     depends_on:
       db:
         condition: service_healthy
       api:
         condition: service_healthy
-    volumes:
-      - ./:/app
     healthcheck:
-      test: ["CMD-SHELL", "ps -ef | grep -q '[g]o run ./cmd/reporter'"]
+      test: ["CMD-SHELL", "ps -ef | grep -q '[/]service'"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -194,8 +194,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-admin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-MudroAdmin2026}"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
     ports:
       - "127.0.0.1:${MINIO_PORT:-9000}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"

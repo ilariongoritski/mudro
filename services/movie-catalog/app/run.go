@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/goritskimihail/mudro/internal/catalog/service"
+	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/services/movie-catalog/internal/adapters/postgrescatalog"
 	httpmoviecatalog "github.com/goritskimihail/mudro/services/movie-catalog/internal/http/moviecatalog"
 )
@@ -25,6 +26,9 @@ const (
 func Run(ctx context.Context) error {
 	addr := getenv("MOVIE_CATALOG_ADDR", defaultAddr)
 	dsn := getenv("MOVIE_CATALOG_DB_DSN", defaultDSN)
+	if err := config.ValidateRuntimeDSN("movie-catalog", dsn); err != nil {
+		return err
+	}
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {

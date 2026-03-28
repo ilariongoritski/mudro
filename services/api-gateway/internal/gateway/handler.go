@@ -83,8 +83,12 @@ func newProxy(target *url.URL, rewritePath func(string) string) http.Handler {
 		req.URL.Path = rewritePath(req.URL.Path)
 		req.Host = target.Host
 	}
-	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
-		http.Error(w, "upstream unavailable: "+err.Error(), http.StatusBadGateway)
+	proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
+		message := "upstream unavailable"
+		if req != nil {
+			message = fmt.Sprintf("%s: %s %s", message, req.Method, req.URL.Path)
+		}
+		http.Error(w, fmt.Sprintf("%s: %v", message, err), http.StatusBadGateway)
 	}
 	return proxy
 }

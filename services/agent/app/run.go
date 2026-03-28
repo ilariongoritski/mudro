@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,10 +29,13 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, dsn)
+	connCtx, connCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer connCancel()
+
+	pool, err := pgxpool.New(connCtx, dsn)
 	if err != nil {
 		log.Fatalf("pgxpool.New: %v", err)
 	}
@@ -48,21 +53,21 @@ func Run() {
 
 	switch *mode {
 	case "planner":
-		runPlannerLoop(repoRoot, q, *interval)
+		runPlannerLoop(ctx, repoRoot, q, *interval)
 	case "planner-once":
-		runPlannerOnce(repoRoot, q)
+		runPlannerOnce(ctx, repoRoot, q)
 	case "worker":
-		runWorkerLoop(w, *interval)
+		runWorkerLoop(ctx, w, *interval)
 	case "once":
-		runPlannerOnce(repoRoot, q)
-		if _, err := w.RunOnce(context.Background()); err != nil {
+		runPlannerOnce(ctx, repoRoot, q)
+		if _, err := w.RunOnce(ctx); err != nil {
 			log.Printf("worker run once: %v", err)
 		}
 	case "approve":
 		if *taskID <= 0 {
 			log.Fatal("approve mode requires --task-id > 0")
 		}
-		if err := q.ApproveTask(context.Background(), *taskID); err != nil {
+		if err := q.ApproveTask(ctx, *taskID); err != nil {
 			log.Fatalf("approve task: %v", err)
 		}
 		log.Printf("approved task id=%d", *taskID)
@@ -70,7 +75,7 @@ func Run() {
 		if *taskID <= 0 {
 			log.Fatal("reject mode requires --task-id > 0")
 		}
-		if err := q.RejectTask(context.Background(), *taskID, *reason); err != nil {
+		if err := q.RejectTask(ctx, *taskID, *reason); err != nil {
 			log.Fatalf("reject task: %v", err)
 		}
 		log.Printf("rejected task id=%d", *taskID)
@@ -92,22 +97,28 @@ func initTaskEventPublisher() events.Publisher {
 	return pub
 }
 
-func runPlannerLoop(repoRoot string, q *agent.Repository, interval time.Duration) {
+func runPlannerLoop(ctx context.Context, repoRoot string, q *agent.Repository, interval time.Duration) {
 	if interval <= 0 {
 		interval = time.Minute
 	}
 
-	runPlannerOnce(repoRoot, q)
+	runPlannerOnce(ctx, repoRoot, q)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		runPlannerOnce(repoRoot, q)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("planner shutting down...")
+			return
+		case <-ticker.C:
+			runPlannerOnce(ctx, repoRoot, q)
+		}
 	}
 }
 
-func runPlannerOnce(repoRoot string, q *agent.Repository) {
-	n, err := agent.PlanFromTodo(context.Background(), repoRoot, q)
+func runPlannerOnce(ctx context.Context, repoRoot string, q *agent.Repository) {
+	n, err := agent.PlanFromTodo(ctx, repoRoot, q)
 	if err != nil {
 		log.Printf("planner error: %v", err)
 		return
@@ -115,18 +126,30 @@ func runPlannerOnce(repoRoot string, q *agent.Repository) {
 	log.Printf("planner: enqueued %d tasks", n)
 }
 
-func runWorkerLoop(w *agent.Worker, interval time.Duration) {
+func runWorkerLoop(ctx context.Context, w *agent.Worker, interval time.Duration) {
 	if interval <= 0 {
 		interval = time.Minute
 	}
 
 	for {
-		processed, err := w.RunOnce(context.Background())
+		select {
+		case <-ctx.Done():
+			log.Printf("worker shutting down...")
+			return
+		default:
+		}
+
+		processed, err := w.RunOnce(ctx)
 		if err != nil {
 			log.Printf("worker error: %v", err)
 		}
 		if !processed {
-			time.Sleep(interval)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(interval):
+			}
 		}
 	}
 }
+

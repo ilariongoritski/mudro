@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/goritskimihail/mudro/internal/api"
 )
 
 func TestHealth(t *testing.T) {
@@ -30,7 +28,7 @@ func TestHealth(t *testing.T) {
 }
 
 func TestRegisterRouteExists(t *testing.T) {
-	handler := NewHandler(api.NewAuthHandlers(nil), nil)
+	handler := NewHandler(NewAuthHandlers(nil), nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", nil)
 	rec := httptest.NewRecorder()
@@ -42,7 +40,7 @@ func TestRegisterRouteExists(t *testing.T) {
 }
 
 func TestAdminRouteServiceUnavailableWithoutAdminHandlers(t *testing.T) {
-	handler := NewHandler(api.NewAuthHandlers(nil), nil)
+	handler := NewHandler(NewAuthHandlers(nil), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users", nil)
 	rec := httptest.NewRecorder()

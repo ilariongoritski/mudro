@@ -1,0 +1,41 @@
+# Build context excludes
+.git
+.github
+.agents
+.claude
+.codex
+.kilocode
+.skaro
+.vscode
+.vercel
+
+# Legacy / transitional
+legacy/
+MUDROTOP/
+pixel-agents/
+testdir/
+out/
+tmp/
+
+# Frontend (built separately)
+frontend/node_modules/
+frontend/dist/
+
+# Data & media
+data/
+
+# Docs (not needed in image)
+docs/
+plans/
+*.md
+!README.md
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE
+*.swp
+*.swo
+*~

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/goritskimihail/mudro/pkg/vercelapi"
+	"github.com/goritskimihail/mudro/services/feed-api/vercelapi"
 )
 
 var (

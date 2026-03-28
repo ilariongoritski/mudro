@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/goritskimihail/mudro/internal/api"
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
 	authapi "github.com/goritskimihail/mudro/services/auth-api/internal/authapi"
@@ -38,7 +37,7 @@ func Run() {
 
 	auth.SetSecret(config.JWTSecret())
 	authSvc := auth.NewService(pool, config.JWTSecret())
-	handler := authapi.NewHandler(api.NewAuthHandlers(authSvc), api.NewAdminHandlers(authSvc))
+	handler := authapi.NewHandler(authapi.NewAuthHandlers(authSvc), authapi.NewAdminHandlers(authSvc))
 
 	srv := &http.Server{
 		Addr:         addr,

@@ -155,6 +155,7 @@ func TestValidateRuntimeDSNRejectsProductionSuperuser(t *testing.T) {
 func TestValidateRuntimeAllowsNonSuperuserProductionDSN(t *testing.T) {
 	t.Setenv("MUDRO_ENV", "production")
 	t.Setenv("DSN", "postgres://mudro_app:secret@127.0.0.1:5432/gallery?sslmode=disable")
+	t.Setenv("JWT_SECRET", "test-production-jwt-secret-32chars!!")
 	if err := ValidateRuntime("api", "DSN"); err != nil {
 		t.Fatalf("expected runtime validation to pass, got %v", err)
 	}
