@@ -68,3 +68,11 @@ pixel-agents/
 
 # npm cache
 frontend/npm-cache/
+
+# AI Agents and IDEs
+.agents/
+.claude/
+.codex/
+.skaro/
+.vscode/
+.kilocode/

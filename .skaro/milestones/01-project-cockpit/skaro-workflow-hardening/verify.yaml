@@ -1,4 +1,0 @@
-- name: skaro-status
-  command: powershell -ExecutionPolicy Bypass -File .\scripts\skaro-local.ps1 status
-- name: skaro-secrets-ignored
-  command: powershell -ExecutionPolicy Bypass -Command "git check-ignore .skaro/secrets.yaml .skaro/token_usage.yaml .skaro/usage_log.jsonl | Out-Null"

@@ -1,4 +1,0 @@
-- name: imported-docs-exist
-  command: powershell -ExecutionPolicy Bypass -Command "$paths = @('.skaro/docs/imported/README.md','.skaro/docs/imported/2026-03-17-codex-snapshot.md','.skaro/docs/imported/2026-03-17-automation-scope.md'); foreach ($p in $paths) { if (-not (Test-Path $p)) { Write-Error \"Missing $p\"; exit 1 } }"
-- name: skaro-status
-  command: powershell -ExecutionPolicy Bypass -File .\scripts\skaro-local.ps1 status
