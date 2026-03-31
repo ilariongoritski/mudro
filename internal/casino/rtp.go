@@ -8,8 +8,6 @@ import (
 	"math"
 	"sync"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PaytableTier struct {
@@ -63,7 +61,7 @@ func EvaluatePayout(roll int, betAmount float64, tiers []PaytableTier) PayoutRes
 	return PayoutResult{Label: "МИМО", Symbol: "💀"}
 }
 
-func GetActiveRtpProfile(ctx context.Context, pool *pgxpool.Pool, userID string) (*RtpProfile, error) {
+func GetActiveRtpProfile(ctx context.Context, repo CasinoRepository, userID string) (*RtpProfile, error) {
 	rtpCacheMu.RLock()
 	if entry, ok := rtpCache[userID]; ok && time.Now().Before(entry.expiresAt) {
 		rtpCacheMu.RUnlock()
@@ -71,48 +69,9 @@ func GetActiveRtpProfile(ctx context.Context, pool *pgxpool.Pool, userID string)
 	}
 	rtpCacheMu.RUnlock()
 
-	// Check for user-specific assignment
-	var profile *RtpProfile
-	row := pool.QueryRow(ctx, `
-		SELECT p.id, p.name, p.rtp, p.paytable, p.is_default
-		FROM casino_rtp_assignments a
-		JOIN casino_rtp_profiles p ON p.id = a.rtp_profile_id
-		WHERE a.user_id = $1 AND (a.expires_at IS NULL OR a.expires_at > now())
-		ORDER BY a.created_at DESC
-		LIMIT 1
-	`, userID)
-
-	var id, name string
-	var rtp float64
-	var paytableJSON []byte
-	var isDefault bool
-
-	err := row.Scan(&id, &name, &rtp, &paytableJSON, &isDefault)
+	profile, err := repo.GetActiveRtpProfile(ctx, userID)
 	if err != nil {
-		// Fallback to default
-		row = pool.QueryRow(ctx, `
-			SELECT id, name, rtp, paytable, is_default
-			FROM casino_rtp_profiles
-			WHERE is_default = true
-			LIMIT 1
-		`)
-		err = row.Scan(&id, &name, &rtp, &paytableJSON, &isDefault)
-		if err != nil {
-			return nil, fmt.Errorf("no default RTP profile: %w", err)
-		}
-	}
-
-	var tiers []PaytableTier
-	if err := json.Unmarshal(paytableJSON, &tiers); err != nil {
-		return nil, fmt.Errorf("parse paytable: %w", err)
-	}
-
-	profile = &RtpProfile{
-		ID:        id,
-		Name:      name,
-		Rtp:       rtp,
-		Paytable:  tiers,
-		IsDefault: isDefault,
+		return nil, err
 	}
 
 	rtpCacheMu.Lock()
