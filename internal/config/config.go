@@ -23,7 +23,7 @@ const (
 	DefaultRedisAddr        = "localhost:6379"
 	DefaultKafkaClientID    = "mudro"
 	DefaultKafkaTopic       = "mudro.agent.tasks.v1"
-	DefaultMudroLocalRoot   = "D:\\mudr\\_mudro-local"
+	DefaultMudroLocalRoot   = "E:\\mudr\\_mudro-local"
 	DefaultSkaroDashboard   = "http://127.0.0.1:4700/dashboard"
 	DefaultClaudeProxyURL   = "http://127.0.0.1:8788"
 )
@@ -209,6 +209,24 @@ func KafkaClientID() string {
 
 func KafkaTopicTasks() string {
 	return envOr("KAFKA_TOPIC_TASKS", DefaultKafkaTopic)
+}
+
+// CORSAllowedOrigins returns the list of explicitly allowed CORS origins
+// from the CORS_ALLOWED_ORIGINS env var (comma-separated). Returns nil when unset.
+func CORSAllowedOrigins() []string {
+	raw := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		s := strings.TrimSpace(p)
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func JWTSecret() string {

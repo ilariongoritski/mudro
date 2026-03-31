@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	s := NewServer(nil, nil)
+	s := NewServer(nil, nil, nil)
 	if s == nil {
 		t.Fatal("NewServer returned nil")
 	}

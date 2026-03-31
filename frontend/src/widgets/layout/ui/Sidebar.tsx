@@ -1,7 +1,7 @@
 ﻿import { Film, Home, LogIn, LogOut, MessageCircle, Sparkles, TabletSmartphone, User, Workflow } from 'lucide-react'
-import { Link, NavLink } from 'react-router'
+import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
-import { logout } from '@/features/auth/model/authSlice'
+import { logout } from '@/entities/session/model/sessionSlice'
 import { cn } from '@/shared/lib/utils'
 
 const primaryNavItems = [
@@ -19,8 +19,8 @@ const secondaryNavItems = [
 
 export const Sidebar = () => {
   const dispatch = useAppDispatch()
-  const token = useAppSelector((state) => state.auth.token)
-  const user = useAppSelector((state) => state.auth.user)
+  const token = useAppSelector((state) => state.session.token)
+  const user = useAppSelector((state) => state.session.user)
 
   return (
     <aside className="mudro-sidebar hidden md:flex">
@@ -110,7 +110,7 @@ export const Sidebar = () => {
           </div>
         ) : (
           <NavLink
-            to="/auth"
+            to="/login"
             className={({ isActive }) => cn('mudro-sidebar__link', isActive && 'mudro-sidebar__link_active')}
           >
             <span className="mudro-sidebar__link-icon">

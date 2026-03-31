@@ -26,36 +26,11 @@ func (s *Server) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// try insert; if already liked, delete instead
-	var liked bool
-	tag, err := s.pool.Exec(r.Context(),
-		`insert into post_user_likes (post_id, user_id) values ($1, $2) on conflict do nothing`,
-		postID, userID,
-	)
+	liked, count, err := s.postsSvc.ToggleLike(r.Context(), postID, userID)
 	if err != nil {
 		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
 		return
 	}
-
-	if tag.RowsAffected() == 0 {
-		// already liked — remove
-		_, err = s.pool.Exec(r.Context(),
-			`delete from post_user_likes where post_id = $1 and user_id = $2`,
-			postID, userID,
-		)
-		if err != nil {
-			http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
-			return
-		}
-		liked = false
-	} else {
-		liked = true
-	}
-
-	var count int
-	_ = s.pool.QueryRow(r.Context(),
-		`select likes_count from posts where id = $1`, postID,
-	).Scan(&count)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(likeResponse{Liked: liked, LikesCount: count})

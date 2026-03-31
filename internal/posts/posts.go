@@ -54,6 +54,16 @@ func (s *Service) CountVisiblePosts(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+
+// LoadLastSyncAt returns the most recent updated_at across all posts.
+// Exists so HTTP handlers get this via service layer — not direct pool access.
+func (s *Service) LoadLastSyncAt(ctx context.Context) (*time.Time, error) {
+	var lastSync *time.Time
+	if err := s.pool.QueryRow(ctx, `SELECT MAX(updated_at) FROM posts`).Scan(&lastSync); err != nil {
+		return nil, err
+	}
+	return lastSync, nil
+}
 func (s *Service) LoadSourceStats(ctx context.Context) ([]SourceStat, error) {
 	q := `SELECT source, count(*) FROM posts`
 	args := make([]any, 0, 1)
@@ -268,10 +278,10 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		select comment_id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
+		select id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
 		from post_comments
 		where post_id = any($1)
-		order by post_id asc, published_at asc, comment_id asc
+		order by post_id asc, published_at asc, id asc
 	`, postIDs)
 	if err != nil {
 		if commentdb.IsUndefinedTableErr(err) {
@@ -319,4 +329,45 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 		return nil, err
 	}
 	return out, nil
+}
+
+
+// AddComment safely inserts a comment to a post.
+func (s *Service) AddComment(ctx context.Context, postID int64, authorName, text string, parentCommentID *int64) (int64, time.Time, error) {
+	now := time.Now()
+	var commentID int64
+	err := s.pool.QueryRow(ctx,
+		`insert into post_comments (post_id, source, source_comment_id, author_name, text, published_at, parent_comment_id)
+		 values ($1, 'local', 'local-' || nextval('post_comments_id_seq')::text, $2, $3, $4, $5)
+		 returning id`,
+		postID, authorName, text, now, parentCommentID,
+	).Scan(&commentID)
+	return commentID, now, err
+}
+
+// ToggleLike toggles the like status of a user on a post.
+func (s *Service) ToggleLike(ctx context.Context, postID, userID int64) (liked bool, likesCount int, err error) {
+	tag, err := s.pool.Exec(ctx,
+		`insert into post_user_likes (post_id, user_id) values ($1, $2) on conflict do nothing`,
+		postID, userID,
+	)
+	if err != nil {
+		return false, 0, err
+	}
+
+	if tag.RowsAffected() == 0 {
+		_, err = s.pool.Exec(ctx,
+			`delete from post_user_likes where post_id = $1 and user_id = $2`,
+			postID, userID,
+		)
+		if err != nil {
+			return false, 0, err
+		}
+		liked = false
+	} else {
+		liked = true
+	}
+
+	_ = s.pool.QueryRow(ctx, `select likes_count from posts where id = $1`, postID).Scan(&likesCount)
+	return liked, likesCount, nil
 }

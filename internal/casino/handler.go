@@ -1,6 +1,7 @@
 package casino
 
 import (
+	"github.com/goritskimihail/mudro/internal/casino/contracts"
 	"bytes"
 	"context"
 	"crypto/subtle"
@@ -14,17 +15,15 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/pkg/httputil"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
-	pool *pgxpool.Pool
+	service *Service
 	hub  *WSHub
 }
 
-func NewServer(pool *pgxpool.Pool) *Server {
-	return &Server{pool: pool, hub: NewWSHub()}
+func NewServer(service *Service) *Server {
+	return &Server{service: service, hub: NewWSHub()}
 }
 
 func (s *Server) Router() http.Handler {
@@ -121,9 +120,7 @@ func extractInitDataFromBody(r *http.Request) (string, error) {
 		return "", nil
 	}
 
-	var body struct {
-		InitData string `json:"initData"`
-	}
+	var body contracts.AuthRequest
 	if err := json.Unmarshal(rawBody, &body); err != nil {
 		return "", err
 	}
@@ -183,9 +180,7 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		InitData string `json:"initData"`
-	}
+	var body contracts.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, 400, map[string]string{"error": "Bad request"})
 		return
@@ -204,7 +199,7 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	acct, err := EnsureUserAccount(r.Context(), s.pool, auth.UserID, CasinoStartBalance())
+	acct, err := s.service.EnsureUserAccount(r.Context(), auth.UserID, CasinoStartBalance())
 	if err != nil {
 		log.Printf("ensure account: %v", err)
 		writeJSON(w, 500, map[string]string{"error": "Internal error"})
@@ -238,10 +233,7 @@ func (s *Server) handlePrepare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serverSeed := GenerateServerSeed()
-	seedHash := HashServerSeed(serverSeed)
-
-	round, err := PrepareRound(r.Context(), s.pool, auth.UserID, serverSeed, seedHash)
+	round, err := s.service.PrepareRound(r.Context(), auth.UserID)
 	if err != nil {
 		log.Printf("prepare round: %v", err)
 		writeJSON(w, 500, map[string]string{"error": "Internal error"})
@@ -250,7 +242,7 @@ func (s *Server) handlePrepare(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, 200, map[string]any{
 		"roundId":        round.ID,
-		"serverSeedHash": seedHash,
+		"serverSeedHash": round.ServerSeedHash,
 		"createdAt":      round.CreatedAt,
 	})
 }
@@ -266,18 +258,13 @@ func (s *Server) handleBet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		RoundID        string  `json:"roundId"`
-		BetAmount      float64 `json:"betAmount"`
-		ClientSeed     string  `json:"clientSeed"`
-		IdempotencyKey string  `json:"idempotencyKey"`
-	}
+	var body contracts.BetRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, 400, map[string]string{"error": "Bad request"})
 		return
 	}
 
-	result, err := PlaceBet(r.Context(), s.pool, BetInput{
+	result, err := s.service.PlaceBet(r.Context(), BetInput{
 		UserID:         auth.UserID,
 		RoundID:        body.RoundID,
 		BetAmount:      body.BetAmount,
@@ -304,7 +291,7 @@ func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	acct, err := GetUserAccount(r.Context(), s.pool, auth.UserID)
+	acct, err := s.service.GetBalance(r.Context(), auth.UserID)
 	if err != nil {
 		writeJSON(w, 404, map[string]string{"error": "Account not found"})
 		return
@@ -324,15 +311,13 @@ func (s *Server) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		Amount float64 `json:"amount"`
-	}
+	var body contracts.FaucetRequest
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	if body.Amount <= 0 {
 		body.Amount = CasinoFaucetAmount()
 	}
 
-	result, err := GrantFaucet(r.Context(), s.pool, auth.UserID, body.Amount)
+	result, err := s.service.GrantFaucet(r.Context(), auth.UserID, body.Amount)
 	if err != nil {
 		log.Printf("faucet error: %v", err)
 		writeJSON(w, 400, map[string]string{"error": "FaucetFailed", "message": err.Error()})
@@ -353,14 +338,7 @@ func (s *Server) handleFaucet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var userCount, roundCount int
-	var houseBalance float64
-	var totalBet, totalPayout float64
-
-	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM casino_accounts WHERE type = 'user'`).Scan(&userCount)
-	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM casino_rounds WHERE status = 'resolved'`).Scan(&roundCount)
-	_ = s.pool.QueryRow(ctx, `SELECT COALESCE(balance, 0) FROM casino_accounts WHERE code = $1`, HouseAccountCode).Scan(&houseBalance)
-	_ = s.pool.QueryRow(ctx, `SELECT COALESCE(SUM(bet_amount), 0), COALESCE(SUM(payout_amount), 0) FROM casino_rounds WHERE status = 'resolved'`).Scan(&totalBet, &totalPayout)
+	userCount, roundCount, houseBalance, totalBet, totalPayout, _ := s.service.GetStats(ctx)
 
 	actualRtp := 0.0
 	if totalBet > 0 {
@@ -379,119 +357,48 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminRtpProfiles(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := s.pool.Query(ctx, `SELECT id, name, rtp, paytable, is_default FROM casino_rtp_profiles ORDER BY name`)
+		profiles, err := s.service.GetRTPProfiles(ctx)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": "query failed"})
 			return
 		}
-		defer rows.Close()
-
-		var profiles []map[string]any
-		for rows.Next() {
-			var id, name string
-			var rtp float64
-			var paytable json.RawMessage
-			var isDefault bool
-			if err := rows.Scan(&id, &name, &rtp, &paytable, &isDefault); err != nil {
-				continue
-			}
-			profiles = append(profiles, map[string]any{
-				"id": id, "name": name, "rtp": rtp, "paytable": json.RawMessage(paytable), "isDefault": isDefault,
-			})
-		}
-		if profiles == nil {
-			profiles = []map[string]any{}
-		}
 		writeJSON(w, 200, profiles)
-
 	case http.MethodPost:
-		var body struct {
-			Name      string          `json:"name"`
-			Rtp       float64         `json:"rtp"`
-			Paytable  json.RawMessage `json:"paytable"`
-			IsDefault bool            `json:"isDefault"`
-		}
+		var body contracts.UpsertRTPProfileRequest
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			writeJSON(w, 400, map[string]string{"error": "Bad request"})
 			return
 		}
-
-		tiers, err := ParsePaytable(body.Paytable)
-		if err != nil {
-			writeJSON(w, 400, map[string]string{"error": err.Error()})
-			return
-		}
-		if err := ValidatePaytable(tiers, body.Rtp); err != nil {
-			writeJSON(w, 400, map[string]string{"error": err.Error()})
-			return
-		}
-
-		if body.IsDefault {
-			_, _ = s.pool.Exec(ctx, `UPDATE casino_rtp_profiles SET is_default = false WHERE is_default = true`)
-		}
-
-		var id string
-		err = s.pool.QueryRow(ctx, `
-			INSERT INTO casino_rtp_profiles (name, rtp, paytable, is_default)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (name) DO UPDATE SET rtp = $2, paytable = $3, is_default = $4, updated_at = now()
-			RETURNING id
-		`, body.Name, body.Rtp, body.Paytable, body.IsDefault).Scan(&id)
+		id, err := s.service.UpsertRTPProfile(ctx, body.Name, body.Rtp, body.Paytable, body.IsDefault)
 		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": err.Error()})
 			return
 		}
-
-		ClearRtpCache("")
-		adminKey := r.Header.Get("X-Admin-Key")
-		log.Printf("[AUDIT] RTP profile upsert: id=%s name=%q rtp=%.2f isDefault=%v by=%s", id, body.Name, body.Rtp, body.IsDefault, maskKey(adminKey))
 		writeJSON(w, 200, map[string]string{"id": id})
-
-	default:
-		// Handle DELETE via query param
-		if r.Method == http.MethodDelete {
-			id := strings.TrimPrefix(r.URL.Path, "/api/casino/admin/rtp/profiles/")
-			if id == "" {
-				writeJSON(w, 400, map[string]string{"error": "missing id"})
-				return
-			}
-			_, _ = s.pool.Exec(ctx, `DELETE FROM casino_rtp_profiles WHERE id = $1`, id)
-			ClearRtpCache("")
-			adminKey := r.Header.Get("X-Admin-Key")
-			log.Printf("[AUDIT] RTP profile deleted: id=%s by=%s", id, maskKey(adminKey))
-		} else {
-			writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
+	case http.MethodDelete:
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			writeJSON(w, 400, map[string]string{"error": "missing id"})
+			return
 		}
+		if err := s.service.DeleteRTPProfile(ctx, id); err != nil {
+			writeJSON(w, 500, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, 200, map[string]string{"status": "ok"})
+	default:
+		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
 	}
 }
 
 func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, code, currency, balance FROM casino_accounts WHERE type = 'user' ORDER BY created_at DESC LIMIT 100
-	`)
+	users, err := s.service.GetUsers(ctx, 100)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": "query failed"})
 		return
-	}
-	defer rows.Close()
-
-	var users []map[string]any
-	for rows.Next() {
-		var id, code, currency string
-		var balance float64
-		if err := rows.Scan(&id, &code, &currency, &balance); err != nil {
-			continue
-		}
-		users = append(users, map[string]any{
-			"id": id, "code": code, "currency": currency, "balance": balance,
-		})
-	}
-	if users == nil {
-		users = []map[string]any{}
 	}
 	writeJSON(w, 200, map[string]any{"items": users, "total": len(users)})
 }
@@ -502,9 +409,3 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 	httputil.WriteJSON(w, status, data)
 }
 
-func maskKey(key string) string {
-	if len(key) <= 4 {
-		return "***"
-	}
-	return key[:4] + "***"
-}

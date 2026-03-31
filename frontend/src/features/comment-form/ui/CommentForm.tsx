@@ -11,7 +11,7 @@ interface CommentFormProps {
 export const CommentForm = ({ postId }: CommentFormProps) => {
   const [text, setText] = useState('')
   const [createComment, { isLoading }] = useCreateCommentMutation()
-  const token = useAppSelector((state) => state.auth.token)
+  const token = useAppSelector((state) => state.session.token)
 
   if (!token) {
     return (

@@ -127,7 +127,7 @@ function normalizeInteger(
     return fallback;
   }
 
-  if (!Number.isInteger(raw) || raw < min || raw > max) {
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < min || raw > max) {
     throw new Error(`${fieldName} must be an integer between ${min} and ${max}`);
   }
 

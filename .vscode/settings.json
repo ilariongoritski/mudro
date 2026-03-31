@@ -1,0 +1,22 @@
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell 7",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell 7": {
+      "path": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile"
+      ]
+    },
+    "PowerShell": {
+      "source": "PowerShell",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass"
+      ]
+    }
+  },
+  "terminal.integrated.rendererType": "dom"
+}

@@ -1,4 +1,4 @@
-﻿import { Link, useLocation } from 'react-router'
+﻿import { Link, useLocation } from 'react-router-dom'
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   '/': {

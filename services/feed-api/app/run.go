@@ -39,7 +39,10 @@ func Run() {
 		log.Fatalf("db ping: %v", err)
 	}
 
-	baseHandler, err := wiring.NewHandler(pool)
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
+	baseHandler, err := wiring.NewHandler(appCtx, pool)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,6 +67,8 @@ func Run() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+
+	appCancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()

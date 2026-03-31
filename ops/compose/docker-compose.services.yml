@@ -45,31 +45,6 @@ services:
       timeout: 5s
       retries: 12
 
-  bff-web:
-    image: golang:1.24
-    restart: unless-stopped
-    working_dir: /app
-    command: sh -lc "/usr/local/go/bin/go run ./services/bff-web/cmd"
-    environment:
-      BFF_WEB_ADDR: ":8086"
-      BFF_WEB_API_BASE_URL: "http://api:8080"
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ROOT: /app
-    depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_healthy
-    ports:
-      - "${BFF_WEB_PORT:-8086}:8086"
-    volumes:
-      - ../../:/app
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8086/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-
   api-gateway:
     image: golang:1.24
     restart: unless-stopped

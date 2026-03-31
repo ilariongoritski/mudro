@@ -36,7 +36,7 @@ func Run() {
 	}
 
 	auth.SetSecret(config.JWTSecret())
-	authSvc := auth.NewService(pool, config.JWTSecret())
+	authSvc := auth.NewService(auth.NewPgRepository(pool), config.JWTSecret())
 	handler := authapi.NewHandler(authapi.NewAuthHandlers(authSvc), authapi.NewAdminHandlers(authSvc))
 
 	srv := &http.Server{

@@ -20,7 +20,7 @@ type CanUseToolOptions = {
   suggestions?: unknown;
   blockedPath?: string;
   decisionReason?: string;
-  toolUseID: string;
+  toolUseID?: string;
   agentID?: string;
 };
 
@@ -45,11 +45,11 @@ export async function runClaudeTask(repoRoot: string, request: NormalizedRunRequ
 
   try {
     const stream = query({
-      abortController,
       prompt: request.prompt,
       options: {
+        abortController,
         allowedTools,
-        canUseTool: async (toolName: string, input: unknown, _options: CanUseToolOptions) => {
+        canUseTool: async (toolName: string, input: Record<string, unknown>, _options: CanUseToolOptions) => {
           try {
             validateToolUse(repoRoot, request, allowedToolNames, toolSummary, toolName, input);
             return {

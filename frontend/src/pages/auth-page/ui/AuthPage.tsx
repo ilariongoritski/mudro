@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate } from 'react-router-dom'
 import { useRegisterMutation, useLoginMutation } from '@/entities/session/api/authApi'
 import { setCredentials } from '@/entities/session/model/sessionSlice'
 import { useAppDispatch } from '@/shared/lib/hooks/storeHooks'

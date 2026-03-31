@@ -10,7 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/goritskimihail/mudro/internal/agent"
+	"github.com/goritskimihail/mudro/internal/agent/repository"
+	"github.com/goritskimihail/mudro/internal/agent/usecase"
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/events"
 )
@@ -48,18 +49,19 @@ func Run() {
 		}
 	}()
 
-	q := agent.NewRepositoryWithPublisher(pool, pub)
-	w := &agent.Worker{RepoRoot: repoRoot, Queue: q, WorkerID: *workerID}
+	r := repository.NewPgRepositoryWithPublisher(pool, pub)
+	agentSvc := usecase.NewAgentService(r)
+	w := &usecase.Worker{RepoRoot: repoRoot, Usecase: agentSvc, WorkerID: *workerID}
 
 	switch *mode {
 	case "planner":
-		runPlannerLoop(ctx, repoRoot, q, *interval)
+		runPlannerLoop(ctx, repoRoot, agentSvc, *interval)
 	case "planner-once":
-		runPlannerOnce(ctx, repoRoot, q)
+		runPlannerOnce(ctx, repoRoot, agentSvc)
 	case "worker":
 		runWorkerLoop(ctx, w, *interval)
 	case "once":
-		runPlannerOnce(ctx, repoRoot, q)
+		runPlannerOnce(ctx, repoRoot, agentSvc)
 		if _, err := w.RunOnce(ctx); err != nil {
 			log.Printf("worker run once: %v", err)
 		}
@@ -67,7 +69,7 @@ func Run() {
 		if *taskID <= 0 {
 			log.Fatal("approve mode requires --task-id > 0")
 		}
-		if err := q.ApproveTask(ctx, *taskID); err != nil {
+		if err := agentSvc.ApproveTask(ctx, *taskID); err != nil {
 			log.Fatalf("approve task: %v", err)
 		}
 		log.Printf("approved task id=%d", *taskID)
@@ -75,7 +77,7 @@ func Run() {
 		if *taskID <= 0 {
 			log.Fatal("reject mode requires --task-id > 0")
 		}
-		if err := q.RejectTask(ctx, *taskID, *reason); err != nil {
+		if err := agentSvc.RejectTask(ctx, *taskID, *reason); err != nil {
 			log.Fatalf("reject task: %v", err)
 		}
 		log.Printf("rejected task id=%d", *taskID)
@@ -97,7 +99,7 @@ func initTaskEventPublisher() events.Publisher {
 	return pub
 }
 
-func runPlannerLoop(ctx context.Context, repoRoot string, q *agent.Repository, interval time.Duration) {
+func runPlannerLoop(ctx context.Context, repoRoot string, q usecase.TaskUsecase, interval time.Duration) {
 	if interval <= 0 {
 		interval = time.Minute
 	}
@@ -117,8 +119,8 @@ func runPlannerLoop(ctx context.Context, repoRoot string, q *agent.Repository, i
 	}
 }
 
-func runPlannerOnce(ctx context.Context, repoRoot string, q *agent.Repository) {
-	n, err := agent.PlanFromTodo(ctx, repoRoot, q)
+func runPlannerOnce(ctx context.Context, repoRoot string, q usecase.TaskUsecase) {
+	n, err := usecase.PlanFromTodo(ctx, repoRoot, q)
 	if err != nil {
 		log.Printf("planner error: %v", err)
 		return
@@ -126,7 +128,7 @@ func runPlannerOnce(ctx context.Context, repoRoot string, q *agent.Repository) {
 	log.Printf("planner: enqueued %d tasks", n)
 }
 
-func runWorkerLoop(ctx context.Context, w *agent.Worker, interval time.Duration) {
+func runWorkerLoop(ctx context.Context, w *usecase.Worker, interval time.Duration) {
 	if interval <= 0 {
 		interval = time.Minute
 	}
@@ -152,4 +154,5 @@ func runWorkerLoop(ctx context.Context, w *agent.Worker, interval time.Duration)
 		}
 	}
 }
+
 
