@@ -55,8 +55,9 @@ type BetResult struct {
 	PayoutAmount   float64 `json:"payoutAmount"`
 	Multiplier     float64 `json:"multiplier"`
 	TierLabel      string  `json:"tierLabel"`
-	TierSymbol     string  `json:"tierSymbol"`
-	Balance        float64 `json:"balance"`
+	TierSymbol     string   `json:"tierSymbol"`
+	Symbols        []string `json:"symbols"`
+	Balance        float64  `json:"balance"`
 	Nonce          int     `json:"nonce"`
 	RoundHash      string  `json:"roundHash"`
 	ServerSeedHash string  `json:"serverSeedHash"`

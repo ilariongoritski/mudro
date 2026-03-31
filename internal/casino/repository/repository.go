@@ -20,7 +20,8 @@ type CasinoRepository interface {
 	// Rounds
 	PrepareRound(ctx context.Context, userID, serverSeed, seedHash string) (*domain.Round, error)
 	GetPreparedRound(ctx context.Context, tx pgx.Tx, roundID, userID string) (*domain.Round, error)
-	ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string, nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel string) error
+	ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string, nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel, tierSymbol string) error
+	GetHistory(ctx context.Context, userID string, limit int) ([]domain.BetResult, error)
 	
 	// Ledger
 	CreateTransfer(ctx context.Context, tx pgx.Tx, kind string, debitAcctID, creditAcctID string, amount float64, metadata map[string]any) error

@@ -149,7 +149,7 @@ func (s *Service) PlaceBet(ctx context.Context, input domain.BetInput) (*domain.
 	}
 
 	err = s.repo.ResolveRound(ctx, tx, input.RoundID, input.ClientSeed, roundHash,
-		nonce, roll, input.BetAmount, payout.Amount, payout.Multiplier, payout.Label)
+		nonce, roll, input.BetAmount, payout.Amount, payout.Multiplier, payout.Label, payout.Symbol)
 	if err != nil {
 		return nil, fmt.Errorf("resolve round: %w", err)
 	}
@@ -174,6 +174,20 @@ func (s *Service) PlaceBet(ctx context.Context, input domain.BetInput) (*domain.
 		ServerSeed:     round.ServerSeed,
 	}
 
+	for _, r := range result.TierSymbol {
+		result.Symbols = append(result.Symbols, string(r))
+	}
+
+	// Ensure exactly 3 symbols for the frontend if possible
+	if len(result.Symbols) < 3 {
+		// Fallback for single symbol (e.g. 💩) -> 💩 🍋 🍇 (random-ish but different)
+		for len(result.Symbols) < 3 {
+			result.Symbols = append(result.Symbols, "🍋")
+		}
+	} else if len(result.Symbols) > 3 {
+		result.Symbols = result.Symbols[:3]
+	}
+
 	resJSON, _ := json.Marshal(result)
 	_ = s.repo.CompleteIdempotencyKey(ctx, tx, idem.ID, resJSON)
 
@@ -182,6 +196,13 @@ func (s *Service) PlaceBet(ctx context.Context, input domain.BetInput) (*domain.
 	}
 
 	return result, nil
+}
+
+func (s *Service) GetHistory(ctx context.Context, userID string, limit int) ([]domain.BetResult, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	return s.repo.GetHistory(ctx, userID, limit)
 }
 
 // ── Admin Passthroughs ──

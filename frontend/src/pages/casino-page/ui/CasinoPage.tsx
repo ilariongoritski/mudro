@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -14,7 +14,7 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
 import './CasinoPage.css'
 
-const reelFallback = ['7', 'BAR', 'STAR']
+const reelFallback = ['🎰', '🍒', '🍋']
 const betOptions = [10, 25, 50, 100]
 
 const formatCasinoTimestamp = (value: string) => {
@@ -132,7 +132,7 @@ export const CasinoPage = () => {
 
     setSpinFeedback(null)
     setCelebrateSpin(false)
-    setReels(['SPIN', 'SPIN', 'SPIN'])
+    setReels(['🎰', '🎰', '🎰'])
 
     try {
       const response = await spinCasino({ bet }).unwrap()

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"time"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -95,16 +96,43 @@ func (repo *pgCasinoRepository) GetPreparedRound(ctx context.Context, tx pgx.Tx,
 	return &rnd, nil
 }
 
-func (repo *pgCasinoRepository) ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string,
-	nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel string) error {
+func (repo *pgCasinoRepository) ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string, nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel, tierSymbol string) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE casino_rounds
-		SET client_seed = $2, nonce = $3, round_hash = $4, roll = $5,
-		    bet_amount = $6, payout_amount = $7, multiplier = $8, tier_label = $9,
-		    status = 'resolved', resolved_at = now()
-		WHERE id = $1
-	`, roundID, clientSeed, nonce, roundHash, roll, betAmount, payoutAmount, multiplier, tierLabel)
+		SET client_seed = $1, round_hash = $2, nonce = $3, roll = $4,
+		    bet_amount = $5, payout_amount = $6, multiplier = $7, tier_label = $8,
+		    tier_symbol = $9, status = 'resolved', resolved_at = now()
+		WHERE id = $10
+	`, clientSeed, roundHash, nonce, roll, betAmount, payoutAmount, multiplier, tierLabel, tierSymbol, roundID)
 	return err
+}
+
+func (repo *pgCasinoRepository) GetHistory(ctx context.Context, userID string, limit int) ([]domain.BetResult, error) {
+	rows, err := repo.pool.Query(ctx, `
+		SELECT id, roll, bet_amount, payout_amount, multiplier, tier_label, tier_symbol, created_at
+		FROM casino_rounds
+		WHERE user_id = $1 AND status = 'resolved'
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.BetResult
+	for rows.Next() {
+		var r domain.BetResult
+		var createdAt time.Time
+		if err := rows.Scan(&r.RoundID, &r.Roll, &r.BetAmount, &r.PayoutAmount, &r.Multiplier, &r.TierLabel, &r.TierSymbol, &createdAt); err == nil {
+			// Backfill symbols array from string
+			for _, runeVal := range r.TierSymbol {
+				r.Symbols = append(r.Symbols, string(runeVal))
+			}
+			results = append(results, r)
+		}
+	}
+	return results, nil
 }
 
 func (repo *pgCasinoRepository) CreateTransfer(ctx context.Context, tx pgx.Tx, kind string,
