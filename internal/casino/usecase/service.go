@@ -1,42 +1,45 @@
-package casino
+package usecase
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/goritskimihail/mudro/internal/casino/domain"
+	"github.com/goritskimihail/mudro/internal/casino/repository"
 )
 
 // Service forms the usecase layer for casino operations.
 type Service struct {
-	repo CasinoRepository
+	repo repository.CasinoRepository
 }
 
 // NewService creates a new casino usecase service.
-func NewService(repo CasinoRepository) *Service {
+func NewService(repo repository.CasinoRepository) *Service {
 	return &Service{repo: repo}
 }
 
 // PrepareRound initiates a new provably fair game round.
-func (s *Service) PrepareRound(ctx context.Context, userID string) (*Round, error) {
-	serverSeed := GenerateServerSeed()
-	seedHash := HashServerSeed(serverSeed)
+func (s *Service) PrepareRound(ctx context.Context, userID string) (*domain.Round, error) {
+	serverSeed := domain.GenerateServerSeed()
+	seedHash := domain.HashServerSeed(serverSeed)
 
 	return s.repo.PrepareRound(ctx, userID, serverSeed, seedHash)
 }
 
 // EnsureUserAccount ensures a wallet is created for the new user.
-func (s *Service) EnsureUserAccount(ctx context.Context, userID string, startBalance float64) (*Account, error) {
+func (s *Service) EnsureUserAccount(ctx context.Context, userID string, startBalance float64) (*domain.Account, error) {
 	return s.repo.EnsureUserAccount(ctx, userID, startBalance)
 }
 
 // GetBalance gets the current player's balance.
-func (s *Service) GetBalance(ctx context.Context, userID string) (*Account, error) {
+func (s *Service) GetBalance(ctx context.Context, userID string) (*domain.Account, error) {
 	return s.repo.GetUserAccount(ctx, userID)
 }
 
 // GrantFaucet gives the user free coins (testnet/demo mode).
-func (s *Service) GrantFaucet(ctx context.Context, userID string, amount float64) (*FaucetResult, error) {
+func (s *Service) GrantFaucet(ctx context.Context, userID string, amount float64) (*domain.FaucetResult, error) {
 	if amount <= 0 {
 		return nil, errors.New("faucet amount must be positive")
 	}
@@ -51,7 +54,7 @@ func (s *Service) GrantFaucet(ctx context.Context, userID string, amount float64
 	if err != nil {
 		return nil, err
 	}
-	houseAcct, err := s.repo.GetSystemAccount(ctx, tx, HouseAccountCode)
+	houseAcct, err := s.repo.GetSystemAccount(ctx, tx, domain.HouseAccountCode)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +76,11 @@ func (s *Service) GrantFaucet(ctx context.Context, userID string, amount float64
 		return nil, fmt.Errorf("commit: %w", err)
 	}
 
-	return &FaucetResult{Amount: amount, Balance: freshAcct.Balance}, nil
+	return &domain.FaucetResult{Amount: amount, Balance: freshAcct.Balance}, nil
 }
 
 // PlaceBet resolves a game round with the user's client seed and calculates payout.
-func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, error) {
+func (s *Service) PlaceBet(ctx context.Context, input domain.BetInput) (*domain.BetResult, error) {
 	if input.BetAmount <= 0 {
 		return nil, errors.New("bet amount must be positive")
 	}
@@ -100,7 +103,7 @@ func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, err
 		return nil, err
 	}
 	if idem.Status == "succeeded" && idem.ResponseJSON != nil {
-		var cached BetResult
+		var cached domain.BetResult
 		if err := json.Unmarshal(idem.ResponseJSON, &cached); err == nil {
 			cached.FromCache = true
 			return &cached, nil
@@ -116,7 +119,7 @@ func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, err
 	if err != nil {
 		return nil, fmt.Errorf("user account: %w", err)
 	}
-	houseAcct, err := s.repo.GetSystemAccount(ctx, tx, HouseAccountCode)
+	houseAcct, err := s.repo.GetSystemAccount(ctx, tx, domain.HouseAccountCode)
 	if err != nil {
 		return nil, fmt.Errorf("house account: %w", err)
 	}
@@ -126,8 +129,8 @@ func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, err
 	}
 
 	nonce := round.Nonce + 1
-	roll, roundHash := Resolve(round.ServerSeed, input.ClientSeed, nonce)
-	payout := EvaluatePayout(roll, input.BetAmount, rtpProfile.Paytable)
+	roll, roundHash := domain.Resolve(round.ServerSeed, input.ClientSeed, nonce)
+	payout := domain.EvaluatePayout(roll, input.BetAmount, rtpProfile.Paytable)
 
 	err = s.repo.CreateTransfer(ctx, tx, "bet_stake", userAcct.ID, houseAcct.ID, input.BetAmount, map[string]any{
 		"roundId": input.RoundID, "roll": roll,
@@ -156,7 +159,7 @@ func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, err
 		return nil, fmt.Errorf("get balance: %w", err)
 	}
 
-	result := &BetResult{
+	result := &domain.BetResult{
 		RoundID:        input.RoundID,
 		Roll:           roll,
 		BetAmount:      input.BetAmount,
@@ -181,6 +184,7 @@ func (s *Service) PlaceBet(ctx context.Context, input BetInput) (*BetResult, err
 	return result, nil
 }
 
+// ── Admin Passthroughs ──
 
 func (s *Service) GetStats(ctx context.Context) (int, int, float64, float64, float64, error) {
 	return s.repo.GetStats(ctx)

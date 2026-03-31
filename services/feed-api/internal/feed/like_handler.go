@@ -6,12 +6,9 @@ import (
 	"strconv"
 
 	"github.com/goritskimihail/mudro/internal/auth"
+	"github.com/goritskimihail/mudro/services/feed-api/internal/feed/contracts"
 )
 
-type likeResponse struct {
-	Liked      bool `json:"liked"`
-	LikesCount int  `json:"likes_count"`
-}
 
 func (s *Server) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.ContextUserID(r.Context())
@@ -33,5 +30,5 @@ func (s *Server) handleToggleLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(likeResponse{Liked: liked, LikesCount: count})
+	_ = json.NewEncoder(w).Encode(contracts.LikeResponse{Liked: liked, LikesCount: count})
 }

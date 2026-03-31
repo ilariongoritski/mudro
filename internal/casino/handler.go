@@ -15,14 +15,17 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/pkg/httputil"
+
+	"github.com/goritskimihail/mudro/internal/casino/domain"
+	"github.com/goritskimihail/mudro/internal/casino/usecase"
 )
 
 type Server struct {
-	service *Service
+	service *usecase.Service
 	hub  *WSHub
 }
 
-func NewServer(service *Service) *Server {
+func NewServer(service *usecase.Service) *Server {
 	return &Server{service: service, hub: NewWSHub()}
 }
 
@@ -264,7 +267,7 @@ func (s *Server) handleBet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.service.PlaceBet(r.Context(), BetInput{
+	result, err := s.service.PlaceBet(r.Context(), domain.BetInput{
 		UserID:         auth.UserID,
 		RoundID:        body.RoundID,
 		BetAmount:      body.BetAmount,

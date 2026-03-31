@@ -5,23 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/goritskimihail/mudro/internal/auth"
+	"github.com/goritskimihail/mudro/services/feed-api/internal/feed/contracts"
 )
 
-type createCommentRequest struct {
-	Text            string `json:"text"`
-	ParentCommentID *int64 `json:"parent_comment_id,omitempty"`
-}
-
-type commentResponse struct {
-	ID          int64     `json:"id"`
-	PostID      int64     `json:"post_id"`
-	AuthorName  string    `json:"author_name"`
-	Text        string    `json:"text"`
-	PublishedAt time.Time `json:"published_at"`
-}
 
 func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.ContextUserID(r.Context())
@@ -36,7 +24,7 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req createCommentRequest
+	var req contracts.CreateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
 		return
@@ -66,7 +54,7 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(commentResponse{
+	_ = json.NewEncoder(w).Encode(contracts.CommentResponse{
 		ID:          commentID,
 		PostID:      postID,
 		AuthorName:  authorName,
