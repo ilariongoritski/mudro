@@ -1,6 +1,7 @@
-package agent
+package usecase
 
 import (
+	"github.com/goritskimihail/mudro/internal/agent/domain"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,12 +15,12 @@ import (
 
 type Worker struct {
 	RepoRoot string
-	Queue    *Repository
+	Usecase TaskUsecase
 	WorkerID string
 }
 
 func (w *Worker) RunOnce(ctx context.Context) (bool, error) {
-	task, err := w.Queue.ClaimNext(ctx, w.WorkerID)
+	task, err := w.Usecase.ClaimNext(ctx, w.WorkerID)
 	if err != nil {
 		return false, err
 	}
@@ -29,21 +30,21 @@ func (w *Worker) RunOnce(ctx context.Context) (bool, error) {
 
 	err = w.processTask(ctx, task)
 	if err == nil {
-		return true, w.Queue.MarkDone(ctx, task.ID)
+		return true, w.Usecase.CompleteTask(ctx, task.ID)
 	}
 
 	retryAfter := time.Duration(0)
 	if task.Attempts < task.MaxAttempts {
 		retryAfter = 2 * time.Minute
 	}
-	markErr := w.Queue.MarkFailed(ctx, task.ID, err.Error(), retryAfter)
+	markErr := w.Usecase.FailTask(ctx, task.ID, err.Error(), retryAfter)
 	if markErr != nil {
 		return true, errors.Join(err, markErr)
 	}
 	return true, err
 }
 
-func (w *Worker) processTask(ctx context.Context, task *Task) error {
+func (w *Worker) processTask(ctx context.Context, task *domain.Task) error {
 	switch task.Kind {
 	case "todo_item":
 		return w.processTodoTask(task)
@@ -60,7 +61,7 @@ func (w *Worker) processTask(ctx context.Context, task *Task) error {
 	}
 }
 
-func (w *Worker) processTodoTask(task *Task) error {
+func (w *Worker) processTodoTask(task *domain.Task) error {
 	var payload struct {
 		Source string `json:"source"`
 		Text   string `json:"text"`
@@ -105,3 +106,4 @@ func (w *Worker) runCommand(ctx context.Context, name string, args ...string) er
 	}
 	return nil
 }
+

@@ -1,4 +1,6 @@
-package agent
+package repository
+
+import "github.com/goritskimihail/mudro/internal/agent/domain"
 
 import (
 	"context"
@@ -14,36 +16,36 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Repository struct {
+type pgRepository struct {
 	pool      *pgxpool.Pool
 	publisher events.Publisher
 }
 
-func NewRepository(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool, publisher: events.NoopPublisher{}}
+func NewPgRepository(pool *pgxpool.Pool) TaskRepository {
+	return &pgRepository{pool: pool, publisher: events.NoopPublisher{}}
 }
 
-func NewRepositoryWithPublisher(pool *pgxpool.Pool, p events.Publisher) *Repository {
+func NewPgRepositoryWithPublisher(pool *pgxpool.Pool, p events.Publisher) TaskRepository {
 	if p == nil {
 		p = events.NoopPublisher{}
 	}
-	return &Repository{pool: pool, publisher: p}
+	return &pgRepository{pool: pool, publisher: p}
 }
 
-func (r *Repository) Enqueue(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
-	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, StatusQueued)
+func (r *pgRepository) Enqueue(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
+	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, domain.StatusQueued)
 }
 
-func (r *Repository) EnqueueWaitingApproval(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
-	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, StatusWaitingApproval)
+func (r *pgRepository) EnqueueWaitingApproval(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey string) (int64, error) {
+	return r.enqueueWithStatus(ctx, kind, payload, priority, runAfter, maxAttempts, dedupeKey, domain.StatusWaitingApproval)
 }
 
-func (r *Repository) enqueueWithStatus(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey, status string) (int64, error) {
+func (r *pgRepository) enqueueWithStatus(ctx context.Context, kind string, payload any, priority int, runAfter time.Time, maxAttempts int, dedupeKey, status string) (int64, error) {
 	if kind == "" {
 		return 0, errors.New("kind is required")
 	}
 	if status == "" {
-		status = StatusQueued
+		status = domain.StatusQueued
 	}
 	if maxAttempts <= 0 {
 		maxAttempts = 3
@@ -81,7 +83,7 @@ func (r *Repository) enqueueWithStatus(ctx context.Context, kind string, payload
 	return id, nil
 }
 
-func (r *Repository) ApproveTask(ctx context.Context, id int64) error {
+func (r *pgRepository) ApproveTask(ctx context.Context, id int64) error {
 	var kind, dedupeKey string
 	err := r.pool.QueryRow(ctx, `
 		update agent_queue
@@ -91,10 +93,10 @@ func (r *Repository) ApproveTask(ctx context.Context, id int64) error {
 		    last_error = null
 		where id = $1 and status = $3
 		returning kind, coalesce(dedupe_key, '')
-	`, id, StatusQueued, StatusWaitingApproval).Scan(&kind, &dedupeKey)
+	`, id, domain.StatusQueued, domain.StatusWaitingApproval).Scan(&kind, &dedupeKey)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("approve task: task %d is not in %q", id, StatusWaitingApproval)
+			return fmt.Errorf("approve task: task %d is not in %q", id, domain.StatusWaitingApproval)
 		}
 		return fmt.Errorf("approve task: %w", err)
 	}
@@ -102,14 +104,14 @@ func (r *Repository) ApproveTask(ctx context.Context, id int64) error {
 		EventType: "task.approved",
 		TaskID:    id,
 		Kind:      kind,
-		Status:    StatusQueued,
+		Status:    domain.StatusQueued,
 		DedupeKey: dedupeKey,
 		Occurred:  time.Now().UTC(),
 	})
 	return nil
 }
 
-func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) error {
+func (r *pgRepository) RejectTask(ctx context.Context, id int64, reason string) error {
 	if reason == "" {
 		reason = "rejected by reviewer"
 	}
@@ -122,10 +124,10 @@ func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) er
 		    last_error = $4
 		where id = $1 and status = $3
 		returning kind, coalesce(dedupe_key, '')
-	`, id, StatusRejected, StatusWaitingApproval, reason).Scan(&kind, &dedupeKey)
+	`, id, domain.StatusRejected, domain.StatusWaitingApproval, reason).Scan(&kind, &dedupeKey)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("reject task: task %d is not in %q", id, StatusWaitingApproval)
+			return fmt.Errorf("reject task: task %d is not in %q", id, domain.StatusWaitingApproval)
 		}
 		return fmt.Errorf("reject task: %w", err)
 	}
@@ -133,7 +135,7 @@ func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) er
 		EventType: "task.rejected",
 		TaskID:    id,
 		Kind:      kind,
-		Status:    StatusRejected,
+		Status:    domain.StatusRejected,
 		DedupeKey: dedupeKey,
 		Error:     reason,
 		Occurred:  time.Now().UTC(),
@@ -141,7 +143,7 @@ func (r *Repository) RejectTask(ctx context.Context, id int64, reason string) er
 	return nil
 }
 
-func (r *Repository) ClaimNext(ctx context.Context, worker string) (*Task, error) {
+func (r *pgRepository) ClaimNext(ctx context.Context, worker string) (*domain.Task, error) {
 	if worker == "" {
 		worker = "agent-worker"
 	}
@@ -166,7 +168,7 @@ func (r *Repository) ClaimNext(ctx context.Context, worker string) (*Task, error
 		          coalesce(q.dedupe_key, ''), q.run_after, coalesce(q.locked_by, ''), q.created_at, q.updated_at
 	`, worker)
 
-	var t Task
+	var t domain.Task
 	var payload string
 	if err := row.Scan(&t.ID, &t.Kind, &payload, &t.Status, &t.Priority, &t.Attempts, &t.MaxAttempts, &t.DedupeKey, &t.RunAfter, &t.LockedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -178,7 +180,7 @@ func (r *Repository) ClaimNext(ctx context.Context, worker string) (*Task, error
 	return &t, nil
 }
 
-func (r *Repository) MarkDone(ctx context.Context, id int64) error {
+func (r *pgRepository) MarkDone(ctx context.Context, id int64) error {
 	var kind, dedupeKey string
 	err := r.pool.QueryRow(ctx, `
 		update agent_queue
@@ -199,22 +201,22 @@ func (r *Repository) MarkDone(ctx context.Context, id int64) error {
 		EventType: "task.done",
 		TaskID:    id,
 		Kind:      kind,
-		Status:    StatusDone,
+		Status:    domain.StatusDone,
 		DedupeKey: dedupeKey,
 		Occurred:  time.Now().UTC(),
 	})
 	return nil
 }
 
-func (r *Repository) MarkFailed(ctx context.Context, id int64, errText string, retryAfter time.Duration) error {
+func (r *pgRepository) MarkFailed(ctx context.Context, id int64, errText string, retryAfter time.Duration) error {
 	if errText == "" {
 		errText = "unknown error"
 	}
 
-	status := StatusFailed
+	status := domain.StatusFailed
 	var nextRun any = nil
 	if retryAfter > 0 {
-		status = StatusQueued
+		status = domain.StatusQueued
 		nextRun = time.Now().Add(retryAfter)
 	}
 
@@ -238,7 +240,7 @@ func (r *Repository) MarkFailed(ctx context.Context, id int64, errText string, r
 		return fmt.Errorf("mark failed: %w", err)
 	}
 	eventType := "task.failed"
-	if status == StatusQueued {
+	if status == domain.StatusQueued {
 		eventType = "task.retry_scheduled"
 	}
 	r.publishTaskEvent(ctx, events.TaskEvent{
@@ -261,7 +263,7 @@ func IsUniqueViolation(err error) bool {
 	return false
 }
 
-func (r *Repository) publishTaskEvent(ctx context.Context, ev events.TaskEvent) {
+func (r *pgRepository) publishTaskEvent(ctx context.Context, ev events.TaskEvent) {
 	if ev.Occurred.IsZero() {
 		ev.Occurred = time.Now().UTC()
 	}
@@ -281,7 +283,7 @@ func (r *Repository) publishTaskEvent(ctx context.Context, ev events.TaskEvent) 
 	}
 }
 
-func (r *Repository) persistTaskEvent(ctx context.Context, ev events.TaskEvent) error {
+func (r *pgRepository) persistTaskEvent(ctx context.Context, ev events.TaskEvent) error {
 	if r.pool == nil {
 		return nil
 	}
@@ -293,3 +295,4 @@ func (r *Repository) persistTaskEvent(ctx context.Context, ev events.TaskEvent) 
 	`, ev.EventID, ev.TaskID, ev.EventType, ev.Status, ev.Kind, ev.DedupeKey, ev.Error, ev.Occurred)
 	return err
 }
+

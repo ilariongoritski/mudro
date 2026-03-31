@@ -1,4 +1,4 @@
-package agent
+package usecase
 
 import (
 	"bufio"
@@ -16,7 +16,7 @@ import (
 var todoLineRe = regexp.MustCompile(`^- \[ \] .+`)
 var riskyTodoRe = regexp.MustCompile(`(?i)\b(drop|truncate|reset|rm\s+-rf|docker compose down -v|alter table|delete from)\b`)
 
-func PlanFromTodo(ctx context.Context, repoRoot string, q *Repository) (int, error) {
+func PlanFromTodo(ctx context.Context, repoRoot string, q TaskUsecase) (int, error) {
 	path := filepath.Join(repoRoot, ".codex", "todo.md")
 	f, err := os.Open(path)
 	if err != nil {
@@ -87,3 +87,4 @@ func detectTaskKind(text string) string {
 		return "todo_item"
 	}
 }
+
