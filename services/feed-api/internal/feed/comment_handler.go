@@ -47,24 +47,18 @@ func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get username for display
-	var authorName string
-	err = s.pool.QueryRow(r.Context(),
-		`select coalesce(display_name, username) from users where id = $1`, userID,
-	).Scan(&authorName)
+	user, err := s.authSvc.GetUserByID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 		return
 	}
 
-	now := time.Now()
-	var commentID int64
-	err = s.pool.QueryRow(r.Context(),
-		`insert into post_comments (post_id, source, source_comment_id, author_name, text, published_at, parent_comment_id)
-		 values ($1, 'local', 'local-' || nextval('post_comments_id_seq')::text, $2, $3, $4, $5)
-		 returning id`,
-		postID, authorName, req.Text, now, req.ParentCommentID,
-	).Scan(&commentID)
+	authorName := user.Username
+	if user.TelegramName != nil && *user.TelegramName != "" {
+		authorName = *user.TelegramName
+	}
+
+	commentID, now, err := s.postsSvc.AddComment(r.Context(), postID, authorName, req.Text, req.ParentCommentID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to create comment"}`, http.StatusInternalServerError)
 		return

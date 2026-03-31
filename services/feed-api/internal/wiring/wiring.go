@@ -34,5 +34,5 @@ func NewHandler(ctx context.Context, pool *pgxpool.Pool) (http.Handler, error) {
 	go chatHub.Run(ctx)
 	chatHandler := chat.NewHandler(chatRepo, chatHub, authSvc)
 
-	return feed.NewServer(pool, postsSvc, chatHandler, authSvc).Router(), nil
+	return feed.NewServer(postsSvc, chatHandler, authSvc).Router(), nil
 }

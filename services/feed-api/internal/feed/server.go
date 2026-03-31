@@ -14,13 +14,12 @@ import (
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/posts"
 	mhttputil "github.com/goritskimihail/mudro/pkg/httputil"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Server is the HTTP delivery layer for the feed domain.
 // pool is kept for comment/like handlers (P1 backlog: extract to usecase layer).
 type Server struct {
-	pool             *pgxpool.Pool
+	
 	postsSvc         *posts.Service
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
@@ -28,9 +27,9 @@ type Server struct {
 }
 
 // NewServer constructs a Server with the provided service dependencies.
-func NewServer(pool *pgxpool.Pool, postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth.Service) *Server {
+func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth.Service) *Server {
 	return &Server{
-		pool:        pool,
+		
 		postsSvc:    postsSvc,
 		authSvc:     authSvc,
 		chatHandler: chatHandler,
