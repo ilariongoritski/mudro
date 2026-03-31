@@ -15,7 +15,7 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
 import './CasinoMiniAppPage.css'
 
-const reelFallback = ['7', 'BAR', 'STAR']
+const reelFallback = ['🎰', '🍒', '🍋']
 const betOptions = [10, 25, 50, 100]
 
 const formatCasinoTimestamp = (value: string) => {
@@ -90,7 +90,7 @@ export const CasinoMiniAppPage = () => {
 
     setStatus(null)
     setWinPulse(false)
-    setReels(['SPIN', 'SPIN', 'SPIN'])
+    setReels(['🎰', '🎰', '🎰'])
     webApp?.HapticFeedback?.impactOccurred('medium')
 
     try {

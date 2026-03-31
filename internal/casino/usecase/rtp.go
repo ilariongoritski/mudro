@@ -1,4 +1,4 @@
-package casino
+package usecase
 
 import (
 	"context"
@@ -8,14 +8,21 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/goritskimihail/mudro/internal/casino/domain"
+	"github.com/goritskimihail/mudro/internal/casino/repository"
 )
 
-type PaytableTier struct {
-	MinRoll    int     `json:"minRoll"`
-	MaxRoll    int     `json:"maxRoll"`
-	Multiplier float64 `json:"multiplier"`
-	Label      string  `json:"label"`
-	Symbol     string  `json:"symbol"`
+
+// Cache
+var (
+	rtpCacheMu sync.RWMutex
+	rtpCache   = map[string]*rtpCacheEntry{}
+)
+
+type rtpCacheEntry struct {
+	profile   *domain.RtpProfile
+	expiresAt time.Time
 }
 
 type PayoutResult struct {
@@ -29,39 +36,13 @@ type RtpProfile struct {
 	ID        string
 	Name      string
 	Rtp       float64
-	Paytable  []PaytableTier
+	Paytable  []domain.PaytableTier
 	IsDefault bool
-}
-
-// Cache
-var (
-	rtpCacheMu sync.RWMutex
-	rtpCache   = map[string]*rtpCacheEntry{}
-)
-
-type rtpCacheEntry struct {
-	profile   *RtpProfile
-	expiresAt time.Time
 }
 
 const rtpCacheTTL = 60 * time.Second
 
-func EvaluatePayout(roll int, betAmount float64, tiers []PaytableTier) PayoutResult {
-	for _, t := range tiers {
-		if roll >= t.MinRoll && roll <= t.MaxRoll {
-			amount := math.Round(betAmount*t.Multiplier*1e8) / 1e8
-			return PayoutResult{
-				Multiplier: t.Multiplier,
-				Amount:     amount,
-				Label:      t.Label,
-				Symbol:     t.Symbol,
-			}
-		}
-	}
-	return PayoutResult{Label: "МИМО", Symbol: "💀"}
-}
-
-func GetActiveRtpProfile(ctx context.Context, repo CasinoRepository, userID string) (*RtpProfile, error) {
+func GetActiveRtpProfile(ctx context.Context, repo repository.CasinoRepository, userID string) (*domain.RtpProfile, error) {
 	rtpCacheMu.RLock()
 	if entry, ok := rtpCache[userID]; ok && time.Now().Before(entry.expiresAt) {
 		rtpCacheMu.RUnlock()
@@ -91,7 +72,7 @@ func ClearRtpCache(userID string) {
 	rtpCacheMu.Unlock()
 }
 
-func ValidatePaytable(tiers []PaytableTier, targetRtp float64) error {
+func ValidatePaytable(tiers []domain.PaytableTier, targetRtp float64) error {
 	covered := make(map[int]bool)
 	var calculatedRtp float64
 
@@ -124,8 +105,8 @@ func ValidatePaytable(tiers []PaytableTier, targetRtp float64) error {
 	return nil
 }
 
-func ParsePaytable(raw json.RawMessage) ([]PaytableTier, error) {
-	var tiers []PaytableTier
+func ParsePaytable(raw json.RawMessage) ([]domain.PaytableTier, error) {
+	var tiers []domain.PaytableTier
 	if err := json.Unmarshal(raw, &tiers); err != nil {
 		return nil, err
 	}

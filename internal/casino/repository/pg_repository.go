@@ -1,12 +1,15 @@
-package casino
+package repository
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"time"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/goritskimihail/mudro/internal/casino/domain"
 )
 
 
@@ -24,10 +27,10 @@ func (repo *pgCasinoRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return repo.pool.Begin(ctx)
 }
 
-func (repo *pgCasinoRepository) EnsureUserAccount(ctx context.Context, userID string, startBalance float64) (*Account, error) {
+func (repo *pgCasinoRepository) EnsureUserAccount(ctx context.Context, userID string, startBalance float64) (*domain.Account, error) {
 	code := "USER_" + userID
 
-	var acct Account
+	var acct domain.Account
 	err := repo.pool.QueryRow(ctx, `
 		INSERT INTO casino_accounts (user_id, type, code, currency, balance)
 		VALUES (NULL, 'user', $1, 'МДР', $2)
@@ -40,9 +43,9 @@ func (repo *pgCasinoRepository) EnsureUserAccount(ctx context.Context, userID st
 	return &acct, nil
 }
 
-func (repo *pgCasinoRepository) GetUserAccount(ctx context.Context, userID string) (*Account, error) {
+func (repo *pgCasinoRepository) GetUserAccount(ctx context.Context, userID string) (*domain.Account, error) {
 	code := "USER_" + userID
-	var acct Account
+	var acct domain.Account
 	err := repo.pool.QueryRow(ctx, `
 		SELECT id, COALESCE(user_id::text, ''), code, currency, balance
 		FROM casino_accounts WHERE code = $1
@@ -53,8 +56,8 @@ func (repo *pgCasinoRepository) GetUserAccount(ctx context.Context, userID strin
 	return &acct, nil
 }
 
-func (repo *pgCasinoRepository) GetSystemAccount(ctx context.Context, q pgx.Tx, code string) (*Account, error) {
-	var acct Account
+func (repo *pgCasinoRepository) GetSystemAccount(ctx context.Context, q pgx.Tx, code string) (*domain.Account, error) {
+	var acct domain.Account
 	err := q.QueryRow(ctx, `
 		SELECT id, COALESCE(user_id::text, ''), code, currency, balance
 		FROM casino_accounts WHERE code = $1
@@ -65,8 +68,8 @@ func (repo *pgCasinoRepository) GetSystemAccount(ctx context.Context, q pgx.Tx, 
 	return &acct, nil
 }
 
-func (repo *pgCasinoRepository) PrepareRound(ctx context.Context, userID, serverSeed, seedHash string) (*Round, error) {
-	var rnd Round
+func (repo *pgCasinoRepository) PrepareRound(ctx context.Context, userID, serverSeed, seedHash string) (*domain.Round, error) {
+	var rnd domain.Round
 	err := repo.pool.QueryRow(ctx, `
 		INSERT INTO casino_rounds (user_id, server_seed, server_seed_hash)
 		VALUES ($1, $2, $3)
@@ -79,8 +82,8 @@ func (repo *pgCasinoRepository) PrepareRound(ctx context.Context, userID, server
 	return &rnd, nil
 }
 
-func (repo *pgCasinoRepository) GetPreparedRound(ctx context.Context, tx pgx.Tx, roundID, userID string) (*Round, error) {
-	var rnd Round
+func (repo *pgCasinoRepository) GetPreparedRound(ctx context.Context, tx pgx.Tx, roundID, userID string) (*domain.Round, error) {
+	var rnd domain.Round
 	err := tx.QueryRow(ctx, `
 		SELECT id, user_id, server_seed, server_seed_hash, nonce, status
 		FROM casino_rounds
@@ -93,16 +96,43 @@ func (repo *pgCasinoRepository) GetPreparedRound(ctx context.Context, tx pgx.Tx,
 	return &rnd, nil
 }
 
-func (repo *pgCasinoRepository) ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string,
-	nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel string) error {
+func (repo *pgCasinoRepository) ResolveRound(ctx context.Context, tx pgx.Tx, roundID, clientSeed, roundHash string, nonce, roll int, betAmount, payoutAmount, multiplier float64, tierLabel, tierSymbol string) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE casino_rounds
-		SET client_seed = $2, nonce = $3, round_hash = $4, roll = $5,
-		    bet_amount = $6, payout_amount = $7, multiplier = $8, tier_label = $9,
-		    status = 'resolved', resolved_at = now()
-		WHERE id = $1
-	`, roundID, clientSeed, nonce, roundHash, roll, betAmount, payoutAmount, multiplier, tierLabel)
+		SET client_seed = $1, round_hash = $2, nonce = $3, roll = $4,
+		    bet_amount = $5, payout_amount = $6, multiplier = $7, tier_label = $8,
+		    tier_symbol = $9, status = 'resolved', resolved_at = now()
+		WHERE id = $10
+	`, clientSeed, roundHash, nonce, roll, betAmount, payoutAmount, multiplier, tierLabel, tierSymbol, roundID)
 	return err
+}
+
+func (repo *pgCasinoRepository) GetHistory(ctx context.Context, userID string, limit int) ([]domain.BetResult, error) {
+	rows, err := repo.pool.Query(ctx, `
+		SELECT id, roll, bet_amount, payout_amount, multiplier, tier_label, tier_symbol, created_at
+		FROM casino_rounds
+		WHERE user_id = $1 AND status = 'resolved'
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []domain.BetResult
+	for rows.Next() {
+		var r domain.BetResult
+		var createdAt time.Time
+		if err := rows.Scan(&r.RoundID, &r.Roll, &r.BetAmount, &r.PayoutAmount, &r.Multiplier, &r.TierLabel, &r.TierSymbol, &createdAt); err == nil {
+			// Backfill symbols array from string
+			for _, runeVal := range r.TierSymbol {
+				r.Symbols = append(r.Symbols, string(runeVal))
+			}
+			results = append(results, r)
+		}
+	}
+	return results, nil
 }
 
 func (repo *pgCasinoRepository) CreateTransfer(ctx context.Context, tx pgx.Tx, kind string,
@@ -150,8 +180,8 @@ func (repo *pgCasinoRepository) CreateTransfer(ctx context.Context, tx pgx.Tx, k
 	return nil
 }
 
-func (repo *pgCasinoRepository) AcquireIdempotencyKey(ctx context.Context, tx pgx.Tx, userID, key, hash string) (*IdempotencyKey, error) {
-	var ik IdempotencyKey
+func (repo *pgCasinoRepository) AcquireIdempotencyKey(ctx context.Context, tx pgx.Tx, userID, key, hash string) (*domain.IdempotencyKey, error) {
+	var ik domain.IdempotencyKey
 	err := tx.QueryRow(ctx, `
 		INSERT INTO casino_idempotency (user_id, key, request_hash)
 		VALUES ($1, $2, $3)
@@ -174,7 +204,7 @@ func (repo *pgCasinoRepository) CompleteIdempotencyKey(ctx context.Context, tx p
 func (repo *pgCasinoRepository) GetStats(ctx context.Context) (userCount, roundCount int, houseBalance, totalBet, totalPayout float64, err error) {
 	_ = repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_accounts WHERE type = 'user'`).Scan(&userCount)
 	_ = repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_rounds WHERE status = 'resolved'`).Scan(&roundCount)
-	_ = repo.pool.QueryRow(ctx, `SELECT COALESCE(balance, 0) FROM casino_accounts WHERE code = $1`, HouseAccountCode).Scan(&houseBalance)
+	_ = repo.pool.QueryRow(ctx, `SELECT COALESCE(balance, 0) FROM casino_accounts WHERE code = $1`, domain.HouseAccountCode).Scan(&houseBalance)
 	_ = repo.pool.QueryRow(ctx, `SELECT COALESCE(SUM(bet_amount), 0), COALESCE(SUM(payout_amount), 0) FROM casino_rounds WHERE status = 'resolved'`).Scan(&totalBet, &totalPayout)
 	return
 }
@@ -238,7 +268,7 @@ func (repo *pgCasinoRepository) GetUsers(ctx context.Context, limit int) ([]map[
 	return users, nil
 }
 
-func (repo *pgCasinoRepository) GetActiveRtpProfile(ctx context.Context, userID string) (*RtpProfile, error) {
+func (repo *pgCasinoRepository) GetActiveRtpProfile(ctx context.Context, userID string) (*domain.RtpProfile, error) {
 	var id, name string
 	var rtp float64
 	var paytableJSON []byte
@@ -264,12 +294,12 @@ func (repo *pgCasinoRepository) GetActiveRtpProfile(ctx context.Context, userID 
 		}
 	}
 
-	var tiers []PaytableTier
+	var tiers []domain.PaytableTier
 	if err := json.Unmarshal(paytableJSON, &tiers); err != nil {
 		return nil, fmt.Errorf("parse paytable: %w", err)
 	}
 
-	return &RtpProfile{
+	return &domain.RtpProfile{
 		ID:        id,
 		Name:      name,
 		Rtp:       rtp,

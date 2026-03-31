@@ -1,4 +1,4 @@
-package casino
+package domain
 
 import (
 	"crypto/hmac"
@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 )
 
@@ -32,4 +33,19 @@ func Resolve(serverSeed, clientSeed string, nonce int) (roll int, roundHash stri
 	mod := new(big.Int).SetInt64(100)
 	roll = int(new(big.Int).Mod(num, mod).Int64())
 	return
+}
+
+func EvaluatePayout(roll int, betAmount float64, tiers []PaytableTier) PayoutResult {
+	for _, t := range tiers {
+		if roll >= t.MinRoll && roll <= t.MaxRoll {
+			amount := math.Round(betAmount*t.Multiplier*1e8) / 1e8
+			return PayoutResult{
+				Multiplier: t.Multiplier,
+				Amount:     amount,
+				Label:      t.Label,
+				Symbol:     t.Symbol,
+			}
+		}
+	}
+	return PayoutResult{Label: "МИМО", Symbol: "💀"}
 }

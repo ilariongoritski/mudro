@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/goritskimihail/mudro/internal/casino"
+	"github.com/goritskimihail/mudro/internal/casino/repository"
+	"github.com/goritskimihail/mudro/internal/casino/usecase"
 	"github.com/goritskimihail/mudro/internal/config"
 )
 
@@ -34,8 +36,8 @@ func Run() {
 		log.Fatalf("db ping: %v", err)
 	}
 
-	repo := casino.NewPgRepository(pool)
-	service := casino.NewService(repo)
+	repo := repository.NewPgRepository(pool)
+	service := usecase.NewService(repo)
 	handler := casino.NewServer(service).Router()
 
 	srv := &http.Server{

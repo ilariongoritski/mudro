@@ -15,14 +15,17 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/pkg/httputil"
+
+	"github.com/goritskimihail/mudro/internal/casino/domain"
+	"github.com/goritskimihail/mudro/internal/casino/usecase"
 )
 
 type Server struct {
-	service *Service
+	service *usecase.Service
 	hub  *WSHub
 }
 
-func NewServer(service *Service) *Server {
+func NewServer(service *usecase.Service) *Server {
 	return &Server{service: service, hub: NewWSHub()}
 }
 
@@ -43,6 +46,7 @@ func (s *Server) Router() http.Handler {
 	// Game
 	mux.HandleFunc("/api/casino/game/prepare", s.withAuth(s.handlePrepare))
 	mux.HandleFunc("/api/casino/game/bet", s.withAuth(s.handleBet))
+	mux.HandleFunc("/api/casino/game/history", s.withAuth(s.handleHistory))
 
 	// Wallet
 	mux.HandleFunc("/api/casino/wallet/balance", s.withAuth(s.handleBalance))
@@ -264,7 +268,7 @@ func (s *Server) handleBet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.service.PlaceBet(r.Context(), BetInput{
+	result, err := s.service.PlaceBet(r.Context(), domain.BetInput{
 		UserID:         auth.UserID,
 		RoundID:        body.RoundID,
 		BetAmount:      body.BetAmount,
@@ -282,6 +286,30 @@ func (s *Server) handleBet(w http.ResponseWriter, r *http.Request) {
 	s.hub.Emit(auth.UserID, "wallet:updated", map[string]float64{"balance": result.Balance})
 
 	writeJSON(w, 200, result)
+}
+
+func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request) {
+	auth := getAuth(r)
+	if auth == nil {
+		writeJSON(w, 401, map[string]string{"error": "Unauthorized"})
+		return
+	}
+
+	limit := 10
+	if lStr := r.URL.Query().Get("limit"); lStr != "" {
+		if n, err := strconv.Atoi(lStr); err == nil {
+			limit = n
+		}
+	}
+
+	history, err := s.service.GetHistory(r.Context(), auth.UserID, limit)
+	if err != nil {
+		log.Printf("history error: %v", err)
+		writeJSON(w, 500, map[string]string{"error": "Internal error"})
+		return
+	}
+
+	writeJSON(w, 200, map[string]any{"items": history})
 }
 
 func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request) {

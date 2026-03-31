@@ -1,4 +1,4 @@
-package casino
+package domain
 
 import (
 	"time"
@@ -55,8 +55,9 @@ type BetResult struct {
 	PayoutAmount   float64 `json:"payoutAmount"`
 	Multiplier     float64 `json:"multiplier"`
 	TierLabel      string  `json:"tierLabel"`
-	TierSymbol     string  `json:"tierSymbol"`
-	Balance        float64 `json:"balance"`
+	TierSymbol     string   `json:"tierSymbol"`
+	Symbols        []string `json:"symbols"`
+	Balance        float64  `json:"balance"`
 	Nonce          int     `json:"nonce"`
 	RoundHash      string  `json:"roundHash"`
 	ServerSeedHash string  `json:"serverSeedHash"`
@@ -67,4 +68,27 @@ type BetResult struct {
 type FaucetResult struct {
 	Amount  float64 `json:"amount"`
 	Balance float64 `json:"balance"`
+}
+
+type PaytableTier struct {
+	MinRoll    int     `json:"minRoll"`
+	MaxRoll    int     `json:"maxRoll"`
+	Multiplier float64 `json:"multiplier"`
+	Label      string  `json:"label"`
+	Symbol     string  `json:"symbol"`
+}
+
+type PayoutResult struct {
+	Multiplier float64
+	Amount     float64
+	Label      string
+	Symbol     string
+}
+
+type RtpProfile struct {
+	ID        string
+	Name      string
+	Rtp       float64
+	Paytable  []PaytableTier
+	IsDefault bool
 }
