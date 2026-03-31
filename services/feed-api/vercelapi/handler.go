@@ -22,5 +22,5 @@ func NewHandler() (http.Handler, error) {
 	}
 
 	postsSvc := posts.NewService(pool, nil)
-	return feed.NewServer(pool, postsSvc).Router(), nil
+	return feed.NewServer(pool, postsSvc, nil, nil).Router(), nil
 }

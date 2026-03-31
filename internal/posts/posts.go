@@ -268,10 +268,10 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		select comment_id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
+		select id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
 		from post_comments
 		where post_id = any($1)
-		order by post_id asc, published_at asc, comment_id asc
+		order by post_id asc, published_at asc, id asc
 	`, postIDs)
 	if err != nil {
 		if commentdb.IsUndefinedTableErr(err) {

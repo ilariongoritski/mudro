@@ -18,8 +18,14 @@ const CasinoPage = lazy(() =>
 const CasinoMiniAppPage = lazy(() =>
   import('@/pages/casino-miniapp-page/ui/CasinoMiniAppPage').then((module) => ({ default: module.CasinoMiniAppPage })),
 )
+const ChatPage = lazy(() =>
+  import('@/pages/chat-page/ui/ChatPage').then((module) => ({ default: module.ChatPage })),
+)
 const OrchestrationPage = lazy(() =>
   import('@/pages/orchestration-page/ui/OrchestrationPage').then((module) => ({ default: module.OrchestrationPage })),
+)
+const ChatPage = lazy(() =>
+  import('@/pages/chat-page/ui/ChatPage').then((module) => ({ default: module.ChatPage })),
 )
 
 const suspenseWrap = (children: ReactNode) => (
@@ -45,6 +51,12 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
   if (isAuthenticated) {
     return <Navigate to="/" replace />
   }
+  return <>{children}</>
+}
+
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
+  if (!isAuthenticated) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -78,6 +90,10 @@ export const AppRouterProvider = () => {
       element: <FeedPage />,
     },
     {
+      path: '/chat',
+      element: suspenseWrap(<ChatPage />),
+    },
+    {
       path: '/casino',
       element: casinoBoundaryWrap(<CasinoPage />),
     },
@@ -92,6 +108,14 @@ export const AppRouterProvider = () => {
     {
       path: '/orchestration',
       element: suspenseWrap(<OrchestrationPage />),
+    },
+    {
+      path: '/chat',
+      element: (
+        <ProtectedRoute>
+          {suspenseWrap(<ChatPage />)}
+        </ProtectedRoute>
+      ),
     },
     {
       path: '/admin',

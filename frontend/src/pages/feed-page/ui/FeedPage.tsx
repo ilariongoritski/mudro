@@ -33,7 +33,15 @@ export const FeedPage = () => {
               {section.label}
             </a>
           ))}
+          <Link to="/chat" className="feed-page-header__link">
+            Чат
+          </Link>
           <CasinoNavButton />
+          {isAuthenticated && (
+            <Link to="/chat" className="feed-page-header__link">
+              Chat
+            </Link>
+          )}
           <Link to="/orchestration#bridge" className="feed-page-header__link">
             Карта bridge
           </Link>
@@ -67,9 +75,17 @@ export const FeedPage = () => {
           </p>
 
           <div className="feed-page-hero__actions">
+            <Link to="/chat" className="feed-page-hero__action">
+              Открыть чат
+            </Link>
             <Link to="/orchestration#bridge" className="feed-page-hero__action">
               Открыть bridge map
             </Link>
+            {isAuthenticated && (
+              <Link to="/chat" className="feed-page-hero__action">
+                Открыть chat
+              </Link>
+            )}
             <Link to="/casino" className="feed-page-hero__action feed-page-hero__action_secondary">
               Открыть casino
             </Link>
