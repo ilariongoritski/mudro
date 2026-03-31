@@ -24,9 +24,6 @@ const ChatPage = lazy(() =>
 const OrchestrationPage = lazy(() =>
   import('@/pages/orchestration-page/ui/OrchestrationPage').then((module) => ({ default: module.OrchestrationPage })),
 )
-const ChatPage = lazy(() =>
-  import('@/pages/chat-page/ui/ChatPage').then((module) => ({ default: module.ChatPage })),
-)
 
 const suspenseWrap = (children: ReactNode) => (
   <Suspense fallback={<div className="p-6 text-sm text-slate-500">Загрузка интерфейса...</div>}>{children}</Suspense>
@@ -91,7 +88,11 @@ export const AppRouterProvider = () => {
     },
     {
       path: '/chat',
-      element: suspenseWrap(<ChatPage />),
+      element: (
+        <ProtectedRoute>
+          {suspenseWrap(<ChatPage />)}
+        </ProtectedRoute>
+      ),
     },
     {
       path: '/casino',
@@ -108,14 +109,6 @@ export const AppRouterProvider = () => {
     {
       path: '/orchestration',
       element: suspenseWrap(<OrchestrationPage />),
-    },
-    {
-      path: '/chat',
-      element: (
-        <ProtectedRoute>
-          {suspenseWrap(<ChatPage />)}
-        </ProtectedRoute>
-      ),
     },
     {
       path: '/admin',

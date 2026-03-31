@@ -23,7 +23,7 @@ const (
 	DefaultRedisAddr        = "localhost:6379"
 	DefaultKafkaClientID    = "mudro"
 	DefaultKafkaTopic       = "mudro.agent.tasks.v1"
-	DefaultMudroLocalRoot   = "D:\\mudr\\_mudro-local"
+	DefaultMudroLocalRoot   = "E:\\mudr\\_mudro-local"
 	DefaultSkaroDashboard   = "http://127.0.0.1:4700/dashboard"
 	DefaultClaudeProxyURL   = "http://127.0.0.1:8788"
 )
