@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/chat"
@@ -17,8 +18,7 @@ import (
 )
 
 // Server is the HTTP delivery layer for the feed domain.
-// It holds references to domain services and delegates business logic to them.
-// pool is kept for comment/like handlers pending their usecase extraction (P1 backlog).
+// pool is kept for comment/like handlers (P1 backlog: extract to usecase layer).
 type Server struct {
 	pool             *pgxpool.Pool
 	postsSvc         *posts.Service
@@ -70,7 +70,15 @@ func (s *Server) Router() http.Handler {
 	return mhttputil.CORS(mhttputil.CORSConfig{SecurityHeaders: true})(mux)
 }
 
-// --- Wrapper delegation methods for the HTML /feed page ---
+// --- Wrapper delegation methods ---
+
+// loadPosts delegates to postsSvc.LoadPosts; used by integration tests and handleFeed.
+func (s *Server) loadPosts(ctx context.Context, beforeTS *time.Time, beforeID *int64, page *int, limit int, source string, sortOrder string) ([]posts.Post, *posts.Cursor, error) {
+	if s.postsSvc == nil {
+		return nil, nil, nil
+	}
+	return s.postsSvc.LoadPosts(ctx, beforeTS, beforeID, page, limit, source, posts.SortOrder(sortOrder), "")
+}
 
 func (s *Server) loadSourceStats(ctx context.Context) ([]posts.SourceStat, error) {
 	if s.postsSvc == nil {
@@ -97,7 +105,7 @@ func (s *Server) countVisiblePosts(ctx context.Context, total *int64) error {
 }
 
 // buildPostsVisibilityWhere builds a SQL WHERE clause.
-// Kept on Server (not moved to params.go) because it is tested directly in server_test.go.
+// Kept on Server because it is tested directly in server_test.go.
 func (s *Server) buildPostsVisibilityWhere(source string, query *string) (string, []any) {
 	conditions := make([]string, 0, 3)
 	args := []any{}
