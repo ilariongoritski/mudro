@@ -1,6 +1,7 @@
 package casino
 
 import (
+	"github.com/goritskimihail/mudro/internal/casino/contracts"
 	"bytes"
 	"context"
 	"crypto/subtle"
@@ -119,9 +120,7 @@ func extractInitDataFromBody(r *http.Request) (string, error) {
 		return "", nil
 	}
 
-	var body struct {
-		InitData string `json:"initData"`
-	}
+	var body contracts.AuthRequest
 	if err := json.Unmarshal(rawBody, &body); err != nil {
 		return "", err
 	}
@@ -181,9 +180,7 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		InitData string `json:"initData"`
-	}
+	var body contracts.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, 400, map[string]string{"error": "Bad request"})
 		return
@@ -261,12 +258,7 @@ func (s *Server) handleBet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		RoundID        string  `json:"roundId"`
-		BetAmount      float64 `json:"betAmount"`
-		ClientSeed     string  `json:"clientSeed"`
-		IdempotencyKey string  `json:"idempotencyKey"`
-	}
+	var body contracts.BetRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, 400, map[string]string{"error": "Bad request"})
 		return
@@ -319,9 +311,7 @@ func (s *Server) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body struct {
-		Amount float64 `json:"amount"`
-	}
+	var body contracts.FaucetRequest
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	if body.Amount <= 0 {
 		body.Amount = CasinoFaucetAmount()
@@ -376,12 +366,7 @@ func (s *Server) handleAdminRtpProfiles(w http.ResponseWriter, r *http.Request) 
 		}
 		writeJSON(w, 200, profiles)
 	case http.MethodPost:
-		var body struct {
-			Name      string          `json:"name"`
-			Rtp       float64         `json:"rtp"`
-			Paytable  json.RawMessage `json:"paytable"`
-			IsDefault bool            `json:"isDefault"`
-		}
+		var body contracts.UpsertRTPProfileRequest
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			writeJSON(w, 400, map[string]string{"error": "Bad request"})
 			return
