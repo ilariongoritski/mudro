@@ -111,3 +111,5 @@
 - 2026-03-18 | БД наполнена 3 seed-постами с Unsplash-медиа | Эффект: лента не пустая для демо
 - 2026-03-18 | Agent `--mode once`: 41 задача в очереди, но worker упал на тестах | Эффект: парсинг заблокирован до починки тестов
 - 2026-03-31 | Code review: 12 критичных исправлений (Frontend 7: дубликат ChatPage, незащищённый /chat маршрут, мёртвый router/index.tsx, дубликат authSlice/authApi, ссылка /auth→/login в Sidebar, AuthInitializer в App.tsx, CommentForm state.auth→state.session; Backend 2: username в ListUsers SELECT, миграция 012 на идемпотентные IF NOT EXISTS; Infra 3: CI postgres 15→16, дубликат bff-web в compose, удалены axios/zustand) | Эффект: TS build зелёный (502 модуля), архитектура auth консолидирована
+
+- 2026-03-31 | Подготовлена архитектурная оценка текущего состояния GitHub-репозитория mudro (`docs/github-architecture-assessment-2026-03-31.md`) | Эффект: зафиксированы сильные стороны, риски и приоритеты перехода к зрелой microservices архитектуре
