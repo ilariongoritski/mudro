@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -63,7 +63,7 @@ const fallbackStatus = (now: Date) =>
     todo: [
       'Подключить боевой backend endpoint orchestration status.',
       'Показать usage по токенам и историю запусков локального runtime.',
-      'Добавить локальный launcher профиля Skaro Claude под D:\\mudr\\_mudro-local.',
+      'Добавить локальный launcher профиля Skaro Claude под E:\\mudr\\_mudro-local.',
     ],
     done: [
       'Маршрут orchestration уже есть на фронтенде.',

@@ -7,12 +7,12 @@ test("normalizeRunRequest applies defaults", () => {
     {
       prompt: "  inspect services/feed-api  "
     },
-    "D:\\mudr\\mudro11"
+    "E:\\mudr\\mudro11"
   );
 
   assert.deepEqual(request, {
     prompt: "inspect services/feed-api",
-    cwd: "D:\\mudr\\mudro11",
+    cwd: "E:\\mudr\\mudro11",
     mode: "read-only",
     allowBash: false,
     maxTurns: 10,
@@ -28,7 +28,7 @@ test("normalizeRunRequest rejects invalid mode", () => {
           prompt: "inspect",
           mode: "write"
         },
-        "D:\\mudr\\mudro11"
+        "E:\\mudr\\mudro11"
       ),
     /mode must be either "read-only" or "edit"/u
   );
@@ -48,16 +48,16 @@ test("isAllowedBashCommand accepts only the allowlist", () => {
 });
 
 test("buildSystemPrompt reflects mode and bash policy", () => {
-  const prompt = buildSystemPrompt("D:\\mudr\\mudro11", {
+  const prompt = buildSystemPrompt("E:\\mudr\\mudro11", {
     prompt: "inspect",
-    cwd: "D:\\mudr\\mudro11",
+    cwd: "E:\\mudr\\mudro11",
     mode: "edit",
     allowBash: true,
     maxTurns: 10,
     timeoutSec: 600
   });
 
-  assert.match(prompt, /Repository root: D:\\mudr\\mudro11/u);
+  assert.match(prompt, /Repository root: E:\\mudr\\mudro11/u);
   assert.match(prompt, /Bash is available/u);
   assert.match(prompt, /You may edit files/u);
 });

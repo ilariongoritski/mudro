@@ -75,7 +75,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 	cmd.Env = append(os.Environ(),
 		"API_ADDR="+addr,
 		"DSN=postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable",
-		"JWT_SECRET=test-secret",
+		"JWT_SECRET=test-secret-123456",
 	)
 	var out bytes.Buffer
 	cmd.Stdout = &out

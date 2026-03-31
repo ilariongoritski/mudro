@@ -60,12 +60,15 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
     if (!data?.items) {
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages((current) => mergeMessages(current, data.items))
   }, [data])
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConnectionState('idle')
+       
       setMessages([])
       return
     }

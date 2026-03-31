@@ -1,6 +1,7 @@
 package wiring
 
 import (
+	"context"
 	"io"
 	"net/http"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func NewHandlerWithLifecycle(pool *pgxpool.Pool) (http.Handler, io.Closer, error) {
-	baseHandler, err := NewHandler(pool)
+	baseHandler, err := NewHandler(context.Background(), pool)
 	if err != nil {
 		return nil, nil, err
 	}
