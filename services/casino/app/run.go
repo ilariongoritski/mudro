@@ -34,7 +34,9 @@ func Run() {
 		log.Fatalf("db ping: %v", err)
 	}
 
-	handler := casino.NewServer(pool).Router()
+	repo := casino.NewPgRepository(pool)
+	service := casino.NewService(repo)
+	handler := casino.NewServer(service).Router()
 
 	srv := &http.Server{
 		Addr:         addr,
