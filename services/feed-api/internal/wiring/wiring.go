@@ -28,7 +28,7 @@ func NewHandler(ctx context.Context, pool *pgxpool.Pool) (http.Handler, error) {
 	}
 
 	postsSvc := posts.NewService(pool, tgVisiblePostIDs)
-	authSvc := auth.NewService(pool, config.JWTSecret())
+	authSvc := auth.NewService(auth.NewPgRepository(pool), config.JWTSecret())
 	chatRepo := chat.NewRepository(pool)
 	chatHub := chat.NewHub()
 	go chatHub.Run(ctx)

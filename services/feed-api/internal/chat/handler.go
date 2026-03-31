@@ -36,7 +36,7 @@ func NewModule(pool *pgxpool.Pool) (*Module, error) {
 	module := &Module{
 		repo:   NewRepository(pool),
 		hub:    hub,
-		auth:   auth.NewService(pool, config.JWTSecret()),
+		auth:   auth.NewService(auth.NewPgRepository(pool), config.JWTSecret()),
 		cancel: cancel,
 		mux:    http.NewServeMux(),
 	}

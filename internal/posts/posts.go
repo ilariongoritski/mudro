@@ -54,6 +54,16 @@ func (s *Service) CountVisiblePosts(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+
+// LoadLastSyncAt returns the most recent updated_at across all posts.
+// Exists so HTTP handlers get this via service layer — not direct pool access.
+func (s *Service) LoadLastSyncAt(ctx context.Context) (*time.Time, error) {
+	var lastSync *time.Time
+	if err := s.pool.QueryRow(ctx, `SELECT MAX(updated_at) FROM posts`).Scan(&lastSync); err != nil {
+		return nil, err
+	}
+	return lastSync, nil
+}
 func (s *Service) LoadSourceStats(ctx context.Context) ([]SourceStat, error) {
 	q := `SELECT source, count(*) FROM posts`
 	args := make([]any, 0, 1)
