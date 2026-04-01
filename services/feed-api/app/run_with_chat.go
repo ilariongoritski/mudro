@@ -12,10 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/pkg/logger"
 	"github.com/goritskimihail/mudro/services/feed-api/internal/wiring"
 )
 
 func RunWithChat() {
+	logger.Init("feed-api")
 	addr := config.APIAddr()
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("api"); err != nil {
