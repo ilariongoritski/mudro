@@ -3,6 +3,10 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/healthz",
+      "destination": "/api/feed"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/feed"
     },
