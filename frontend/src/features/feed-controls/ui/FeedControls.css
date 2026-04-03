@@ -9,13 +9,11 @@
   padding: clamp(1rem, 1.6vw, 1.35rem);
   border-radius: calc(var(--mudro-radius-lg) + 2px);
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(255, 246, 251, 0.88)),
     radial-gradient(circle at 0% 0%, rgba(255, 20, 147, 0.12), transparent 34%),
-    radial-gradient(circle at 100% 0%, rgba(255, 207, 88, 0.12), transparent 28%);
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  box-shadow:
-    0 24px 48px rgba(19, 10, 23, 0.14),
-    0 2px 0 rgba(255, 255, 255, 0.5) inset;
+    radial-gradient(circle at 100% 0%, rgba(255, 207, 88, 0.07), transparent 28%),
+    linear-gradient(160deg, rgba(25, 15, 30, 0.92), rgba(20, 12, 26, 0.88));
+  border: var(--mudro-glass-border);
+  box-shadow: var(--mudro-shadow);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   overflow: hidden;
@@ -64,8 +62,9 @@
 }
 
 .feed-controls__eyebrow_soft {
-  color: var(--mudro-text);
-  background: rgba(19, 10, 23, 0.06);
+  color: rgba(255, 244, 249, 0.75);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: none;
 }
 
@@ -74,20 +73,20 @@
   font-size: clamp(1.1rem, 1.8vw, 1.5rem);
   line-height: 1.1;
   letter-spacing: -0.04em;
-  color: var(--mudro-text);
+  color: #fff7fb;
 }
 
 .feed-controls__lead {
   margin: 0;
   max-width: 62ch;
-  color: rgba(42, 15, 45, 0.78);
+  color: rgba(255, 244, 249, 0.65);
   line-height: 1.5;
   font-size: 0.96rem;
 }
 
 .feed-controls__stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.7rem;
 }
 
@@ -96,9 +95,9 @@
   gap: 0.25rem;
   padding: 0.82rem 0.88rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(19, 10, 23, 0.06);
-  box-shadow: 0 10px 24px rgba(19, 10, 23, 0.06);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .feed-controls__stat span {
@@ -111,7 +110,7 @@
 .feed-controls__stat strong {
   font-size: 1.02rem;
   line-height: 1.2;
-  color: var(--mudro-text);
+  color: #fff7fb;
 }
 
 .feed-controls__status {
@@ -142,13 +141,13 @@
 }
 
 .feed-controls__signal {
-  border: 1px solid rgba(19, 10, 23, 0.08);
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--mudro-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 244, 249, 0.82);
 }
 
 .feed-controls__reset {
-  border: 1px solid rgba(255, 20, 147, 0.18);
+  border: 1px solid rgba(255, 20, 147, 0.3);
   background: linear-gradient(135deg, rgba(255, 20, 147, 0.98), rgba(59, 17, 53, 0.94));
   color: #fff;
   cursor: pointer;
@@ -160,7 +159,7 @@
 
 .feed-controls__reset:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(255, 20, 147, 0.22);
+  box-shadow: 0 14px 28px rgba(255, 20, 147, 0.3);
   filter: saturate(1.05);
 }
 
@@ -199,25 +198,25 @@
   min-height: 3.15rem;
   padding: 0.82rem 1rem;
   border-radius: 16px;
-  border: 1px solid rgba(19, 10, 23, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--mudro-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f0;
   font-size: 0.98rem;
+  font-family: inherit;
   outline: none;
-  box-shadow: 0 10px 24px rgba(19, 10, 23, 0.04);
   transition:
     border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    box-shadow 0.16s ease;
 }
 
 .feed-controls__search-input::placeholder {
-  color: rgba(87, 70, 94, 0.54);
+  color: rgba(255, 244, 249, 0.35);
 }
 
 .feed-controls__search-input:focus {
-  border-color: rgba(255, 20, 147, 0.4);
-  box-shadow: 0 0 0 4px rgba(255, 20, 147, 0.12);
+  border-color: rgba(255, 20, 147, 0.45);
+  box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.12);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .feed-controls__row {
@@ -227,16 +226,17 @@
 }
 
 .feed-pill {
-  border: 1px solid rgba(19, 10, 23, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   padding: 0.68rem 0.94rem;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--mudro-text);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 244, 249, 0.85);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
   font-weight: 600;
+  font-family: inherit;
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease,
@@ -246,15 +246,15 @@
 
 .feed-pill:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 20, 147, 0.18);
-  box-shadow: 0 12px 24px rgba(19, 10, 23, 0.08);
+  border-color: rgba(255, 20, 147, 0.25);
+  background: rgba(255, 20, 147, 0.1);
 }
 
 .feed-pill_active {
   background: linear-gradient(135deg, rgba(255, 20, 147, 0.98), rgba(59, 17, 53, 0.94));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 14px 30px rgba(19, 10, 23, 0.16);
+  box-shadow: 0 8px 20px rgba(255, 20, 147, 0.25);
 }
 
 .feed-pill__badge {
@@ -275,11 +275,18 @@
   min-height: 3.15rem;
   padding: 0.75rem 0.88rem;
   border-radius: 16px;
-  border: 1px solid rgba(19, 10, 23, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--mudro-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f0;
   font-weight: 600;
-  box-shadow: 0 10px 24px rgba(19, 10, 23, 0.04);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.feed-controls__field_limit select option {
+  background: #1a1122;
+  color: #f0f0f0;
 }
 
 .feed-controls__footer {
@@ -295,8 +302,8 @@
   min-height: 2.3rem;
   padding: 0.52rem 0.84rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(19, 10, 23, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--mudro-muted);
   font-size: 0.82rem;
   font-weight: 600;
@@ -311,7 +318,7 @@
 
 .feed-user-badge__email {
   font-size: 0.84rem;
-  color: rgba(42, 15, 45, 0.78);
+  color: rgba(255, 244, 249, 0.65);
 }
 
 .feed-user-badge__premium {
@@ -327,12 +334,12 @@
 .feed-user-badge__role {
   font-size: 0.64rem;
   font-weight: 700;
-  color: var(--mudro-text);
-  border: 1px solid rgba(19, 10, 23, 0.08);
+  color: rgba(255, 244, 249, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.2rem 0.4rem;
   border-radius: 0.35rem;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 960px) {
@@ -351,7 +358,7 @@
 
 @media (max-width: 720px) {
   .feed-controls__stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .feed-controls__grid {

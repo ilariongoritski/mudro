@@ -99,7 +99,6 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
         totalPosts={frontData?.meta.total_posts ?? 0}
         vkPosts={sourceTotals.vk}
         tgPosts={sourceTotals.tg}
-        lastSyncAt={frontData?.meta.last_sync_at}
       />
 
       {isInitialLoading ? (
@@ -116,9 +115,9 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
       {isFrontError ? (
         <div className="feed-widget__error">
           <div className="feed-widget__state-copy">
-            <span className="feed-widget__state-eyebrow">Ошибка</span>
-            <h3>Не удалось загрузить ленту</h3>
-            <p>Это уже проблема слоя данных или сети. Повтори запрос или проверь backend-контур.</p>
+            <span className="feed-widget__state-eyebrow">Недоступно</span>
+            <h3>Лента временно недоступна</h3>
+            <p>Сервер не отвечает. Убедитесь, что backend запущен, и повторите попытку.</p>
           </div>
           <button type="button" onClick={() => refetch()}>
             Повторить
@@ -128,10 +127,10 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
 
       {showEmpty ? (
         <section className="feed-widget__empty">
-          <div className="feed-widget__empty-copy">
+          <div className="feed-widget__state-copy">
             <span className="feed-widget__state-eyebrow">Пусто</span>
-            <h3>Под текущими фильтрами постов пока нет</h3>
-            <p>Такое бывает для пустой базы, жёсткого source-фильтра или ещё не синхронизированного архива.</p>
+            <h3>Постов пока нет</h3>
+            <p>Попробуй сбросить фильтры или выбрать другой источник. Если лента пуста — значит данные ещё не загружены в архив.</p>
           </div>
           <div className="feed-widget__empty-actions">
             <button type="button" onClick={() => refetch()}>

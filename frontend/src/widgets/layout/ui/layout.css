@@ -28,6 +28,8 @@
 }
 
 .mudro-sidebar {
+  width: 17rem;
+  flex-shrink: 0;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -247,6 +249,28 @@
   gap: 0.75rem;
 }
 
+.mudro-sidebar__user-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.mudro-sidebar__user-avatar {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 20, 147, 0.2);
+  border: 1px solid rgba(255, 20, 147, 0.3);
+  color: #ffd2e7;
+}
+
 .mudro-sidebar__user-copy {
   display: grid;
   gap: 0.05rem;
@@ -260,6 +284,56 @@
 
 .mudro-sidebar__user-copy small {
   color: rgba(255, 244, 249, 0.58);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mudro-sidebar__auth-cta {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mudro-sidebar__auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.mudro-sidebar__auth-btn_primary {
+  background: linear-gradient(135deg, rgba(255, 20, 147, 0.9), rgba(180, 10, 100, 0.85));
+  color: #fff;
+  border: 1px solid rgba(255, 20, 147, 0.6);
+  box-shadow: 0 4px 14px rgba(255, 20, 147, 0.2);
+}
+
+.mudro-sidebar__auth-btn_primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 20, 147, 0.35);
+}
+
+.mudro-sidebar__auth-btn_secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 244, 249, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mudro-sidebar__auth-btn_secondary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 20, 147, 0.3);
+  background: rgba(255, 20, 147, 0.08);
 }
 
 .mudro-sidebar__logout,
@@ -391,21 +465,12 @@
 }
 
 @media (max-width: 960px) {
-  .mudro-app-shell {
-    display: block;
-  }
-
-  .mudro-app-shell__sidebar {
-    width: 100%;
-  }
-
   .mudro-sidebar {
-    position: relative;
-    height: auto;
+    display: none;
   }
 
   .mudro-topbar {
-    margin-left: 0.75rem;
-    margin-right: 0.75rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
   }
 }
