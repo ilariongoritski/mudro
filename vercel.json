@@ -3,12 +3,16 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.go"
+      "source": "/api/:path*",
+      "destination": "/api/index.go"
     },
     {
-      "src": "/feed",
-      "dest": "/api/index.go"
+      "source": "/feed",
+      "destination": "/api/index.go"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }

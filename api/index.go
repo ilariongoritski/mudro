@@ -18,7 +18,6 @@ var (
 )
 
 func initServer() {
-	// Increased timeout to 15s to handle database "cold start" (Neon Free Tier)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
