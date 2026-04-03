@@ -6,6 +6,15 @@ import (
 	"sync"
 )
 
+// Broadcaster is the interface satisfied by both Hub (in-memory) and RedisHub.
+type Broadcaster interface {
+	Start(ctx context.Context)
+	Register(room string, client *Client)
+	Unregister(room string, client *Client)
+	Publish(msg Message)
+	Close() error
+}
+
 type roomClient struct {
 	room   string
 	client *Client

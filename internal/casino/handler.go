@@ -340,7 +340,8 @@ func (s *Server) handleFaucet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body contracts.FaucetRequest
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	// Intentionally ignore decode error: empty body uses default amount.
+	_ = json.NewDecoder(r.Body).Decode(&body) //nolint:errcheck
 	if body.Amount <= 0 {
 		body.Amount = CasinoFaucetAmount()
 	}

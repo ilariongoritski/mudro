@@ -39,6 +39,7 @@ func Run() {
 
 	auth.SetSecret(config.JWTSecret())
 	authSvc := auth.NewService(auth.NewPgRepository(pool), config.JWTSecret())
+	authSvc.SetTokenExpiry(time.Duration(config.JWTExpiryHours()) * time.Hour)
 	handler := authapi.NewHandler(authapi.NewAuthHandlers(authSvc), authapi.NewAdminHandlers(authSvc))
 
 	srv := &http.Server{

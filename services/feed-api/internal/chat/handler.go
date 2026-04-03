@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
@@ -22,7 +24,7 @@ var errUnauthorized = errors.New("unauthorized")
 
 type Module struct {
 	repo   *Repository
-	hub    *Hub
+	hub    Broadcaster
 	auth   *auth.Service
 	cancel context.CancelFunc
 	mux    *http.ServeMux
@@ -30,7 +32,19 @@ type Module struct {
 
 func NewModule(pool *pgxpool.Pool) (*Module, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	hub := NewHub()
+
+	var hub Broadcaster
+	if config.ChatHubBackend() == "redis" {
+		rdb := redis.NewClient(&redis.Options{
+			Addr:     config.RedisAddr(),
+			Password: config.RedisPassword(),
+			DB:       config.RedisDB(),
+		})
+		slog.Info("chat: using Redis Pub/Sub hub", "addr", config.RedisAddr())
+		hub = NewRedisHub(rdb)
+	} else {
+		hub = NewHub()
+	}
 	hub.Start(ctx)
 
 	module := &Module{
@@ -170,7 +184,9 @@ func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: time.Now().UTC(),
 		},
 	})
-	_ = client.Enqueue(readyPayload)
+	if !client.Enqueue(readyPayload) {
+		slog.Warn("chat: failed to enqueue ready payload", "user_id", user.ID, "room", room)
+	}
 
 	go client.WritePump(func() {
 		m.hub.Unregister(room, client)

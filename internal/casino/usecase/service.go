@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/goritskimihail/mudro/internal/casino/domain"
 	"github.com/goritskimihail/mudro/internal/casino/repository"
@@ -188,8 +189,13 @@ func (s *Service) PlaceBet(ctx context.Context, input domain.BetInput) (*domain.
 		result.Symbols = result.Symbols[:3]
 	}
 
-	resJSON, _ := json.Marshal(result)
-	_ = s.repo.CompleteIdempotencyKey(ctx, tx, idem.ID, resJSON)
+	resJSON, err := json.Marshal(result)
+	if err != nil {
+		slog.Error("marshal idempotency result", "err", err)
+	}
+	if err := s.repo.CompleteIdempotencyKey(ctx, tx, idem.ID, resJSON); err != nil {
+		slog.Error("complete idempotency key", "id", idem.ID, "err", err)
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit: %w", err)

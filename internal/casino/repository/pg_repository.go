@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
+	"log/slog"
 	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -202,10 +203,18 @@ func (repo *pgCasinoRepository) CompleteIdempotencyKey(ctx context.Context, tx p
 }
 
 func (repo *pgCasinoRepository) GetStats(ctx context.Context) (userCount, roundCount int, houseBalance, totalBet, totalPayout float64, err error) {
-	_ = repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_accounts WHERE type = 'user'`).Scan(&userCount)
-	_ = repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_rounds WHERE status = 'resolved'`).Scan(&roundCount)
-	_ = repo.pool.QueryRow(ctx, `SELECT COALESCE(balance, 0) FROM casino_accounts WHERE code = $1`, domain.HouseAccountCode).Scan(&houseBalance)
-	_ = repo.pool.QueryRow(ctx, `SELECT COALESCE(SUM(bet_amount), 0), COALESCE(SUM(payout_amount), 0) FROM casino_rounds WHERE status = 'resolved'`).Scan(&totalBet, &totalPayout)
+	if e := repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_accounts WHERE type = 'user'`).Scan(&userCount); e != nil {
+		slog.Error("stats: user count", "err", e)
+	}
+	if e := repo.pool.QueryRow(ctx, `SELECT count(*) FROM casino_rounds WHERE status = 'resolved'`).Scan(&roundCount); e != nil {
+		slog.Error("stats: round count", "err", e)
+	}
+	if e := repo.pool.QueryRow(ctx, `SELECT COALESCE(balance, 0) FROM casino_accounts WHERE code = $1`, domain.HouseAccountCode).Scan(&houseBalance); e != nil {
+		slog.Error("stats: house balance", "err", e)
+	}
+	if e := repo.pool.QueryRow(ctx, `SELECT COALESCE(SUM(bet_amount), 0), COALESCE(SUM(payout_amount), 0) FROM casino_rounds WHERE status = 'resolved'`).Scan(&totalBet, &totalPayout); e != nil {
+		slog.Error("stats: totals", "err", e)
+	}
 	return
 }
 

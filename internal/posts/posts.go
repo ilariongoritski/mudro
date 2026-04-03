@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -317,7 +318,9 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 			comment.Text = *text
 		}
 		if len(reactionsRaw) > 0 {
-			_ = json.Unmarshal(reactionsRaw, &comment.Reactions)
+			if err := json.Unmarshal(reactionsRaw, &comment.Reactions); err != nil {
+				slog.Error("unmarshal comment reactions", "comment", comment.SourceCommentID, "err", err)
+			}
 		}
 		if len(mediaRaw) > 0 {
 			comment.Media = append(json.RawMessage(nil), mediaRaw...)
@@ -368,6 +371,8 @@ func (s *Service) ToggleLike(ctx context.Context, postID, userID int64) (liked b
 		liked = true
 	}
 
-	_ = s.pool.QueryRow(ctx, `select likes_count from posts where id = $1`, postID).Scan(&likesCount)
+	if err := s.pool.QueryRow(ctx, `select likes_count from posts where id = $1`, postID).Scan(&likesCount); err != nil {
+		slog.Error("read likes_count after toggle", "post_id", postID, "err", err)
+	}
 	return liked, likesCount, nil
 }
