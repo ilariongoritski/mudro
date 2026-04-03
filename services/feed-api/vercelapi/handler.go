@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/posts"
