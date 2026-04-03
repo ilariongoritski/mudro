@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: MUDRO Casino API
+  version: 1.0.0
+  description: Casino game service — provably fair slot machine with wallet.
+servers:
+  - url: http://localhost:8081
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Balance:
+      type: object
+      required: [balance, currency]
+      properties:
+        balance:
+          type: number
+          format: double
+        currency:
+          type: string
+
+    BetResult:
+      type: object
+      properties:
+        symbols:
+          type: array
+          items:
+            type: string
+        win:
+          type: number
+          format: double
+        bet:
+          type: number
+          format: double
+        balance:
+          type: number
+          format: double
+        is_win:
+          type: boolean
+        rtp:
+          type: number
+          format: double
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      operationId: healthz
+      responses:
+        "200":
+          description: OK
+
+  /api/casino/auth/telegram:
+    post:
+      summary: Authenticate via Telegram initData
+      operationId: casinoTelegramAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [initData]
+              properties:
+                initData:
+                  type: string
+      responses:
+        "200":
+          description: JWT token for casino session
+        "401":
+          description: Invalid Telegram data
+
+  /api/casino/dev/init-data:
+    get:
+      summary: Generate dev initData (dev mode only)
+      operationId: devInitData
+      responses:
+        "200":
+          description: Dev initData string
+
+  /api/casino/wallet/balance:
+    get:
+      summary: Get wallet balance
+      operationId: getBalance
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+        "401":
+          description: Unauthorized
+
+  /api/casino/wallet/faucet:
+    post:
+      summary: Request free credits (faucet)
+      operationId: faucet
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: double
+                  description: Amount to credit (default applied if 0)
+      responses:
+        "200":
+          description: Credits added
+        "401":
+          description: Unauthorized
+
+  /api/casino/game/prepare:
+    post:
+      summary: Prepare a spin (generate server seed)
+      operationId: prepareSpin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Prepared spin data with hashed server seed
+        "401":
+          description: Unauthorized
+
+  /api/casino/game/bet:
+    post:
+      summary: Place a bet and spin
+      operationId: placeBet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  format: double
+                client_seed:
+                  type: string
+      responses:
+        "200":
+          description: Spin result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BetResult'
+        "400":
+          description: Insufficient balance or invalid bet
+        "401":
+          description: Unauthorized
+
+  /api/casino/game/history:
+    get:
+      summary: Get bet history
+      operationId: getBetHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          description: List of past bets
+        "401":
+          description: Unauthorized
+
+  /api/casino/ws:
+    get:
+      summary: WebSocket connection for real-time casino events
+      operationId: casinoWS
+      description: |
+        Upgrade to WebSocket. Auth via ?token=<jwt> query param
+        (browser WS API does not support custom headers).
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "101":
+          description: Switching Protocols
+
+  /api/casino/admin/stats:
+    get:
+      summary: Casino stats (admin)
+      operationId: adminCasinoStats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+        "403":
+          description: Admin only
+
+  /api/casino/admin/rtp/profiles:
+    get:
+      summary: RTP profiles list (admin)
+      operationId: adminRtpProfiles
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: RTP profiles
+        "403":
+          description: Admin only
+
+  /api/casino/admin/users:
+    get:
+      summary: Casino user list (admin)
+      operationId: adminCasinoUsers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Users
+        "403":
+          description: Admin only
