@@ -37,6 +37,7 @@ func RegisterBotCommands(botAPI *tgbotapi.BotAPI) error {
 		{Command: "actions1h", Description: "Путь за час: проблемы и решения"},
 		{Command: "commits3", Description: "3 коммита: суть изменений на русском"},
 		{Command: "movies", Description: "Каталог фильмов 🎬"},
+		{Command: "ping", Description: "Проверка связи (PONG)"},
 	}
 
 	config := tgbotapi.NewSetMyCommands(commands...)
@@ -108,6 +109,8 @@ func HandleCommands(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		handleCommits3(bot, update)
 	case "movies":
 		handleMovies(bot, update)
+	case "ping":
+		handlePing(bot, update)
 	default:
 		handleUnknown(bot, update)
 	}
@@ -166,6 +169,14 @@ func handleHelp(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, helpText)
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("send /help: %v", err)
+	}
+}
+
+func handlePing(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	text := fmt.Sprintf("PONG 🏓\nServer time: %s", time.Now().Format("15:04:05 02.01.2006"))
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("send /ping: %v", err)
 	}
 }
 

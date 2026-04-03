@@ -3,19 +3,19 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 20, 147, 0.18), transparent 38%),
-    radial-gradient(circle at 82% 80%, rgba(255, 207, 88, 0.08), transparent 30%),
-    linear-gradient(140deg, #0f0a14 0%, #150b1e 50%, #1a1122 100%);
+  background: 
+    radial-gradient(circle at 18% 18%, rgba(255, 20, 147, 0.12), transparent 38%),
+    radial-gradient(circle at 82% 80%, rgba(255, 207, 88, 0.05), transparent 30%),
+    linear-gradient(140deg, var(--mudro-bg-base) 0%, var(--mudro-bg-soft) 100%);
 }
 
 .auth-card {
-  background: rgba(25, 15, 30, 0.75);
+  background: var(--mudro-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(255, 20, 147, 0.12);
-  border-radius: 28px;
+  border: var(--mudro-glass-border);
+  box-shadow: var(--mudro-shadow);
+  border-radius: var(--mudro-radius-lg);
   padding: 40px;
   width: 100%;
   max-width: 420px;
@@ -37,7 +37,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 20, 147, 0.98), rgba(72, 18, 64, 0.95));
+  background: linear-gradient(135deg, var(--mudro-accent), #481240);
   color: #fff;
   font-size: 1.2rem;
   font-weight: 900;
@@ -51,26 +51,26 @@
 }
 
 .auth-logo-text strong {
-  color: #fff7fb;
+  color: var(--mudro-text);
   font-size: 1.1rem;
   line-height: 1.1;
 }
 
 .auth-logo-text small {
-  color: rgba(255, 244, 249, 0.55);
+  color: var(--mudro-muted);
   font-size: 0.78rem;
 }
 
 .auth-card h1 {
   margin: 0 0 0.4rem;
   font-size: 1.6rem;
-  color: #fff7fb;
+  color: var(--mudro-text);
   font-weight: 700;
   letter-spacing: -0.03em;
 }
 
 .auth-subtitle {
-  color: #b8aec4;
+  color: var(--mudro-muted);
   margin-top: 0;
   margin-bottom: 1.75rem;
   font-size: 0.92rem;
@@ -86,46 +86,46 @@
 .auth-input {
   width: 100%;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: var(--mudro-radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f0f0f0;
-  font-size: 0.97rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mudro-text);
+  font-size: 1rem;
   font-family: inherit;
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
 .auth-input::placeholder {
-  color: rgba(255, 244, 249, 0.6);
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .auth-input:focus {
   outline: none;
-  border-color: rgba(255, 20, 147, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.14);
-  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--mudro-accent);
+  box-shadow: 0 0 0 3px var(--mudro-accent-glow);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-button {
   width: 100%;
   padding: 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ffd0e5, #ff4fb0);
+  border-radius: var(--mudro-radius-md);
+  background: linear-gradient(135deg, var(--mudro-casino-soft), var(--mudro-casino-magenta));
   color: #240611;
-  font-size: 0.97rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   font-family: inherit;
   border: none;
   cursor: pointer;
   transition: transform 0.16s ease, box-shadow 0.16s ease;
-  box-shadow: 0 4px 16px rgba(255, 79, 176, 0.3);
+  box-shadow: 0 4px 16px rgba(255, 79, 176, 0.25);
   margin-top: 0.3rem;
 }
 
 .auth-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(255, 79, 176, 0.45);
+  box-shadow: 0 6px 22px rgba(255, 79, 176, 0.4);
 }
 
 .auth-button:active:not(:disabled) {
@@ -133,33 +133,33 @@
 }
 
 .auth-button:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .auth-error {
   color: #fca5a5;
   font-size: 0.88rem;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 10px;
-  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--mudro-radius-md);
+  padding: 10px 14px;
   text-align: left;
 }
 
 .auth-footer {
   margin-top: 1.5rem;
-  color: #b8aec4;
+  color: var(--mudro-muted);
   font-size: 0.88rem;
 }
 
 .auth-footer a {
-  color: #ff4fb0;
+  color: var(--mudro-casino-magenta);
   text-decoration: none;
-  font-weight: 600;
-  transition: color 0.15s ease;
+  font-weight: 700;
+  transition: opacity 0.15s ease;
 }
 
 .auth-footer a:hover {
-  color: #ff1493;
+  opacity: 0.8;
 }
