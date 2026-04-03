@@ -29,6 +29,9 @@ const (
 )
 
 func DSN() string {
+	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
+		return v
+	}
 	return envOr("DSN", DefaultDSN)
 }
 
