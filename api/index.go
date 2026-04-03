@@ -12,14 +12,16 @@ import (
 )
 
 var (
-	once    sync.Once
 	router  http.Handler
+	once    sync.Once
 	initErr error
 )
 
 func initServer() {
+	// Increased timeout to 15s to handle database "cold start" (Neon Free Tier)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
 	h, err := vercelapi.NewHandler(ctx)
 	if err != nil {
 		initErr = err
