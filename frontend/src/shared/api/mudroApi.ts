@@ -30,16 +30,26 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         extraOptions,
       )
       if (refreshResult.data) {
-        const data = refreshResult.data as { token: string; user: { id: number; username: string; email?: string; role: string; is_premium: boolean } }
+        const data = refreshResult.data as {
+          token: string
+          user: {
+            id: number
+            username: string
+            email?: string | null
+            role: string
+            isPremium?: boolean
+            is_premium?: boolean
+          }
+        }
         const { setCredentials } = await import('@/entities/session/model/sessionSlice')
         api.dispatch(setCredentials({
           token: data.token,
           user: {
             id: data.user.id,
             username: data.user.username,
-            email: data.user.email,
+            email: data.user.email ?? undefined,
             role: data.user.role,
-            isPremium: data.user.is_premium,
+            isPremium: data.user.isPremium ?? data.user.is_premium ?? false,
           },
         }))
         result = await rawBaseQuery(args, api, extraOptions)

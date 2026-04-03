@@ -124,13 +124,8 @@
 - `make health`
 
 Этот таргет должен последовательно выполнить:
-- `make up`
-- `make ps`
-- `make dbcheck`
-- `make migrate`
-- `make tables`
-- `make test`
-- `make count-posts`
+- основной `core` health loop для `gallery`
+- отдельный `casino` health loop для `mudro_casino`
 
 Критерий “локальный агент живой”:
 - контейнер БД `healthy`
@@ -138,6 +133,8 @@
 - таблица `posts` существует
 - тесты проходят
 - `count(posts)` выполняется
+- `casino-db` отвечает
+- `GET /healthz` на казино отвечает `ok`
 
 `count = 0` допустим, если данные еще не импортированы.
 

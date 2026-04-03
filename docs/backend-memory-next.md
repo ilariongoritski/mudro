@@ -18,7 +18,7 @@ The canonical runtime is up on the main stack, including the feed API and the ca
 3. Keep docs and runbooks aligned with the current canonical ports:
    - main DB: `5433`
    - casino DB: `5434`
-   - main API: `8081`
+   - main API: `8080`
    - casino API: `8082`
 4. Avoid using stale container names like `mudro11-db-1` in canonical docs unless explicitly discussing a legacy local test environment.
 

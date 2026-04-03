@@ -8,11 +8,14 @@ AGENT_REVIEW_MIGRATION ?= $(MIGRATIONS_DIR)/005_agent_review_gate.sql
 AGENT_EVENTS_MIGRATION ?= $(MIGRATIONS_DIR)/006_agent_task_events.sql
 MEDIA_MIGRATION ?= $(MIGRATIONS_DIR)/007_media_assets.sql
 MEDIA_FIX_MIGRATION ?= $(MIGRATIONS_DIR)/008_media_link_constraints.sql
+AGENT_EVENTS_FK_MIGRATION ?= $(MIGRATIONS_DIR)/009_agent_events_fk.sql
 COMMENT_MODEL_MIGRATION ?= $(MIGRATIONS_DIR)/009_comment_model.sql
 USERS_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/009_users_and_auth.sql
+USER_ROLES_MIGRATION ?= $(MIGRATIONS_DIR)/010_user_roles_and_subscriptions.sql
+SIMPLIFY_AUTH_MIGRATION ?= $(MIGRATIONS_DIR)/011_simplify_auth.sql
+USERS_PROFILE_MIGRATION ?= $(MIGRATIONS_DIR)/012_users_and_auth.sql
 USERS_TELEGRAM_MIGRATION ?= $(MIGRATIONS_DIR)/015_users_telegram.sql
 CHAT_MIGRATION ?= $(MIGRATIONS_DIR)/016_chat.sql
-CASINO_EMOJI_MIGRATION ?= $(MIGRATIONS_DIR)/017_casino_emoji_v2.sql
 CASINO_MIGRATION ?= services/casino/migrations/001_init.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
@@ -27,7 +30,8 @@ ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
 MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
-RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_AUTH_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(CASINO_MIGRATION) $(MOVIE_CATALOG_MIGRATION) $(CASINO_EMOJI_MIGRATION)
+RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(AGENT_EVENTS_FK_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_AUTH_MIGRATION) $(USER_ROLES_MIGRATION) $(SIMPLIFY_AUTH_MIGRATION) $(USERS_PROFILE_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(MOVIE_CATALOG_MIGRATION)
+RUNTIME_DOWN_MIGRATIONS ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.down.sql $(MIGRATIONS_DIR)/016_chat.down.sql $(MIGRATIONS_DIR)/015_users_telegram.down.sql $(MIGRATIONS_DIR)/012_users_and_auth.down.sql $(MIGRATIONS_DIR)/011_simplify_auth.down.sql $(MIGRATIONS_DIR)/010_user_roles_and_subscriptions.down.sql $(MIGRATIONS_DIR)/009_users_and_auth.down.sql $(MIGRATIONS_DIR)/009_comment_model.down.sql $(MIGRATIONS_DIR)/009_agent_events_fk.down.sql $(MIGRATIONS_DIR)/008_media_link_constraints.down.sql $(MIGRATIONS_DIR)/007_media_assets.down.sql $(MIGRATIONS_DIR)/006_agent_task_events.down.sql $(MIGRATIONS_DIR)/005_agent_review_gate.down.sql $(MIGRATIONS_DIR)/004_post_comments.down.sql $(MIGRATIONS_DIR)/002b_agent_queue.down.sql $(MIGRATIONS_DIR)/002_account_post_likes.down.sql $(MIGRATIONS_DIR)/001_init.down.sql
 
 ifeq ($(wildcard $(GO)),)
 GO := go
@@ -90,15 +94,14 @@ dbcheck-core:
 	$(PSQL_CORE_CMD) -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"
 
 migrate:
-ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-	cat "$(USERS_TELEGRAM_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_TELEGRAM_MIGRATION)"
-endif
+	@for f in $(RUNTIME_MIGRATIONS); do \
+		echo "==> applying $$f"; \
+		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
+			cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; \
+		else \
+			$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; \
+		fi || exit $$?; \
+	done
 
 migrate-runtime:
 	@for f in $(RUNTIME_MIGRATIONS); do \
@@ -111,13 +114,15 @@ migrate-runtime:
 	done
 
 migrate-all:
-	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
+	@for f in $(RUNTIME_MIGRATIONS); do \
 		echo "==> applying $$f"; \
 		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
 	done
+	@echo "==> applying separate casino migration"
+	@$(MAKE) migrate-casino
 
 migrate-down:
-	@for f in $$(ls $(MIGRATIONS_DIR)/*.down.sql | sort -r); do \
+	@for f in $(RUNTIME_DOWN_MIGRATIONS); do \
 		echo "==> rolling back $$f"; \
 		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
 	done
@@ -273,6 +278,16 @@ casino-dbcheck:
 		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	fi
 
+casino-up:
+	docker compose up -d casino-db
+	$(MAKE) migrate-casino
+	docker compose up -d casino-api
+
+health-casino:
+	$(MAKE) casino-up
+	$(MAKE) casino-dbcheck
+	@curl -fsS http://127.0.0.1:$${CASINO_API_PORT:-8082}/healthz >/dev/null && echo "casino healthz: ok"
+
 health-runtime:
 	$(MAKE) core-up
 	$(MAKE) core-ps
@@ -282,10 +297,14 @@ health-runtime:
 	$(MAKE) test-active
 	$(MAKE) count-posts-core
 
-health: health-runtime
+health-mvp:
+	$(MAKE) health-runtime
+	$(MAKE) health-casino
+
+health: health-mvp
 
 demo-up:
-	$(MAKE) health-runtime
+	$(MAKE) health-mvp
 	$(MAKE) demo-seed
 
 demo-seed:

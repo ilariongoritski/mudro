@@ -44,7 +44,7 @@ postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
 
 ## Quick Start
 
-Canonical local bootstrap:
+Canonical local bootstrap for the core contour:
 
 ```bash
 make core-up
@@ -52,6 +52,12 @@ make dbcheck-core
 make migrate-runtime
 make tables-core
 make health-runtime
+```
+
+Full MVP bootstrap including the separate casino database/runtime:
+
+```bash
+make health
 ```
 
 Useful follow-up checks:
@@ -64,6 +70,7 @@ make count-posts-core
 
 Expected local endpoints:
 - API health: `http://127.0.0.1:8080/healthz`
+- Casino health: `http://127.0.0.1:8082/healthz`
 - Frontend dev server: `http://127.0.0.1:5173`
 
 ## Frontend

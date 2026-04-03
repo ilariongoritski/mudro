@@ -136,7 +136,7 @@ make count-posts-core
 One-command health loop:
 
 ```bash
-make health-runtime
+make health
 ```
 
 ## Local Demo (localhost, no Vercel)
@@ -149,8 +149,10 @@ make demo-check
 
 Expected endpoints:
 - `http://127.0.0.1:8080/healthz`
+- `http://127.0.0.1:8082/healthz`
 - `http://127.0.0.1:5173`
 
 Notes:
+- `make health` now covers both the core runtime and the separate casino DB/API contour.
 - `make demo-up` applies runtime migrations and auto-seeds the demo feed from `data/nu/feed_items.json` if the local `posts` table is still empty.
 - `make demo-check` now validates both API health and that `/api/front` returns a non-empty feed.

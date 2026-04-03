@@ -19,20 +19,22 @@ import (
 // Server is the HTTP delivery layer for the feed domain.
 // pool is kept for comment/like handlers (P1 backlog: extract to usecase layer).
 type Server struct {
-	
 	postsSvc         *posts.Service
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
+	httpClient       *http.Client
+	casinoServiceURL string
 	tgVisiblePostIDs []string
 }
 
 // NewServer constructs a Server with the provided service dependencies.
 func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth.Service) *Server {
 	return &Server{
-		
-		postsSvc:    postsSvc,
-		authSvc:     authSvc,
-		chatHandler: chatHandler,
+		postsSvc:         postsSvc,
+		authSvc:          authSvc,
+		chatHandler:      chatHandler,
+		httpClient:       &http.Client{Timeout: 10 * time.Second},
+		casinoServiceURL: config.CasinoServiceURL(),
 	}
 }
 
@@ -59,6 +61,12 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/auth/login", s.handleAuthLogin)
 		mux.HandleFunc("/api/auth/register", s.handleAuthRegister)
 		mux.HandleFunc("/api/auth/me", s.handleAuthMe)
+		mux.HandleFunc("/api/auth/refresh", s.handleAuthRefresh)
+		mux.HandleFunc("/api/auth/telegram", s.handleAuthTelegram)
+		mux.HandleFunc("/api/casino/balance", s.handleCasinoBalance)
+		mux.HandleFunc("/api/casino/history", s.handleCasinoHistory)
+		mux.HandleFunc("/api/casino/spin", s.handleCasinoSpin)
+		mux.HandleFunc("/api/casino/config", s.handleCasinoConfig)
 	}
 	if s.chatHandler != nil {
 		mux.HandleFunc("/api/chat/ws", s.chatHandler.HandleWS)
