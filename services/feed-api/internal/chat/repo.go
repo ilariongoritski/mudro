@@ -21,19 +21,34 @@ func (r *Repository) ListMessages(ctx context.Context, room string, limit int, b
 		limit = 50
 	}
 
+	convID, err := r.GetOrCreateConversation(ctx, room)
+	if err != nil {
+		return nil, err
+	}
+
 	var before any
 	if beforeID != nil {
 		before = *beforeID
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		select id, room_name, user_id, username, user_role, body, created_at
-		from chat_messages
-		where room_name = $1
-		  and ($2::bigint is null or id < $2)
-		order by id desc
+		select 
+			m.id, 
+			m.conversation_id, 
+			m.sender_id, 
+			m.body, 
+			m.created_at,
+			u.id, 
+			u.login, 
+			u.role,
+			coalesce(u.avatar_url, '')
+		from messages m
+		left join users u on u.id = m.sender_id
+		where m.conversation_id = $1
+		  and ($2::bigint is null or m.id < $2)
+		order by m.id desc
 		limit $3
-	`, room, before, limit)
+	`, convID, before, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -42,14 +57,17 @@ func (r *Repository) ListMessages(ctx context.Context, room string, limit int, b
 	messages := make([]Message, 0, limit)
 	for rows.Next() {
 		var msg Message
+		msg.Room = room
 		if err := rows.Scan(
 			&msg.ID,
-			&msg.Room,
+			&msg.ConversationID,
+			&msg.SenderID,
+			&msg.Body,
+			&msg.CreatedAt,
 			&msg.User.ID,
 			&msg.User.Username,
 			&msg.User.Role,
-			&msg.Body,
-			&msg.CreatedAt,
+			&msg.User.AvatarURL,
 		); err != nil {
 			return nil, err
 		}
@@ -65,20 +83,42 @@ func (r *Repository) ListMessages(ctx context.Context, room string, limit int, b
 
 func (r *Repository) InsertMessage(ctx context.Context, user UserIdentity, room, body string) (Message, error) {
 	room = normalizeRoom(room)
+	convID, err := r.GetOrCreateConversation(ctx, room)
+	if err != nil {
+		return Message{}, err
+	}
 
 	var msg Message
-	err := r.pool.QueryRow(ctx, `
-		insert into chat_messages (room_name, user_id, username, user_role, body)
-		values ($1, $2, $3, $4, $5)
-		returning id, room_name, user_id, username, user_role, body, created_at
-	`, room, user.ID, user.Username, user.Role, body).Scan(
+	msg.Room = room
+	err = r.pool.QueryRow(ctx, `
+		insert into messages (conversation_id, sender_id, body)
+		values ($1, $2, $3)
+		returning id, conversation_id, sender_id, body, created_at
+	`, convID, user.ID, body).Scan(
 		&msg.ID,
-		&msg.Room,
-		&msg.User.ID,
-		&msg.User.Username,
-		&msg.User.Role,
+		&msg.ConversationID,
+		&msg.SenderID,
 		&msg.Body,
 		&msg.CreatedAt,
 	)
-	return msg, err
+	if err != nil {
+		return Message{}, err
+	}
+	msg.User = user
+	return msg, nil
+}
+
+func (r *Repository) GetOrCreateConversation(ctx context.Context, title string) (int64, error) {
+	var id int64
+	err := r.pool.QueryRow(ctx, "select id from conversations where title = $1 and kind = 'group' limit 1", title).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+
+	err = r.pool.QueryRow(ctx, `
+		insert into conversations (kind, title) 
+		values ('group', $1) 
+		returning id
+	`, title).Scan(&id)
+	return id, err
 }

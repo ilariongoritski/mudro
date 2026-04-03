@@ -131,9 +131,10 @@ func (m *Module) handleCreateMessage(w http.ResponseWriter, r *http.Request, use
 	}
 
 	msg, err := m.repo.InsertMessage(r.Context(), UserIdentity{
-		ID:       user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		ID:        user.ID,
+		Username:  user.Username,
+		Role:      user.Role,
+		AvatarURL: user.AvatarURL,
 	}, req.Room, body)
 	if err != nil {
 		http.Error(w, "failed to store chat message", http.StatusInternalServerError)
@@ -177,9 +178,10 @@ func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {
 		Message: &Message{
 			Room: room,
 			User: UserIdentity{
-				ID:       user.ID,
-				Username: user.Username,
-				Role:     user.Role,
+				ID:        user.ID,
+				Username:  user.Username,
+				Role:      user.Role,
+				AvatarURL: user.AvatarURL,
 			},
 			CreatedAt: time.Now().UTC(),
 		},

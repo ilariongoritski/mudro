@@ -23,9 +23,9 @@ func NewPgRepository(pool *pgxpool.Pool) UserRepository {
 func (r *pgUserRepository) FindByLogin(ctx context.Context, login string) (*User, error) {
 	var u User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, username, email, password_hash, role, created_at
+		SELECT id, username, email, password_hash, role, coalesce(avatar_url, ''), created_at
 		FROM users WHERE username = $1 OR email = $1
-	`, login).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt)
+	`, login).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.AvatarURL, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrInvalidCredentials
@@ -38,9 +38,9 @@ func (r *pgUserRepository) FindByLogin(ctx context.Context, login string) (*User
 func (r *pgUserRepository) FindByID(ctx context.Context, id int64) (*User, error) {
 	var u User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, username, email, role, created_at
+		SELECT id, username, email, role, coalesce(avatar_url, ''), created_at
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.CreatedAt)
+	`, id).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.AvatarURL, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNoSession
@@ -53,9 +53,9 @@ func (r *pgUserRepository) FindByID(ctx context.Context, id int64) (*User, error
 func (r *pgUserRepository) FindByTelegramID(ctx context.Context, telegramID int64) (*User, error) {
 	var u User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, username, email, role, created_at, telegram_id, telegram_username
+		SELECT id, username, email, role, coalesce(avatar_url, ''), created_at, telegram_id, telegram_username
 		FROM users WHERE telegram_id = $1
-	`, telegramID).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.CreatedAt, &u.TelegramID, &u.TelegramName)
+	`, telegramID).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.AvatarURL, &u.CreatedAt, &u.TelegramID, &u.TelegramName)
 	if err != nil {
 		return nil, err // pass pgx.ErrNoRows through — Service uses it for branch logic
 	}
@@ -71,8 +71,8 @@ func (r *pgUserRepository) Create(ctx context.Context, username, email, password
 	err := r.pool.QueryRow(ctx, `
 		INSERT INTO users (username, email, password_hash, role, created_at, updated_at)
 		VALUES ($1, $2, $3, 'user', NOW(), NOW())
-		RETURNING id, username, email, role, created_at
-	`, username, emailPtr, passwordHash).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.CreatedAt)
+		RETURNING id, username, email, role, coalesce(avatar_url, ''), created_at
+	`, username, emailPtr, passwordHash).Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.AvatarURL, &u.CreatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "users_username_key") || strings.Contains(err.Error(), "users_email_key") {
 			return nil, ErrUserExists
@@ -87,9 +87,9 @@ func (r *pgUserRepository) CreateFromTelegram(ctx context.Context, params Telegr
 	err := r.pool.QueryRow(ctx, `
 		INSERT INTO users (username, password_hash, role, created_at, updated_at, telegram_id, telegram_username)
 		VALUES ($1, $2, 'user', NOW(), NOW(), $3, $4)
-		RETURNING id, username, role, created_at, telegram_id, telegram_username
+		RETURNING id, username, role, coalesce(avatar_url, ''), created_at, telegram_id, telegram_username
 	`, params.Username, params.PasswordHash, params.TelegramID, params.TelegramName).Scan(
-		&u.ID, &u.Username, &u.Role, &u.CreatedAt, &u.TelegramID, &u.TelegramName,
+		&u.ID, &u.Username, &u.Role, &u.AvatarURL, &u.CreatedAt, &u.TelegramID, &u.TelegramName,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "users_username_key") {
@@ -122,7 +122,7 @@ func (r *pgUserRepository) HasActiveSubscription(ctx context.Context, userID int
 }
 
 func (r *pgUserRepository) ListAll(ctx context.Context) ([]User, error) {
-	rows, err := r.pool.Query(ctx, `SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC`)
+	rows, err := r.pool.Query(ctx, `SELECT id, username, email, role, coalesce(avatar_url, ''), created_at FROM users ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (r *pgUserRepository) ListAll(ctx context.Context) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.Role, &u.AvatarURL, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, u)

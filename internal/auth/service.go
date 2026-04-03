@@ -33,6 +33,7 @@ type User struct {
 	IsPremium    bool
 	TelegramID   *int64
 	TelegramName *string
+	AvatarURL    string
 	CreatedAt    time.Time
 }
 

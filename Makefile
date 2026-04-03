@@ -27,7 +27,7 @@ ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
 MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
-RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(USERS_AUTH_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(CASINO_MIGRATION) $(MOVIE_CATALOG_MIGRATION) $(CASINO_EMOJI_MIGRATION)
+RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(USERS_AUTH_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(MOVIE_CATALOG_MIGRATION)
 
 ifeq ($(wildcard $(GO)),)
 GO := go
@@ -58,6 +58,11 @@ ps:
 
 logs:
 	docker compose logs --no-color --tail=200
+
+casino-up:
+	docker compose up -d casino-db
+	$(MAKE) migrate-casino
+	docker compose up -d casino-api
 
 core-up:
 	$(CORE_COMPOSE) up -d
@@ -291,6 +296,11 @@ casino-dbcheck:
 		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	fi
 
+health-casino:
+	$(MAKE) casino-up
+	$(MAKE) casino-dbcheck
+	@curl -fsS "http://127.0.0.1:$${CASINO_API_PORT:-8082}/healthz" >/dev/null && echo "casino api healthz: ok"
+
 health-runtime:
 	$(MAKE) core-up
 	$(MAKE) core-ps
@@ -300,10 +310,14 @@ health-runtime:
 	$(MAKE) test-active
 	$(MAKE) count-posts-core
 
-health: health-runtime
+health-mvp:
+	$(MAKE) health-runtime
+	$(MAKE) health-casino
+
+health: health-mvp
 
 demo-up:
-	$(MAKE) health-runtime
+	$(MAKE) health-mvp
 	$(MAKE) demo-seed
 
 demo-seed:

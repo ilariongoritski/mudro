@@ -9,51 +9,37 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/goritskimihail/mudro/internal/casino"
-	"github.com/goritskimihail/mudro/internal/casino/repository"
-	"github.com/goritskimihail/mudro/internal/casino/usecase"
-	"github.com/goritskimihail/mudro/internal/config"
-	"github.com/goritskimihail/mudro/pkg/logger"
+	"github.com/goritskimihail/mudro/services/casino/internal/casino"
 )
 
 func Run() {
-	logger.Init("casino")
-	addr := casino.CasinoAddr()
-	dsn := config.DSN()
-	if err := config.ValidateRuntime("casino"); err != nil {
-		log.Fatal(err)
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := casino.OpenPool(ctx)
 	if err != nil {
-		log.Fatalf("pgxpool.New: %v", err)
+		log.Fatalf("casino open pool: %v", err)
 	}
 	defer pool.Close()
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("db ping: %v", err)
+
+	store := casino.NewStore(pool, casino.NewEngine())
+	if err := store.EnsureSeedConfig(ctx); err != nil {
+		log.Fatalf("casino seed config: %v", err)
 	}
 
-	repo := repository.NewPgRepository(pool)
-	service := usecase.NewService(repo)
-	handler := casino.NewServer(service).Router()
-
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      handler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  30 * time.Second,
+		Addr:              casino.Addr(),
+		Handler:           casino.NewHandler(store).Router(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       30 * time.Second,
 	}
 
 	go func() {
-		log.Printf("casino listening on %s", addr)
+		log.Printf("casino listening on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %v", err)
+			log.Fatalf("casino listen: %v", err)
 		}
 	}()
 
@@ -65,6 +51,6 @@ func Run() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("shutdown error: %v", err)
+		log.Printf("casino shutdown: %v", err)
 	}
 }

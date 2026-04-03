@@ -22,15 +22,18 @@ type Server struct {
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
 	tgVisiblePostIDs []string
+	httpClient       *http.Client
+	casinoServiceURL string
 }
 
 // NewServer constructs a Server with the provided service dependencies.
 func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth.Service) *Server {
 	return &Server{
-		
-		postsSvc:    postsSvc,
-		authSvc:     authSvc,
-		chatHandler: chatHandler,
+		postsSvc:         postsSvc,
+		authSvc:          authSvc,
+		chatHandler:      chatHandler,
+		httpClient:       &http.Client{Timeout: 10 * time.Second},
+		casinoServiceURL: config.CasinoServiceURL(),
 	}
 }
 
@@ -57,6 +60,10 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/auth/login", s.handleAuthLogin)
 		mux.HandleFunc("/api/auth/register", s.handleAuthRegister)
 		mux.HandleFunc("/api/auth/me", s.handleAuthMe)
+		mux.HandleFunc("/api/casino/balance", s.handleCasinoBalance)
+		mux.HandleFunc("/api/casino/history", s.handleCasinoHistory)
+		mux.HandleFunc("/api/casino/spin", s.handleCasinoSpin)
+		mux.HandleFunc("/api/casino/config", s.handleCasinoConfig)
 	}
 	if s.chatHandler != nil {
 		mux.HandleFunc("/api/chat/ws", s.chatHandler.HandleWS)
