@@ -4,11 +4,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index"
+      "destination": "/api/feed"
     },
     {
       "source": "/feed",
-      "destination": "/api/index"
+      "destination": "/api/feed"
     }
   ]
 }
