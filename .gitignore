@@ -76,3 +76,4 @@ frontend/npm-cache/
 .skaro/
 .vscode/
 .kilocode/
+env/
