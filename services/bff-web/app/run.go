@@ -16,13 +16,14 @@ import (
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/goritskimihail/mudro/internal/tgexport"
+	pkgconfig "github.com/goritskimihail/mudro/pkg/config"
 	"github.com/goritskimihail/mudro/services/bff-web/internal/bffweb"
 )
 
 func Run() {
-	addr := envOr("BFF_WEB_ADDR", ":8086")
+	addr := pkgconfig.EnvOr("BFF_WEB_ADDR", ":8086")
 	dsn := config.DSN()
-	movieCatalogURL := envOr("MOVIE_CATALOG_URL", "http://movie-catalog:8091")
+	movieCatalogURL := pkgconfig.EnvOr("MOVIE_CATALOG_URL", "http://movie-catalog:8091")
 
 	if err := config.ValidateRuntime("bff-web"); err != nil {
 		log.Fatal(err)
@@ -56,7 +57,7 @@ func Run() {
 	mux := http.NewServeMux()
 
 	// BFF endpoints
-	bffHandler := bffweb.NewHandler(posts.NewService(pool, tgVisiblePostIDs), envOr("BFF_WEB_API_BASE_URL", config.APIBaseURL()))
+	bffHandler := bffweb.NewHandler(posts.NewService(pool, tgVisiblePostIDs), pkgconfig.EnvOr("BFF_WEB_API_BASE_URL", config.APIBaseURL()))
 	mux.Handle("/api/bff/web/v1/", bffHandler)
 
 	// Movie catalog proxy
@@ -90,9 +91,4 @@ func Run() {
 	}
 }
 
-func envOr(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
+

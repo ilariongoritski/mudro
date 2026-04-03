@@ -19,9 +19,12 @@ export const ChatPage = () => {
     connectionLabel,
     error,
     isLoading,
+    isFetching,
     isSending,
     messages,
+    hasMore,
     refetch,
+    loadMore,
     sendMessage,
   } = useChatRoom({ room: roomName })
 
@@ -51,8 +54,8 @@ export const ChatPage = () => {
             Сообщения сохраняются в базе данных и транслируются через WebSocket всем участникам комнаты.
           </p>
           <div className="chat-page__actions">
-            <button type="button" className="chat-page__action" onClick={() => refetch()}>
-              Обновить историю
+            <button type="button" className="chat-page__action" onClick={() => refetch()} disabled={isLoading}>
+              {isLoading ? 'Загрузка...' : 'Обновить историю'}
             </button>
           </div>
         </div>
@@ -72,7 +75,15 @@ export const ChatPage = () => {
 
       <section className="chat-page__surface">
         <div className="chat-page__messages" aria-live="polite">
-          {isLoading ? <p className="chat-page__empty">Загружаем историю сообщений…</p> : null}
+          {isLoading && messages.length === 0 ? <p className="chat-page__empty">Загружаем историю сообщений…</p> : null}
+
+          {isAuthenticated && hasMore && messages.length > 0 ? (
+            <div className="chat-page__load-more">
+              <button type="button" className="chat-page__load-more-btn" onClick={() => loadMore()} disabled={isFetching}>
+                {isFetching ? 'Загружаем...' : 'Загрузить более старые'}
+              </button>
+            </div>
+          ) : null}
 
           {!isLoading && messages.length === 0 && isAuthenticated ? (
             <p className="chat-page__empty">Комната пуста. Отправьте первое сообщение.</p>

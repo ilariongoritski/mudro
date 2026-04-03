@@ -13,13 +13,14 @@ import (
 
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
+	pkgconfig "github.com/goritskimihail/mudro/pkg/config"
 	"github.com/goritskimihail/mudro/pkg/logger"
 	authapi "github.com/goritskimihail/mudro/services/auth-api/internal/authapi"
 )
 
 func Run() {
 	logger.Init("auth-api")
-	addr := envOr("AUTH_API_ADDR", ":8087")
+	addr := pkgconfig.EnvOr("AUTH_API_ADDR", ":8087")
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("auth-api", "JWT_SECRET"); err != nil {
 		log.Fatal(err)
@@ -69,9 +70,4 @@ func Run() {
 	}
 }
 
-func envOr(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
+

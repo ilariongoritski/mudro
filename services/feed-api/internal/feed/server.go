@@ -17,9 +17,7 @@ import (
 )
 
 // Server is the HTTP delivery layer for the feed domain.
-// pool is kept for comment/like handlers (P1 backlog: extract to usecase layer).
 type Server struct {
-	
 	postsSvc         *posts.Service
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler

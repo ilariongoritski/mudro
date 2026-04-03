@@ -2,7 +2,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 const apiProxyTarget = process.env.MUDRO_API_PROXY_TARGET ?? 'http://127.0.0.1:8080'
 const bffProxyTarget = process.env.MUDRO_BFF_PROXY_TARGET ?? 'http://127.0.0.1:8086'

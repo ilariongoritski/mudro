@@ -10,15 +10,16 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/services/api-gateway/internal/gateway"
+	pkgconfig "github.com/goritskimihail/mudro/pkg/config"
 )
 
 func Run() {
-	addr := envOr("GATEWAY_ADDR", ":8085")
+	addr := pkgconfig.EnvOr("GATEWAY_ADDR", ":8085")
 	handler, err := gateway.NewHandler(gateway.Config{
-		FeedAPIURL:          envOr("GATEWAY_FEED_API_URL", "http://127.0.0.1:8080"),
-		BFFWebURL:           envOr("GATEWAY_BFF_WEB_URL", "http://127.0.0.1:8086"),
-		AuthAPIURL:          envOr("GATEWAY_AUTH_API_URL", "http://127.0.0.1:8087"),
-		OrchestrationAPIURL: envOr("GATEWAY_ORCHESTRATION_API_URL", "http://127.0.0.1:8088"),
+		FeedAPIURL:          pkgconfig.EnvOr("GATEWAY_FEED_API_URL", "http://127.0.0.1:8080"),
+		BFFWebURL:           pkgconfig.EnvOr("GATEWAY_BFF_WEB_URL", "http://127.0.0.1:8086"),
+		AuthAPIURL:          pkgconfig.EnvOr("GATEWAY_AUTH_API_URL", "http://127.0.0.1:8087"),
+		OrchestrationAPIURL: pkgconfig.EnvOr("GATEWAY_ORCHESTRATION_API_URL", "http://127.0.0.1:8088"),
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -51,9 +52,4 @@ func Run() {
 	}
 }
 
-func envOr(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
+

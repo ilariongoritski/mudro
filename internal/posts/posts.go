@@ -174,6 +174,15 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 }
 
 func (s *Service) buildPostsQuery(source, query string, page *int, beforeTS *time.Time, beforeID *int64, limit int, order, comparator string) (string, []any, bool) {
+	// Whitelist guard: only "asc"/"desc" are valid ORDER BY directions.
+	// The comparator must be one of the two keyset-pagination operators.
+	if order != "asc" && order != "desc" {
+		return "", nil, false
+	}
+	if comparator != "<" && comparator != ">" {
+		return "", nil, false
+	}
+
 	base := `
 		select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
 		from posts

@@ -29,4 +29,4 @@ export const chatApi = mudroApi.injectEndpoints({
   }),
 })
 
-export const { useGetChatMessagesQuery, useSendChatMessageMutation } = chatApi
+export const { useGetChatMessagesQuery, useLazyGetChatMessagesQuery, useSendChatMessageMutation } = chatApi

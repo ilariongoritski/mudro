@@ -8,6 +8,8 @@ export const postsApi = mudroApi.injectEndpoints({
     getFront: build.query<FrontResponse, FeedQueryArgs>({
       query: ({ limit, source, sort, q }) => ({
         url: '/front',
+        // 'cache' is a fetch option, not RTK Query cache control.
+        // We use 'no-store' to ensure we bypass browser/CDN caches for the main feed.
         cache: 'no-store',
         params: {
           limit,
@@ -32,6 +34,7 @@ export const postsApi = mudroApi.injectEndpoints({
     getPosts: build.query<FeedResponse, PostsQueryArgs>({
       query: ({ limit, page, source, sort, before_ts, before_id, q }) => ({
         url: '/posts',
+        // Bypass browser cache for post history requests.
         cache: 'no-store',
         params: {
           limit,

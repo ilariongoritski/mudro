@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { useGetChatMessagesQuery, useSendChatMessageMutation } from '@/entities/chat/api/chatApi'
+import { useLazyGetChatMessagesQuery, useSendChatMessageMutation, useGetChatMessagesQuery } from '@/entities/chat/api/chatApi'
 import type { ChatMessage, ChatSocketEvent } from '@/entities/chat/model/types'
 import { env } from '@/shared/config/env'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
@@ -43,32 +43,58 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
   const token = useAppSelector((state) => state.session.token)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [connectionState, setConnectionState] = useState<'idle' | 'connecting' | 'open' | 'closed' | 'error'>('idle')
+  const [hasMore, setHasMore] = useState(true)
 
+  // Initial load
   const {
-    data,
-    isLoading,
-    isFetching,
-    error,
+    data: initialData,
+    isLoading: isInitialLoading,
+    error: initialError,
     refetch,
   } = useGetChatMessagesQuery(
     { room, limit },
     { skip: !token },
   )
+
+  // Lazy query for loading history (older messages)
+  const [triggerLoadMore, { isFetching: isMoreLoading }] = useLazyGetChatMessagesQuery()
+
   const [sendChatMessage, { isLoading: isSending }] = useSendChatMessageMutation()
 
+  // Sync initial data to state
   useEffect(() => {
-    if (!data?.items) {
+    if (initialData?.items) {
+      setMessages((current) => mergeMessages(current, initialData.items))
+      if (initialData.items.length < limit) {
+        setHasMore(false)
+      }
+    }
+  }, [initialData, limit])
+
+  const loadMore = useCallback(async () => {
+    if (isMoreLoading || !hasMore || messages.length === 0) {
       return
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMessages((current) => mergeMessages(current, data.items))
-  }, [data])
+
+    const oldestId = messages[0].id
+    try {
+      const result = await triggerLoadMore({ room, limit, before_id: oldestId }).unwrap()
+      if (result.items.length === 0) {
+        setHasMore(false)
+        return
+      }
+      if (result.items.length < limit) {
+        setHasMore(false)
+      }
+      setMessages((current) => mergeMessages(current, result.items))
+    } catch (err) {
+      console.error('Failed to load more chat messages', err)
+    }
+  }, [isMoreLoading, hasMore, messages, room, limit, triggerLoadMore])
 
   useEffect(() => {
     if (!token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConnectionState('idle')
-       
       setMessages([])
       return
     }
@@ -133,13 +159,15 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
   return {
     room,
     messages,
-    isLoading,
-    isFetching,
-    error,
+    isLoading: isInitialLoading,
+    isFetching: isMoreLoading,
+    error: initialError,
     isSending,
+    hasMore,
     connectionState,
     connectionLabel,
     refetch,
+    loadMore,
     sendMessage,
   }
 }
