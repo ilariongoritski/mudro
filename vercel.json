@@ -1,9 +1,18 @@
 {
   "version": 2,
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "/api/index.go"
+    },
+    {
+      "source": "/feed",
+      "destination": "/api/index.go"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": "/$1"
     }
   ]
 }

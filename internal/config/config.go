@@ -29,6 +29,9 @@ const (
 )
 
 func DSN() string {
+	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
+		return v
+	}
 	return envOr("DSN", DefaultDSN)
 }
 
@@ -76,6 +79,9 @@ func ReportIntervalMinutes() int {
 }
 
 func RepoRoot() string {
+	if os.Getenv("VERCEL") == "1" {
+		return "."
+	}
 	if v := strings.TrimSpace(os.Getenv("MUDRO_ROOT")); v != "" {
 		return v
 	}
