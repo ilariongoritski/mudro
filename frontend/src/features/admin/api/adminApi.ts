@@ -2,6 +2,7 @@ import { mudroApi } from '@/shared/api/mudroApi'
 
 export interface AdminUser {
   id: number | string
+  username?: string
   email: string
   role: string
 }

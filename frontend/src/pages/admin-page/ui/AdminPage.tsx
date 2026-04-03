@@ -1,57 +1,87 @@
 import { useGetAdminStatsQuery, useGetAdminUsersQuery } from '@/features/admin/api/adminApi'
 
+import './AdminPage.css'
+
 export const AdminPage = () => {
   const { data: usersResp, isLoading: usersLoading } = useGetAdminUsersQuery()
   const { data: statsResp, isLoading: statsLoading } = useGetAdminStatsQuery()
+
   const users = usersResp?.status === 'ok' && Array.isArray(usersResp.users) ? usersResp.users : []
   const stats = statsResp ?? null
   const loading = usersLoading || statsLoading
 
-  if (loading) return <div className="p-8">Загрузка панели управления...</div>
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <div className="admin-page__loading">Загружаем панель управления</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="admin-page p-8" style={{ background: '#fff', minHeight: '100vh', color: '#1f2937' }}>
-      <header className="mb-8 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Панель администратора Mudro</h1>
-        <div className="flex gap-4">
-          <div className="stat-card p-4 border rounded shadow-sm bg-gray-50">
-            <div className="text-gray-500 text-sm">Всего пользователей</div>
-            <div className="text-xl font-bold">{users.length}</div>
+    <main className="admin-page">
+      <header className="admin-page__header">
+        <div>
+          <h1 className="admin-page__title">Панель администратора</h1>
+          <p className="admin-page__subtitle">MUDRO · управление пользователями и системой</p>
+        </div>
+
+        <div className="admin-page__stats">
+          <div className="admin-stat-card">
+            <div className="admin-stat-card__label">Пользователей</div>
+            <div className="admin-stat-card__value">{users.length}</div>
           </div>
-          <div className="stat-card p-4 border rounded shadow-sm bg-gray-50">
-            <div className="text-gray-500 text-sm">Активные подписки</div>
-            <div className="text-xl font-bold">{stats?.active_subscriptions || 0}</div>
+          <div className="admin-stat-card">
+            <div className="admin-stat-card__label">Подписки</div>
+            <div className="admin-stat-card__value">{stats?.active_subscriptions ?? 0}</div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="admin-stat-card__label">Админов</div>
+            <div className="admin-stat-card__value">
+              {users.filter((u) => u.role === 'admin').length}
+            </div>
           </div>
         </div>
       </header>
 
-      <section className="users-table">
-        <h2 className="text-xl font-semibold mb-4">Список пользователей</h2>
-        <div className="overflow-x-auto border rounded">
-          <table className="w-full text-left">
-            <thead className="bg-gray-100 border-b">
+      <section className="admin-page__section">
+        <h2 className="admin-page__section-title">Список пользователей</h2>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
               <tr>
-                <th className="p-3">ID</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Роль</th>
-                <th className="p-3">Действия</th>
+                <th>ID</th>
+                <th>Логин</th>
+                <th>Email</th>
+                <th>Роль</th>
+                <th>Действия</th>
               </tr>
             </thead>
             <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--mudro-muted)', padding: '2rem' }}>
+                    Пользователи не найдены
+                  </td>
+                </tr>
+              ) : null}
               {users.map((u) => (
-                <tr key={u.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{u.id}</td>
-                  <td className="p-3">{u.email}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}
-                    >
+                <tr key={u.id}>
+                  <td style={{ opacity: 0.5, fontVariantNumeric: 'tabular-nums' }}>{u.id}</td>
+                  <td style={{ fontWeight: 600 }}>{u.username ?? '—'}</td>
+                  <td style={{ opacity: 0.8 }}>{u.email}</td>
+                  <td>
+                    <span className={`admin-badge ${u.role === 'admin' ? 'admin-badge--admin' : 'admin-badge--user'}`}>
                       {u.role}
                     </span>
                   </td>
-                  <td className="p-3">
-                    <button className="text-blue-600 hover:underline mr-2 text-sm">Сменить роль</button>
-                    <button className="text-red-600 hover:underline text-sm">Забанить</button>
+                  <td>
+                    <button type="button" className="admin-btn admin-btn--role">
+                      Сменить роль
+                    </button>
+                    <button type="button" className="admin-btn admin-btn--ban">
+                      Забанить
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -59,6 +89,6 @@ export const AdminPage = () => {
           </table>
         </div>
       </section>
-    </div>
+    </main>
   )
 }

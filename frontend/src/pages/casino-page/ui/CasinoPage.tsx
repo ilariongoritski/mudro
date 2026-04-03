@@ -9,6 +9,7 @@ import {
   useSpinCasinoMutation,
   useUpdateCasinoConfigMutation,
 } from '@/features/casino/api/casinoApi'
+import { EmojiPickerTrigger } from '@/features/casino/ui/EmojiPicker'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
@@ -38,6 +39,7 @@ export const CasinoPage = () => {
   const [reels, setReels] = useState<string[]>(reelFallback)
   const [spinFeedback, setSpinFeedback] = useState<string | null>(null)
   const [celebrateSpin, setCelebrateSpin] = useState(false)
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null)
   const [rtpDraft, setRtpDraft] = useState<string | null>(null)
   const [initialBalanceDraft, setInitialBalanceDraft] = useState<string | null>(null)
 
@@ -275,6 +277,12 @@ export const CasinoPage = () => {
                       {option}
                     </button>
                   ))}
+                  <EmojiPickerTrigger
+                    onSelect={(emoji) => {
+                      setSelectedEmoji(emoji)
+                      setSpinFeedback(`Реакция ${emoji} выбрана — запусти spin!`)
+                    }}
+                  />
                 </div>
               </div>
 
@@ -282,6 +290,10 @@ export const CasinoPage = () => {
                 <div className="casino-page__summary-tile">
                   <span>Текущая ставка</span>
                   <strong>{bet} credits</strong>
+                </div>
+                <div className="casino-page__summary-tile">
+                  <span>Реакция spin</span>
+                  <strong>{selectedEmoji ?? '—'}</strong>
                 </div>
                 <div className="casino-page__summary-tile">
                   <span>Последний результат</span>
