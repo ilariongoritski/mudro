@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux'
 
 import { useRegisterMutation } from '@/entities/session/api/authApi'
 import { setCredentials } from '@/entities/session/model/sessionSlice'
+import { getErrorMessage } from '@/shared/lib/apiError'
 
 import '@/pages/login-page/ui/Auth.css'
 
@@ -29,6 +30,13 @@ export const RegisterPage = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <Link to="/" className="auth-logo">
+          <span className="auth-logo-mark">M</span>
+          <span className="auth-logo-text">
+            <strong>Mudro</strong>
+            <small>Социальная сеть</small>
+          </span>
+        </Link>
         <h1>Регистрация</h1>
         <p className="auth-subtitle">Создайте аккаунт и сразу войдите в Mudro</p>
         <form onSubmit={handleSubmit} className="auth-form">
@@ -57,7 +65,7 @@ export const RegisterPage = () => {
             className="auth-input"
             minLength={6}
           />
-          {error && <div className="auth-error">Ошибка регистрации. Возможно, логин или email уже заняты.</div>}
+          {error && <div className="auth-error">{getErrorMessage(error, 'Ошибка регистрации. Возможно, логин или email уже заняты.')}</div>}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
           </button>

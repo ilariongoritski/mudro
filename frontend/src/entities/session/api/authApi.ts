@@ -38,6 +38,12 @@ export const authApi = mudroApi.injectEndpoints({
     me: build.query<User, void>({
       query: () => '/auth/me',
     }),
+    refresh: build.mutation<AuthResult, void>({
+      query: () => ({
+        url: '/auth/refresh',
+        method: 'POST',
+      }),
+    }),
     telegramBootstrap: build.mutation<AuthResult, { initData: string }>({
       query: (payload) => ({
         url: '/auth/telegram',
@@ -48,4 +54,4 @@ export const authApi = mudroApi.injectEndpoints({
   }),
 })
 
-export const { useLoginMutation, useRegisterMutation, useMeQuery, useTelegramBootstrapMutation } = authApi
+export const { useLoginMutation, useRegisterMutation, useMeQuery, useRefreshMutation, useTelegramBootstrapMutation } = authApi
