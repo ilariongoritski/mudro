@@ -11,6 +11,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
+	"log/slog"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,13 +39,21 @@ type User struct {
 // Service is the auth usecase layer.
 // It depends only on UserRepository — never on pgx or pgxpool directly.
 type Service struct {
-	repo      UserRepository
-	jwtSecret []byte
+	repo        UserRepository
+	jwtSecret   []byte
+	tokenExpiry time.Duration
 }
 
 // NewService constructs an auth Service with the given repository and JWT secret.
 func NewService(repo UserRepository, secret string) *Service {
-	return &Service{repo: repo, jwtSecret: []byte(secret)}
+	return &Service{repo: repo, jwtSecret: []byte(secret), tokenExpiry: 168 * time.Hour}
+}
+
+// SetTokenExpiry overrides the default 7-day token lifetime.
+func (s *Service) SetTokenExpiry(d time.Duration) {
+	if d > 0 {
+		s.tokenExpiry = d
+	}
 }
 
 // Register creates a new user with the given credentials.
@@ -78,7 +88,7 @@ func (s *Service) IssueToken(user *User) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID,
-		"exp":  time.Now().Add(24 * 7 * time.Hour).Unix(),
+		"exp":  time.Now().Add(s.tokenExpiry).Unix(),
 		"role": user.Role,
 	})
 	return token.SignedString(s.jwtSecret)
@@ -146,7 +156,9 @@ func (s *Service) FindOrCreateTelegramUser(ctx context.Context, telegramID int64
 	loaded, err := s.repo.FindByTelegramID(ctx, telegramID)
 	if err == nil {
 		if name := strings.TrimSpace(telegramUsername); name != "" {
-			_ = s.repo.UpdateTelegramName(ctx, loaded.ID, name)
+			if err := s.repo.UpdateTelegramName(ctx, loaded.ID, name); err != nil {
+				slog.Error("update telegram name", "user_id", loaded.ID, "err", err)
+			}
 			loaded.TelegramName = &name
 		}
 		s.fillPremiumStatus(ctx, loaded)

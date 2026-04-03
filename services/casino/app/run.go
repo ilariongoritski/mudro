@@ -15,9 +15,11 @@ import (
 	"github.com/goritskimihail/mudro/internal/casino/repository"
 	"github.com/goritskimihail/mudro/internal/casino/usecase"
 	"github.com/goritskimihail/mudro/internal/config"
+	"github.com/goritskimihail/mudro/pkg/logger"
 )
 
 func Run() {
+	logger.Init("casino")
 	addr := casino.CasinoAddr()
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("casino"); err != nil {

@@ -21,12 +21,14 @@ func NewHandler(authHandlers *AuthHandlers, adminHandlers *AdminHandlers) http.H
 		mux.HandleFunc("/api/v1/auth/telegram", authHandlers.HandleTelegramAuth)
 		mux.HandleFunc("/api/v1/auth/logout", authHandlers.HandleLogout)
 		mux.HandleFunc("/api/v1/auth/me", authHandlers.AuthMiddleware(authHandlers.HandleMe))
+		mux.HandleFunc("/api/v1/auth/refresh", authHandlers.AuthMiddleware(authHandlers.HandleRefresh))
 	} else {
 		mux.HandleFunc("/api/v1/auth/register", serviceUnavailable)
 		mux.HandleFunc("/api/v1/auth/login", serviceUnavailable)
 		mux.HandleFunc("/api/v1/auth/telegram", serviceUnavailable)
 		mux.HandleFunc("/api/v1/auth/logout", serviceUnavailable)
 		mux.HandleFunc("/api/v1/auth/me", serviceUnavailable)
+		mux.HandleFunc("/api/v1/auth/refresh", serviceUnavailable)
 	}
 
 	if authHandlers != nil && adminHandlers != nil {

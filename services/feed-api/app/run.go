@@ -17,10 +17,12 @@ import (
 
 	"github.com/goritskimihail/mudro/internal/config"
 	"github.com/goritskimihail/mudro/internal/ratelimit"
+	"github.com/goritskimihail/mudro/pkg/logger"
 	"github.com/goritskimihail/mudro/services/feed-api/internal/wiring"
 )
 
 func Run() {
+	logger.Init("feed-api")
 	addr := config.APIAddr()
 	dsn := config.DSN()
 	if err := config.ValidateRuntime("api"); err != nil {

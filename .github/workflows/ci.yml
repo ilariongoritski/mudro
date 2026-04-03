@@ -104,3 +104,22 @@ jobs:
 
       - name: Validate Claude role runner
         run: python -m py_compile ./scripts/claude/run_role_matrix.py
+
+  # ─── golangci-lint ──────────────────────────────────────────────
+  go-lint:
+    name: Go — Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.0
+          args: --timeout=5m

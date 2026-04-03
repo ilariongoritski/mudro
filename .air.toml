@@ -1,0 +1,37 @@
+# .air.toml — Hot reload for feed-api (services/feed-api)
+# Run: air -c .air.toml  (from repo root)
+# Requires: go install github.com/air-verse/air@latest
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Entry point for the feed-api service
+  cmd = "go build -o ./tmp/feed-api ./cmd/api"
+  bin = "./tmp/feed-api"
+  full_bin = "./tmp/feed-api"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir  = [
+    "tmp", "vendor", "frontend", ".agents", ".codex",
+    "migrations", "contracts", "docs", "scripts",
+    "services/auth-api", "services/casino", "services/agent",
+    "services/bot", "services/feed-api/internal/chat"
+  ]
+  include_dir  = ["cmd", "internal"]
+  exclude_regex = ["_test\\.go$"]
+  delay = 1000        # ms debounce
+  stop_on_error = true
+  send_interrupt = true
+
+[log]
+  time = true
+  main_only = false
+
+[color]
+  main    = "magenta"
+  watcher = "cyan"
+  build   = "yellow"
+  runner  = "green"
+
+[misc]
+  clean_on_exit = true

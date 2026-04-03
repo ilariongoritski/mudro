@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/goritskimihail/mudro/internal/auth"
 	"github.com/goritskimihail/mudro/internal/config"
@@ -22,7 +24,7 @@ var errUnauthorized = errors.New("unauthorized")
 
 type Module struct {
 	repo   *Repository
-	hub    *Hub
+	hub    Broadcaster
 	auth   *auth.Service
 	cancel context.CancelFunc
 	mux    *http.ServeMux
@@ -30,7 +32,19 @@ type Module struct {
 
 func NewModule(pool *pgxpool.Pool) (*Module, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	hub := NewHub()
+
+	var hub Broadcaster
+	if config.ChatHubBackend() == "redis" {
+		rdb := redis.NewClient(&redis.Options{
+			Addr:     config.RedisAddr(),
+			Password: config.RedisPassword(),
+			DB:       config.RedisDB(),
+		})
+		slog.Info("chat: using Redis Pub/Sub hub", "addr", config.RedisAddr())
+		hub = NewRedisHub(rdb)
+	} else {
+		hub = NewHub()
+	}
 	hub.Start(ctx)
 
 	module := &Module{
@@ -63,7 +77,8 @@ func (m *Module) handleMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := m.currentUserFromRequest(r)
+	// REST endpoints: only accept token from Authorization header (not query params).
+	user, err := m.authenticateFromHeader(r)
 	if err != nil {
 		http.Error(w, errUnauthorized.Error(), http.StatusUnauthorized)
 		return
@@ -130,7 +145,7 @@ func (m *Module) handleCreateMessage(w http.ResponseWriter, r *http.Request, use
 }
 
 func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {
-	user, err := m.currentUserFromRequest(r)
+	user, err := m.authenticateForWS(r)
 	if err != nil {
 		http.Error(w, errUnauthorized.Error(), http.StatusUnauthorized)
 		return
@@ -169,7 +184,9 @@ func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: time.Now().UTC(),
 		},
 	})
-	_ = client.Enqueue(readyPayload)
+	if !client.Enqueue(readyPayload) {
+		slog.Warn("chat: failed to enqueue ready payload", "user_id", user.ID, "room", room)
+	}
 
 	go client.WritePump(func() {
 		m.hub.Unregister(room, client)
@@ -179,11 +196,24 @@ func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (m *Module) currentUserFromRequest(r *http.Request) (*auth.User, error) {
+// authenticateFromHeader extracts the JWT exclusively from the Authorization header.
+// Use this for REST endpoints where tokens must not appear in URLs.
+func (m *Module) authenticateFromHeader(r *http.Request) (*auth.User, error) {
+	tokenString := parseBearerToken(r.Header.Get("Authorization"))
+	return m.authenticateToken(r.Context(), tokenString)
+}
+
+// authenticateForWS extracts the JWT from query params (required for WebSocket,
+// since the browser WebSocket API does not support custom headers).
+func (m *Module) authenticateForWS(r *http.Request) (*auth.User, error) {
 	tokenString := strings.TrimSpace(r.URL.Query().Get("token"))
 	if tokenString == "" {
 		tokenString = parseBearerToken(r.Header.Get("Authorization"))
 	}
+	return m.authenticateToken(r.Context(), tokenString)
+}
+
+func (m *Module) authenticateToken(ctx context.Context, tokenString string) (*auth.User, error) {
 	if tokenString == "" {
 		return nil, errUnauthorized
 	}
@@ -198,7 +228,7 @@ func (m *Module) currentUserFromRequest(r *http.Request) (*auth.User, error) {
 		return nil, errUnauthorized
 	}
 
-	user, err := m.auth.GetUserByID(r.Context(), userID)
+	user, err := m.auth.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, errUnauthorized
 	}
@@ -301,22 +331,34 @@ func normalizeRoom(raw string) string {
 }
 
 func isAllowedOrigin(origin string) bool {
-	parsedOrigin, err := url.Parse(origin)
-	if err != nil {
-		return false
+	// Use explicitly configured origins when available.
+	for _, allowed := range config.CORSAllowedOrigins() {
+		if allowed == "*" || strings.EqualFold(strings.TrimSpace(allowed), origin) {
+			return true
+		}
 	}
 
-	allowedHosts := map[string]struct{}{
-		"127.0.0.1:5173": {},
-		"localhost:5173": {},
+	// In dev mode, allow localhost variants.
+	if config.MudroEnv() == "" || config.MudroEnv() == "dev" || config.MudroEnv() == "development" {
+		parsedOrigin, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		host := parsedOrigin.Hostname()
+		if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+			return true
+		}
 	}
 
+	// Also allow API's own origin.
 	if apiBase, err := url.Parse(config.APIBaseURL()); err == nil && apiBase.Host != "" {
-		allowedHosts[apiBase.Host] = struct{}{}
+		parsedOrigin, err := url.Parse(origin)
+		if err == nil && parsedOrigin.Host == apiBase.Host {
+			return true
+		}
 	}
 
-	_, ok := allowedHosts[parsedOrigin.Host]
-	return ok
+	return false
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

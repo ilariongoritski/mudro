@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, RouterProvider as RRProvider } from 'rea
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
+import { AppLayout } from '@/widgets/layout/ui/AppLayout'
 import { FeedPage } from '@/pages/feed-page/ui/FeedPage'
 import { LoginPage } from '@/pages/login-page/ui/LoginPage'
 import { NotFoundPage } from '@/pages/not-found-page/ui/NotFoundPage'
@@ -24,17 +25,19 @@ const ChatPage = lazy(() =>
 const OrchestrationPage = lazy(() =>
   import('@/pages/orchestration-page/ui/OrchestrationPage').then((module) => ({ default: module.OrchestrationPage })),
 )
+const MoviesPage = lazy(() => import('@/pages/movies-page/ui/MoviesPage'))
+const ProfilePage = lazy(() => import('@/pages/profile-page/ui/ProfilePage'))
 
 const suspenseWrap = (children: ReactNode) => (
-  <Suspense fallback={<div className="p-6 text-sm text-slate-500">Загрузка интерфейса...</div>}>{children}</Suspense>
+  <Suspense fallback={<div className="p-6 text-sm" style={{ color: 'var(--mudro-muted)' }}>Загрузка...</div>}>{children}</Suspense>
 )
 
 const casinoBoundaryWrap = (children: ReactNode) => (
   <ErrorBoundary
     fallback={
-      <div className="m-4 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
+      <div className="m-4 rounded-2xl border border-rose-900 bg-rose-950 p-6 text-rose-300">
         <h2 className="m-0 text-lg font-semibold">Ошибка модуля казино</h2>
-        <p className="mb-0 mt-2 text-sm">Обновите страницу или вернитесь в ленту. Основной интерфейс продолжит работу.</p>
+        <p className="mb-0 mt-2 text-sm">Обновите страницу или вернитесь в ленту.</p>
       </div>
     }
   >
@@ -44,16 +47,9 @@ const casinoBoundaryWrap = (children: ReactNode) => (
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
-
   if (isAuthenticated) {
     return <Navigate to="/" replace />
   }
-  return <>{children}</>
-}
-
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
-  if (!isAuthenticated) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -66,6 +62,7 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
 
 export const AppRouterProvider = () => {
   const router = createBrowserRouter([
+    // Публичные роуты вне AppLayout
     {
       path: '/login',
       element: (
@@ -83,22 +80,6 @@ export const AppRouterProvider = () => {
       ),
     },
     {
-      path: '/',
-      element: <FeedPage />,
-    },
-    {
-      path: '/chat',
-      element: (
-        <ProtectedRoute>
-          {suspenseWrap(<ChatPage />)}
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: '/casino',
-      element: casinoBoundaryWrap(<CasinoPage />),
-    },
-    {
       path: '/tma/casino',
       element: casinoBoundaryWrap(<CasinoMiniAppPage />),
     },
@@ -106,17 +87,43 @@ export const AppRouterProvider = () => {
       path: '/casino/miniapp',
       element: <Navigate to="/tma/casino" replace />,
     },
+    // Все основные страницы — под AppLayout
     {
-      path: '/orchestration',
-      element: suspenseWrap(<OrchestrationPage />),
-    },
-    {
-      path: '/admin',
-      element: (
-        <AdminRoute>
-          {suspenseWrap(<AdminPage />)}
-        </AdminRoute>
-      ),
+      element: <AppLayout />,
+      children: [
+        {
+          path: '/',
+          element: <FeedPage />,
+        },
+        {
+          path: '/chat',
+          element: suspenseWrap(<ChatPage />),
+        },
+        {
+          path: '/casino',
+          element: casinoBoundaryWrap(<CasinoPage />),
+        },
+        {
+          path: '/movies',
+          element: suspenseWrap(<MoviesPage />),
+        },
+        {
+          path: '/profile',
+          element: suspenseWrap(<ProfilePage />),
+        },
+        {
+          path: '/orchestration',
+          element: suspenseWrap(<OrchestrationPage />),
+        },
+        {
+          path: '/admin',
+          element: (
+            <AdminRoute>
+              {suspenseWrap(<AdminPage />)}
+            </AdminRoute>
+          ),
+        },
+      ],
     },
     {
       path: '*',

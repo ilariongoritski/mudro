@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux'
 
 import { useLoginMutation } from '@/entities/session/api/authApi'
 import { setCredentials } from '@/entities/session/model/sessionSlice'
+import { getErrorMessage } from '@/shared/lib/apiError'
 
 import '@/pages/login-page/ui/Auth.css'
 
@@ -28,8 +29,15 @@ export const LoginPage = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1>Вход в Mudro</h1>
-        <p className="auth-subtitle">Investor-ready archive and casino MVP</p>
+        <Link to="/" className="auth-logo">
+          <span className="auth-logo-mark">M</span>
+          <span className="auth-logo-text">
+            <strong>Mudro</strong>
+            <small>Социальная сеть</small>
+          </span>
+        </Link>
+        <h1>Вход</h1>
+        <p className="auth-subtitle">Войдите, чтобы получить доступ к мессенджеру и казино</p>
         <form onSubmit={handleSubmit} className="auth-form">
           <input
             type="text"
@@ -47,7 +55,7 @@ export const LoginPage = () => {
             required
             className="auth-input"
           />
-          {error && <div className="auth-error">Ошибка авторизации. Проверьте логин, email и пароль.</div>}
+          {error && <div className="auth-error">{getErrorMessage(error, 'Неверный логин или пароль.')}</div>}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Входим...' : 'Войти'}
           </button>

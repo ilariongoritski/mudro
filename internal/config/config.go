@@ -213,6 +213,17 @@ func KafkaTopicTasks() string {
 
 // CORSAllowedOrigins returns the list of explicitly allowed CORS origins
 // from the CORS_ALLOWED_ORIGINS env var (comma-separated). Returns nil when unset.
+// ChatHubBackend returns the backend for the WebSocket chat hub.
+// "redis" enables Redis Pub/Sub for multi-instance deployments.
+// Defaults to "memory" (in-process, single instance).
+func ChatHubBackend() string {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("CHAT_HUB_BACKEND")))
+	if v == "redis" {
+		return "redis"
+	}
+	return "memory"
+}
+
 func CORSAllowedOrigins() []string {
 	raw := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
 	if raw == "" {
@@ -227,6 +238,15 @@ func CORSAllowedOrigins() []string {
 		}
 	}
 	return out
+}
+
+func JWTExpiryHours() int {
+	if v := strings.TrimSpace(os.Getenv("JWT_EXPIRY_HOURS")); v != "" {
+		if n, ok := parsePositiveInt(v); ok {
+			return n
+		}
+	}
+	return 168 // 7 days
 }
 
 func JWTSecret() string {

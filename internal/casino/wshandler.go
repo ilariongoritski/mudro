@@ -3,6 +3,7 @@ package casino
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -66,8 +67,9 @@ func (h *WSHub) HandleUpgrade(w http.ResponseWriter, r *http.Request) {
 	h.conns[userID] = append(h.conns[userID], conn)
 	h.mu.Unlock()
 
-	// Send ready
-	_ = conn.WriteJSON(map[string]any{"type": "connection:ready", "userId": userID})
+	if err := conn.WriteJSON(map[string]any{"type": "connection:ready", "userId": userID}); err != nil {
+		slog.Debug("ws: send ready failed", "user_id", userID, "err", err)
+	}
 
 	// Read loop (keep alive, handle close)
 	go func() {
@@ -110,6 +112,8 @@ func (h *WSHub) Emit(userID, eventType string, payload any) {
 	h.mu.RUnlock()
 
 	for _, conn := range conns {
-		_ = conn.WriteMessage(websocket.TextMessage, data)
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			slog.Debug("ws: broadcast write failed", "user_id", userID, "err", err)
+		}
 	}
 }

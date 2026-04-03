@@ -55,7 +55,7 @@ func NewHandler(repo *Repository, hub *Hub, authService *auth.Service) *Handler 
 }
 
 func (h *Handler) HandleWS(w http.ResponseWriter, r *http.Request) {
-	user, err := h.authenticate(r)
+	user, err := h.authenticateWS(r)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -96,7 +96,7 @@ func (h *Handler) HandleWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleHistory(w http.ResponseWriter, r *http.Request) {
-	if _, err := h.authenticate(r); err != nil {
+	if _, err := h.authenticateFromHeader(r); err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -118,12 +118,21 @@ func (h *Handler) HandleHistory(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(messages)
 }
 
-func (h *Handler) authenticate(r *http.Request) (*auth.User, error) {
+// authenticateWS extracts token from query params (needed for WebSocket) or header.
+func (h *Handler) authenticateWS(r *http.Request) (*auth.User, error) {
+	return h.doAuthenticate(r, extractTokenForWS(r))
+}
+
+// authenticateFromHeader extracts token only from Authorization header (for REST endpoints).
+func (h *Handler) authenticateFromHeader(r *http.Request) (*auth.User, error) {
+	return h.doAuthenticate(r, extractTokenFromHeader(r))
+}
+
+func (h *Handler) doAuthenticate(r *http.Request, token string) (*auth.User, error) {
 	if h.auth == nil {
 		return nil, errors.New("chat auth service is required")
 	}
 
-	token := extractToken(r)
 	if token == "" && config.MudroEnv() == "dev" {
 		return &auth.User{
 			ID:       0,
@@ -145,17 +154,23 @@ func (h *Handler) authenticate(r *http.Request) (*auth.User, error) {
 	return h.auth.GetUserByID(r.Context(), subject)
 }
 
-func extractToken(r *http.Request) string {
-	if token := strings.TrimSpace(r.URL.Query().Get("token")); token != "" {
-		return token
-	}
-
+// extractTokenFromHeader extracts JWT from the Authorization header only.
+func extractTokenFromHeader(r *http.Request) string {
 	header := strings.TrimSpace(r.Header.Get("Authorization"))
 	if strings.HasPrefix(strings.ToLower(header), "bearer ") {
 		return strings.TrimSpace(header[7:])
 	}
-
 	return ""
+}
+
+// extractTokenForWS extracts JWT from query params (required for WebSocket,
+// since the browser WebSocket API does not support custom headers),
+// falling back to Authorization header.
+func extractTokenForWS(r *http.Request) string {
+	if token := strings.TrimSpace(r.URL.Query().Get("token")); token != "" {
+		return token
+	}
+	return extractTokenFromHeader(r)
 }
 
 func parseSubject(value any) (int64, error) {

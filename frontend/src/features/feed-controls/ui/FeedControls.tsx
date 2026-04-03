@@ -1,6 +1,5 @@
 import { setLimit, setQuery, setSort, setSource } from '../model/feedFiltersSlice'
 import type { FeedSort, FeedSource } from '@/entities/post/model/types'
-import { formatDateTime } from '@/shared/lib/format/date'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 
 import './FeedControls.css'
@@ -22,7 +21,6 @@ interface FeedControlsProps {
   totalPosts?: number
   vkPosts?: number
   tgPosts?: number
-  lastSyncAt?: string
 }
 
 const sourceStateLabel: Record<FeedSource, string> = {
@@ -36,7 +34,7 @@ const sortStateLabel: Record<FeedSort, string> = {
   asc: 'Сначала старые',
 }
 
-export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyncAt }: FeedControlsProps) => {
+export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0 }: FeedControlsProps) => {
   const dispatch = useAppDispatch()
   const { source, sort, limit, query } = useAppSelector((state) => state.feedFilters)
   const user = useAppSelector((state) => state.session.user)
@@ -72,10 +70,6 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0, lastSyn
             <div className="feed-controls__stat">
               <span>Telegram</span>
               <strong>{tgPosts}</strong>
-            </div>
-            <div className="feed-controls__stat">
-              <span>Последний sync</span>
-              <strong>{lastSyncAt ? formatDateTime(lastSyncAt) : '—'}</strong>
             </div>
           </div>
         </div>

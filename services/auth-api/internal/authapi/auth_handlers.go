@@ -249,6 +249,36 @@ func (h *AuthHandlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleRefresh issues a new JWT using the current (still valid) token.
+func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	user := UserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	token, err := h.authSvc.IssueToken(user)
+	if err != nil {
+		log.Printf("auth refresh token: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		Token: token,
+		User: meResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+			IsPremium: user.IsPremium,
+		},
+	})
+}
+
 // HandleLogout returns 200 for stateless JWT auth; client clears local token.
 func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { useChatRoom } from '@/features/chat/model/useChatRoom'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
+import { getErrorMessage } from '@/shared/lib/apiError'
 
 import './ChatPage.css'
 
@@ -10,7 +11,10 @@ const roomName = 'main'
 
 export const ChatPage = () => {
   const [draft, setDraft] = useState('')
+  const [sendError, setSendError] = useState<string | null>(null)
   const currentUser = useAppSelector((state) => state.session.user)
+  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
+
   const {
     connectionLabel,
     error,
@@ -27,11 +31,13 @@ export const ChatPage = () => {
       return
     }
 
+    setSendError(null)
     try {
       await sendMessage(draft)
       setDraft('')
-    } catch (err) {
-      console.error('Chat send failed', err)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Не удалось отправить сообщение.'
+      setSendError(msg)
     }
   }
 
@@ -39,16 +45,12 @@ export const ChatPage = () => {
     <main className="chat-page mudro-fade-up">
       <section className="chat-page__hero">
         <div className="chat-page__copy">
-          <span className="chat-page__eyebrow">Mudro chat</span>
-          <h1 className="chat-page__title">Realtime-комната поверх текущего feed-api runtime.</h1>
+          <span className="chat-page__eyebrow">Мессенджер</span>
+          <h1 className="chat-page__title">Общий чат в реальном времени.</h1>
           <p className="chat-page__lead">
-            Первый merge не трогает gateway и BFF: история идёт через Postgres, события приходят по WebSocket, а доступ
-            остаётся только для авторизованных пользователей.
+            Сообщения сохраняются в базе данных и транслируются через WebSocket всем участникам комнаты.
           </p>
           <div className="chat-page__actions">
-            <Link to="/" className="chat-page__action chat-page__action_secondary">
-              Вернуться в ленту
-            </Link>
             <button type="button" className="chat-page__action" onClick={() => refetch()}>
               Обновить историю
             </button>
@@ -57,13 +59,13 @@ export const ChatPage = () => {
 
         <div className="chat-page__status-card">
           <span className="chat-page__status-label">Состояние</span>
-          <strong>{connectionLabel}</strong>
+          <strong>{isAuthenticated ? connectionLabel : 'Гость'}</strong>
           <p>
             Комната: <code>{roomName}</code>
           </p>
           <p>
-            Пользователь:{' '}
-            <strong>{currentUser?.username ?? 'session token loaded'}</strong>
+            Участник:{' '}
+            <strong>{currentUser?.username ?? 'Не авторизован'}</strong>
           </p>
         </div>
       </section>
@@ -72,8 +74,12 @@ export const ChatPage = () => {
         <div className="chat-page__messages" aria-live="polite">
           {isLoading ? <p className="chat-page__empty">Загружаем историю сообщений…</p> : null}
 
-          {!isLoading && messages.length === 0 ? (
-            <p className="chat-page__empty">Комната пуста. Отправь первое сообщение и проверь broadcast в другой сессии.</p>
+          {!isLoading && messages.length === 0 && isAuthenticated ? (
+            <p className="chat-page__empty">Комната пуста. Отправьте первое сообщение.</p>
+          ) : null}
+
+          {!isLoading && !isAuthenticated && messages.length === 0 ? (
+            <p className="chat-page__empty">Войдите в аккаунт, чтобы видеть историю и отправлять сообщения.</p>
           ) : null}
 
           {messages.map((message) => {
@@ -94,26 +100,37 @@ export const ChatPage = () => {
           })}
         </div>
 
-        <form className="chat-page__composer" onSubmit={handleSubmit}>
-          <label className="chat-page__composer-label" htmlFor="chat-body">
-            Сообщение
-          </label>
-          <textarea
-            id="chat-body"
-            className="chat-page__textarea"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Напиши короткое сообщение в main room"
-            rows={4}
-          />
-          {error ? <p className="chat-page__error">Не удалось синхронизировать чат. Проверь auth и feed-api.</p> : null}
-          <div className="chat-page__composer-actions">
-            <span className="chat-page__hint">Сообщения пишутся в Postgres и раздаются через WebSocket.</span>
-            <button type="submit" className="chat-page__submit" disabled={isSending || !draft.trim()}>
-              {isSending ? 'Отправляем…' : 'Отправить'}
-            </button>
+        {isAuthenticated ? (
+          <form className="chat-page__composer" onSubmit={handleSubmit}>
+            <label className="chat-page__composer-label" htmlFor="chat-body">
+              Сообщение
+            </label>
+            <textarea
+              id="chat-body"
+              className="chat-page__textarea"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Напишите сообщение..."
+              rows={4}
+            />
+            {error ? <p className="chat-page__error">{getErrorMessage(error, 'Не удалось синхронизировать чат.')}</p> : null}
+            {sendError ? <p className="chat-page__error">{sendError}</p> : null}
+            <div className="chat-page__composer-actions">
+              <span className="chat-page__hint">Все участники видят сообщения в реальном времени.</span>
+              <button type="submit" className="chat-page__submit" disabled={isSending || !draft.trim()}>
+                {isSending ? 'Отправляем…' : 'Отправить'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="chat-page__guest-cta">
+            <p className="chat-page__guest-text">Войдите в аккаунт, чтобы писать в чат</p>
+            <div className="chat-page__guest-actions">
+              <Link to="/login" className="chat-page__submit">Войти</Link>
+              <Link to="/register" className="chat-page__action chat-page__action_secondary">Зарегистрироваться</Link>
+            </div>
           </div>
-        </form>
+        )}
       </section>
     </main>
   )

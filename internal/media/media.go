@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -198,7 +199,9 @@ order by l.post_id asc, l.position asc, a.id asc
 			item.Title = *title
 		}
 		if len(extraRaw) > 0 {
-			_ = json.Unmarshal(extraRaw, &item.Extra)
+			if err := json.Unmarshal(extraRaw, &item.Extra); err != nil {
+				slog.Error("unmarshal media extra", "err", err)
+			}
 		}
 		grouped[postID] = append(grouped[postID], item)
 	}
@@ -247,7 +250,9 @@ order by l.comment_id asc, l.position asc, a.id asc
 			item.Title = *title
 		}
 		if len(extraRaw) > 0 {
-			_ = json.Unmarshal(extraRaw, &item.Extra)
+			if err := json.Unmarshal(extraRaw, &item.Extra); err != nil {
+				slog.Error("unmarshal media extra", "err", err)
+			}
 		}
 		grouped[commentID] = append(grouped[commentID], item)
 	}

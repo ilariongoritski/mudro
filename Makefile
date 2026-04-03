@@ -116,6 +116,12 @@ migrate-all:
 		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
 	done
 
+migrate-down:
+	@for f in $$(ls $(MIGRATIONS_DIR)/*.down.sql | sort -r); do \
+		echo "==> rolling back $$f"; \
+		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
+	done
+
 migrate-agent:
 ifeq ($(USE_DOCKER_PSQL),1)
 	cat "$(AGENT_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
@@ -190,6 +196,12 @@ check: lint test
 
 validate-contracts:
 	$(GO) run ./tools/validate-contracts -dir ./contracts
+
+validate-openapi:
+	@for f in contracts/http/*.yaml; do \
+		echo "==> validating $$f"; \
+		npx --yes @redocly/cli lint "$$f" --format=summary || exit $$?; \
+	done
 
 validate-microservices:
 	$(MAKE) test-active
