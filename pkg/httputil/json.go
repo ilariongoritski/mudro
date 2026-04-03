@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // WriteJSON serializes payload as JSON and writes it to the response.
@@ -14,13 +15,19 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-// HandleHealth returns a standard /healthz handler.
+// HandleHealth returns a standard /healthz handler with uptime info.
 func HandleHealth(serviceName string) http.HandlerFunc {
-	body := map[string]string{"status": "ok"}
-	if serviceName != "" {
-		body["service"] = serviceName
-	}
+	startedAt := time.Now()
 	return func(w http.ResponseWriter, _ *http.Request) {
+		uptime := time.Since(startedAt).Truncate(time.Second)
+		body := map[string]string{
+			"status":     "ok",
+			"started_at": startedAt.UTC().Format(time.RFC3339),
+			"uptime":     uptime.String(),
+		}
+		if serviceName != "" {
+			body["service"] = serviceName
+		}
 		WriteJSON(w, http.StatusOK, body)
 	}
 }

@@ -5,7 +5,7 @@
   --mudro-card-strong: rgba(35, 20, 45, 0.85);
   --mudro-line: rgba(255, 105, 180, 0.15);
   --mudro-text: #f0f0f0;
-  --mudro-muted: #a095ad;
+  --mudro-muted: #b8aec4; /* повышен с #a095ad для контраста ≥4.5:1 на фоне #0f0a14 */
   --mudro-accent: #ff1493;
   --mudro-accent-glow: rgba(255, 20, 147, 0.4);
   --mudro-casino-pink: #ff1493;

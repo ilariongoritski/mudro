@@ -1,4 +1,22 @@
-﻿.mudro-app-shell {
+﻿.skip-to-main {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: var(--mudro-accent);
+  color: #fff;
+  font-weight: 600;
+  z-index: 9999;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+  transition: top 0.1s;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
+
+.mudro-app-shell {
   min-height: 100vh;
   display: flex;
   background:

@@ -117,6 +117,7 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0 }: FeedC
                   key={option.value}
                   type="button"
                   onClick={() => dispatch(setSource(option.value))}
+                  aria-pressed={source === option.value}
                   className={`feed-pill ${source === option.value ? 'feed-pill_active' : ''}`}
                 >
                   <span className="feed-pill__badge">{option.badge}</span>
@@ -134,6 +135,7 @@ export const FeedControls = ({ totalPosts = 0, vkPosts = 0, tgPosts = 0 }: FeedC
                   key={option.value}
                   type="button"
                   onClick={() => dispatch(setSort(option.value))}
+                  aria-pressed={sort === option.value}
                   className={`feed-pill ${sort === option.value ? 'feed-pill_active' : ''}`}
                 >
                   {option.label}

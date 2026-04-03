@@ -7,10 +7,11 @@ import './layout.css'
 export const AppLayout = () => {
   return (
     <div className="mudro-app-shell">
+      <a href="#mudro-main-content" className="skip-to-main">Перейти к основному содержимому</a>
       <Sidebar />
       <div className="mudro-app-shell__workspace">
         <TopBar />
-        <main className="mudro-app-shell__main">
+        <main id="mudro-main-content" className="mudro-app-shell__main">
           <Outlet />
         </main>
       </div>

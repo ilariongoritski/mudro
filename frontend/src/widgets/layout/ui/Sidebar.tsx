@@ -66,9 +66,9 @@ export const Sidebar = () => {
             <button
               onClick={() => dispatch(logout())}
               className="mudro-sidebar__logout"
-              title="Выйти"
+              aria-label="Выйти из аккаунта"
             >
-              <LogOut size={16} />
+              <LogOut size={16} aria-hidden="true" />
             </button>
           </div>
         ) : (

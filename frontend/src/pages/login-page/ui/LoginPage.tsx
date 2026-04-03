@@ -39,23 +39,33 @@ export const LoginPage = () => {
         <h1>Вход</h1>
         <p className="auth-subtitle">Войдите, чтобы получить доступ к мессенджеру и казино</p>
         <form onSubmit={handleSubmit} className="auth-form">
+          <label htmlFor="login-username" className="sr-only">Логин или email</label>
           <input
+            id="login-username"
             type="text"
             placeholder="Логин или email"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
             required
+            autoComplete="username"
             className="auth-input"
           />
+          <label htmlFor="login-password" className="sr-only">Пароль</label>
           <input
+            id="login-password"
             type="password"
             placeholder="Пароль"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
             className="auth-input"
           />
-          {error && <div className="auth-error">{getErrorMessage(error, 'Неверный логин или пароль.')}</div>}
+          {error && (
+            <div className="auth-error" role="alert" aria-live="assertive">
+              {getErrorMessage(error, 'Неверный логин или пароль.')}
+            </div>
+          )}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Входим...' : 'Войти'}
           </button>

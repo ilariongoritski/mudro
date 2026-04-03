@@ -40,32 +40,45 @@ export const RegisterPage = () => {
         <h1>Регистрация</h1>
         <p className="auth-subtitle">Создайте аккаунт и сразу войдите в Mudro</p>
         <form onSubmit={handleSubmit} className="auth-form">
+          <label htmlFor="reg-login" className="sr-only">Логин</label>
           <input
+            id="reg-login"
             type="text"
             placeholder="Логин"
             value={login}
             onChange={(e) => setLogin(e.target.value)}
             required
+            autoComplete="username"
             className="auth-input"
           />
+          <label htmlFor="reg-email" className="sr-only">Email</label>
           <input
+            id="reg-email"
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
             className="auth-input"
           />
+          <label htmlFor="reg-password" className="sr-only">Пароль (минимум 6 символов)</label>
           <input
+            id="reg-password"
             type="password"
             placeholder="Пароль (мин. 6 символов)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="new-password"
             className="auth-input"
             minLength={6}
           />
-          {error && <div className="auth-error">{getErrorMessage(error, 'Ошибка регистрации. Возможно, логин или email уже заняты.')}</div>}
+          {error && (
+            <div className="auth-error" role="alert" aria-live="assertive">
+              {getErrorMessage(error, 'Ошибка регистрации. Возможно, логин или email уже заняты.')}
+            </div>
+          )}
           <button type="submit" disabled={isLoading} className="auth-button">
             {isLoading ? 'Создаём аккаунт...' : 'Зарегистрироваться'}
           </button>

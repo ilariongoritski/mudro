@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import type { Post, PostComment } from "@/entities/post/model/types";
 import {
@@ -34,21 +34,55 @@ const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
   return normalizeReactions(reactions);
 };
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
+  const panelRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     if (!post) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+    // Save trigger element to restore focus on close
+    const triggerEl = document.activeElement as HTMLElement | null;
+
+    // Move focus into the panel
+    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    firstFocusable?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
 
-    window.addEventListener("keydown", handleEscape);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("keydown", handleKeyDown);
+      triggerEl?.focus();
     };
   }, [post, onClose]);
 
@@ -81,7 +115,8 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
             transition={{ duration: 0.2 }}
           />
 
-          <motion.aside 
+          <motion.aside
+            ref={panelRef}
             className="post-drawer__panel"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}

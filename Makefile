@@ -188,6 +188,24 @@ test:
 test-active:
 	$(GO) test ./...
 
+cover:
+	$(GO) test -coverprofile=coverage.out ./...
+	$(GO) tool cover -func=coverage.out
+
+cover-html:
+	$(GO) test -coverprofile=coverage.out ./...
+	$(GO) tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
+
+fe-test:
+	cd frontend && npm run test
+
+fe-build:
+	cd frontend && npm run build
+
+fe-audit:
+	cd frontend && npm audit
+
 lint:
 	golangci-lint run ./...
 	cd frontend && npm run lint

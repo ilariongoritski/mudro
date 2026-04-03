@@ -36,7 +36,9 @@ export const CommentForm = ({ postId }: CommentFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-slate-100">
+      <label htmlFor={`comment-input-${postId}`} className="sr-only">Написать комментарий</label>
       <Input
+        id={`comment-input-${postId}`}
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Написать комментарий..."
@@ -46,9 +48,10 @@ export const CommentForm = ({ postId }: CommentFormProps) => {
       <button
         type="submit"
         disabled={isLoading || !text.trim()}
+        aria-label="Отправить комментарий"
         className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-colors disabled:opacity-40"
       >
-        <Send className="w-4 h-4" />
+        <Send className="w-4 h-4" aria-hidden="true" />
       </button>
     </form>
   )

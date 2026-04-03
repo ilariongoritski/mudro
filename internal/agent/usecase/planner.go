@@ -75,15 +75,30 @@ func isRiskyTodo(text string) bool {
 func detectTaskKind(text string) string {
 	t := strings.ToLower(strings.TrimSpace(text))
 	switch {
-	case strings.Contains(t, "dbcheck"), strings.Contains(t, "select 1"), strings.Contains(t, "проверка бд"), strings.Contains(t, "проверки бд"):
+	case strings.Contains(t, "dbcheck"),
+		strings.Contains(t, "select 1"),
+		strings.Contains(t, "проверка бд"),
+		strings.Contains(t, "проверки бд"),
+		strings.Contains(t, "make dbcheck"):
 		return "db_check"
-	case strings.Contains(t, "tables"), strings.Contains(t, "\\dt"), strings.Contains(t, "список таблиц"), strings.Contains(t, "таблиц"):
+	case strings.Contains(t, `\dt`),
+		strings.Contains(t, "список таблиц"),
+		strings.Contains(t, "make tables"):
 		return "tables_check"
-	case strings.Contains(t, "count(*) from posts"), strings.Contains(t, "count-posts"), strings.Contains(t, "количество постов"):
+	case strings.Contains(t, "count(*) from posts"),
+		strings.Contains(t, "count-posts"),
+		strings.Contains(t, "количество постов"),
+		strings.Contains(t, "make count-posts"):
 		return "count_posts"
-	case strings.Contains(t, "health"), strings.Contains(t, "go test"), strings.Contains(t, "make test"), strings.Contains(t, "test"):
+	case strings.Contains(t, "make test"),
+		strings.Contains(t, "go test"),
+		strings.Contains(t, "make health"),
+		strings.Contains(t, "health check"),
+		strings.Contains(t, "запустить тест"):
 		return "health_check"
 	default:
+		// Any other todo — treated as todo_item; the worker will detect
+		// "make <target>" patterns from the text and execute them.
 		return "todo_item"
 	}
 }
