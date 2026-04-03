@@ -4,15 +4,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index.go"
+      "destination": "/api/index"
     },
     {
       "source": "/feed",
-      "destination": "/api/index.go"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "destination": "/api/index"
     }
   ]
 }
