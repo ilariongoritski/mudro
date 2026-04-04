@@ -104,7 +104,7 @@ export interface CasinoConfigResponse {
 }
 
 export type RoulettePhase = 'betting' | 'locking' | 'spinning' | 'result' | 'idle'
-export type RouletteBetType = 'straight' | 'red' | 'black' | 'green' | 'odd' | 'even' | 'low' | 'high' | 'dozen1' | 'dozen2' | 'dozen3'
+export type RouletteBetType = 'straight' | 'red' | 'black' | 'green' | 'odd' | 'even' | 'low' | 'high'
 export type RouletteColor = 'red' | 'black' | 'green' | 'unknown'
 
 export interface RouletteRoundHistoryItem {
@@ -168,16 +168,6 @@ export interface RouletteBetResponse {
   status?: string
   accepted_bets?: number
   state?: RouletteStateResponse
-}
-
-export interface RouletteInstantSpinResponse {
-  winning_number: number
-  winning_color: RouletteColor
-  display_sequence: number[]
-  result_sequence: number[]
-  payout_amount: number
-  balance: number
-  bets: RouletteBetItem[]
 }
 
 export interface CasinoSpinRequest {
@@ -756,24 +746,6 @@ export const casinoApi = mudroApi.injectEndpoints({
       transformResponse: (response: RawRouletteBetResponse) => normalizeRouletteBetResponse(response),
       invalidatesTags: ['Casino'],
     }),
-    instantRouletteSpin: build.mutation<RouletteInstantSpinResponse, RouletteBetRequest>({
-      query: (body) => ({
-        url: '/casino/roulette/instant-spin',
-        method: 'POST',
-        body: {
-          bets: body.bets.map((bet) => ({
-            bet_type: bet.bet_type,
-            bet_value: bet.bet_value != null ? String(bet.bet_value) : '',
-            stake: bet.stake,
-          })),
-        },
-      }),
-      transformResponse: (response: any) => ({
-        ...response,
-        bets: (response.bets ?? []).map(normalizeRouletteBetItem),
-      }),
-      invalidatesTags: ['Casino'],
-    }),
     getPlinkoConfig: build.query<PlinkoConfigResponse, void>({
       query: () => ({
         url: '/casino/plinko/config',
@@ -880,7 +852,6 @@ export const {
   useGetRouletteStateQuery,
   useGetRouletteHistoryQuery,
   usePlaceRouletteBetsMutation,
-  useInstantRouletteSpinMutation,
   useGetPlinkoConfigQuery,
   useGetPlinkoStateQuery,
   useDropPlinkoMutation,

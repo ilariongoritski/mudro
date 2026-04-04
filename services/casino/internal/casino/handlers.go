@@ -35,7 +35,6 @@ func (h *Handler) Router() http.Handler {
 
 	mux.HandleFunc("/roulette/state", h.handleRouletteState)
 	mux.HandleFunc("/roulette/bets", h.handleRouletteBets)
-	mux.HandleFunc("/roulette/instant-spin", h.handleRouletteInstantSpin)
 	mux.HandleFunc("/roulette/history", h.handleRouletteHistory)
 	mux.HandleFunc("/roulette/stream", h.handleRouletteStream)
 
@@ -278,31 +277,6 @@ func (h *Handler) handleRouletteBets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.store.PlaceRouletteBets(r.Context(), actor, req.RoundID, req.Bets)
-	if err != nil {
-		writeDomainError(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func (h *Handler) handleRouletteInstantSpin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	actor, err := authContextFromHeaders(r)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, err)
-		return
-	}
-
-	var req RouletteInstantSpinRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	resp, err := h.store.InstantRouletteSpin(r.Context(), actor, req.Bets)
 	if err != nil {
 		writeDomainError(w, err)
 		return
