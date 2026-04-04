@@ -100,5 +100,21 @@
 @media (max-width: 960px) {
   .feed-page-hero {
     grid-template-columns: 1fr;
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .feed-page-hero {
+    padding: 1rem;
+    border-radius: var(--mudro-radius-lg);
+  }
+  
+  .feed-page-hero__title {
+    font-size: 1.6rem;
+  }
+  
+  .feed-page-hero__lead {
+    font-size: 0.88rem;
   }
 }

@@ -28,7 +28,6 @@ function Convert-WindowsPathToWsl([string]$PathValue) {
 function Get-GitBashPath {
     $candidates = @(
         $env:MUDRO_GIT_BASH,
-        "D:\Git\bin\bash.exe",
         "C:\Program Files\Git\bin\bash.exe"
     ) | Where-Object { $_ -and $_.Trim().Length -gt 0 }
 

@@ -173,7 +173,7 @@ def main() -> int:
     parser.add_argument("--max-workers", type=int, default=4)
     parser.add_argument(
         "--output-dir",
-        default=os.environ.get("MUDRO_CLAUDE_RUNS_DIR", r"D:\mudr\_mudro-local\claude-orch\runs"),
+        default=os.environ.get("MUDRO_CLAUDE_RUNS_DIR", r"E:\mudr\_mudro-local\claude-orch\runs"),
     )
     args = parser.parse_args()
 

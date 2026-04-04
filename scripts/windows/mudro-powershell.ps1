@@ -31,7 +31,6 @@ function Convert-MudroPathToWsl {
 
 function Get-MudroGitBashPath {
     $candidates = @(
-        "D:\Git\bin\bash.exe",
         "C:\Program Files\Git\bin\bash.exe"
     )
 
@@ -101,11 +100,22 @@ function mudro-tables { Invoke-MudroShell -Command "make tables" }
 function mudro-test { Invoke-MudroShell -Command "go test ./..." }
 function mudro-e2e { Invoke-MudroShell -Command "go test ./e2e -run TestCmd -count=1" }
 function mudro-shell { Invoke-MudroShell -Command "exec bash" }
+function mudro-casino-rollout {
+    [CmdletBinding()]
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)][string[]]$Args
+    )
+
+    $repoRoot = Get-MudroRepoRoot
+    $scriptPath = Join-Path $repoRoot "scripts\windows\casino-db-rollout.ps1"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath @Args
+}
 
 Set-Alias mmake mudro-make -Scope Global
 Set-Alias mh mudro-health -Scope Global
 Set-Alias mt mudro-test -Scope Global
 Set-Alias me2e mudro-e2e -Scope Global
+Set-Alias mcasino mudro-casino-rollout -Scope Global
 
 function Enable-MudroPowerShellProfile {
     [CmdletBinding()]

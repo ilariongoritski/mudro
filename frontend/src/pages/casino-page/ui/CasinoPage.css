@@ -462,24 +462,49 @@
 
 @media (max-width: 720px) {
   .casino-page {
-    width: min(100% - 1rem, 100%);
-    padding-top: 0.7rem;
+    width: 100%;
+    padding: 0.7rem 1rem 3rem;
   }
 
-  .casino-page__stage-metrics,
+  .casino-page__stage-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .casino-page__stage-reels {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
   }
 
   .casino-page__reel {
-    min-height: 124px;
+    min-height: 100px;
+    border-radius: 12px;
+  }
+
+  .casino-page__reel span {
+    font-size: 2.5rem;
   }
 
   .casino-page__hero-copy h1 {
+    font-size: 2.2rem;
     max-width: none;
   }
 
   .casino-page__admin-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .casino-page__stage-metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .casino-page__hero-actions {
+    flex-direction: column;
+  }
+  
+  .casino-page__primary-action,
+  .casino-page__secondary-action {
+    width: 100%;
   }
 }
