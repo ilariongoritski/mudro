@@ -16,8 +16,8 @@ const AdminPage = lazy(() =>
 const CasinoPage = lazy(() =>
   import('@/pages/casino-page/ui/CasinoPage').then((module) => ({ default: module.CasinoPage })),
 )
-const CasinoMiniAppPage = lazy(() =>
-  import('@/pages/casino-miniapp-page/ui/CasinoMiniAppPage').then((module) => ({ default: module.CasinoMiniAppPage })),
+const CasinoMiniAppShell = lazy(() =>
+  import('@/pages/casino-miniapp-page/ui/CasinoMiniAppShell').then((module) => ({ default: module.CasinoMiniAppShell })),
 )
 const ChatPage = lazy(() =>
   import('@/pages/chat-page/ui/ChatPage').then((module) => ({ default: module.ChatPage })),
@@ -81,7 +81,7 @@ export const AppRouterProvider = () => {
     },
     {
       path: '/tma/casino',
-      element: casinoBoundaryWrap(<CasinoMiniAppPage />),
+      element: casinoBoundaryWrap(<CasinoMiniAppShell />),
     },
     {
       path: '/casino/miniapp',

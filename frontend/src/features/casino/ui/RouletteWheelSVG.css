@@ -1,0 +1,29 @@
+.roulette-wheel-svg {
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
+  width: 240px;
+  height: 240px;
+}
+
+.roulette-wheel-svg__svg {
+  filter: drop-shadow(0 0 20px rgba(245, 200, 66, 0.25));
+}
+
+.roulette-wheel-svg__hub-text {
+  font-family: var(--font-heading, inherit);
+}
+
+.roulette-wheel-svg__pointer {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #e0c040);
+  border: 2px solid #f5c842;
+  box-shadow: 0 0 8px rgba(245, 200, 66, 0.8);
+  z-index: 10;
+}

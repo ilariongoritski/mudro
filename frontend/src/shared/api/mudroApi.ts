@@ -19,13 +19,46 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions,
 ) => {
-  const result = await rawBaseQuery(args, api, extraOptions)
+  let result = await rawBaseQuery(args, api, extraOptions)
 
-  // No refresh-token endpoint exists on the backend.
-  // On 401, immediately clear local session so the user is redirected to login.
   if (result.error && result.error.status === 401) {
-    const { logout } = await import('@/entities/session/model/sessionSlice')
-    api.dispatch(logout())
+    const token = (api.getState() as RootState).session?.token
+    if (token) {
+      const refreshResult = await rawBaseQuery(
+        { url: '/auth/refresh', method: 'POST' },
+        api,
+        extraOptions,
+      )
+      if (refreshResult.data) {
+        const data = refreshResult.data as {
+          token: string
+          user: {
+            id: number
+            username: string
+            email?: string | null
+            role: string
+            isPremium?: boolean
+            is_premium?: boolean
+          }
+        }
+        const { setCredentials } = await import('@/entities/session/model/sessionSlice')
+        api.dispatch(setCredentials({
+          token: data.token,
+          user: {
+            id: data.user.id,
+            username: data.user.username,
+            email: data.user.email ?? undefined,
+            role: data.user.role,
+            isPremium: data.user.isPremium ?? data.user.is_premium ?? false,
+          },
+        }))
+        // Retry the original request
+        result = await rawBaseQuery(args, api, extraOptions)
+      } else {
+        const { logout } = await import('@/entities/session/model/sessionSlice')
+        api.dispatch(logout())
+      }
+    }
   }
 
   return result

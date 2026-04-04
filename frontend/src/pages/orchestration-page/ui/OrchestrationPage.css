@@ -62,17 +62,11 @@
 }
 
 .orchestration-page__brand-mark {
-  width: 2.95rem;
+  width: 4rem;
   height: 2.95rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.95), rgba(61, 15, 54, 0.95));
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 900;
-  box-shadow: 0 14px 30px rgba(255, 105, 180, 0.24);
 }
 
 .orchestration-page__brand-copy {

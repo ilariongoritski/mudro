@@ -6,6 +6,7 @@ import {
   normalizeOrchestrationStatus,
   useGetOrchestrationStatusQuery,
 } from '@/features/orchestration/api/orchestrationApi'
+import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
 import './OrchestrationPage.css'
 
@@ -144,7 +145,7 @@ export const OrchestrationPage = () => {
     >
       <header className="orchestration-page__topbar">
         <div className="orchestration-page__brand">
-          <span className="orchestration-page__brand-mark">M</span>
+          <span className="orchestration-page__brand-mark"><MudroLogoMark /></span>
           <div className="orchestration-page__brand-copy">
             <strong>Orchestration</strong>
             <small>control plane для MUDRO</small>
