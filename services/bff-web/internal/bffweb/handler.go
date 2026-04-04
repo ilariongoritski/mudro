@@ -52,6 +52,11 @@ func NewHandler(timeline TimelineLoader, apiBaseURL string) http.Handler {
 		apiBase:  strings.TrimRight(strings.TrimSpace(apiBaseURL), "/"),
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				IdleConnTimeout:     90 * time.Second,
+				MaxIdleConnsPerHost: 20,
+			},
 		},
 	}
 
