@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/auth"
-	internalcasino "github.com/goritskimihail/mudro/internal/casino"
+	"github.com/goritskimihail/mudro/pkg/tgauth"
 )
 
 type authSessionUser struct {
@@ -237,7 +237,7 @@ func (s *Server) handleAuthTelegram(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tgAuth, err := internalcasino.ValidateInitData(botToken, initData)
+	tgAuth, err := tgauth.ValidateInitData(botToken, initData)
 	if err != nil {
 		http.Error(w, "invalid telegram initData", http.StatusUnauthorized)
 		return

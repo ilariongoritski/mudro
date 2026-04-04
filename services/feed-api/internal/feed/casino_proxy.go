@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	mhttputil "github.com/goritskimihail/mudro/pkg/httputil"
 )
@@ -40,6 +41,127 @@ func (s *Server) handleCasinoConfig(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleCasinoBonusState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/bonus/state", false)
+}
+
+func (s *Server) handleCasinoBonusClaimSubscription(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/bonus/claim-subscription", false)
+}
+
+func (s *Server) handleCasinoBonusHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/bonus/history", false)
+}
+
+func (s *Server) handleCasinoProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/profile", false)
+}
+
+func (s *Server) handleCasinoActivity(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/activity", false)
+}
+
+func (s *Server) handleCasinoLiveFeed(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/live-feed", false)
+}
+
+func (s *Server) handleCasinoTopWins(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/top-wins", false)
+}
+
+func (s *Server) handleCasinoReactions(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet, http.MethodPost:
+		s.proxyCasino(w, r, "/reactions", false)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleCasinoRouletteState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/roulette/state", false)
+}
+
+func (s *Server) handleCasinoRouletteBets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/roulette/bets", false)
+}
+
+func (s *Server) handleCasinoRouletteHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/roulette/history", false)
+}
+
+func (s *Server) handleCasinoRouletteStream(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/roulette/stream", false)
+}
+
+func (s *Server) handleCasinoPlinkoConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/plinko/config", false)
+}
+
+func (s *Server) handleCasinoPlinkoState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/plinko/state", false)
+}
+
+func (s *Server) handleCasinoPlinkoDrop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/plinko/drop", false)
 }
 
 func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPath string, adminOnly bool) {
@@ -78,15 +200,24 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 		http.Error(w, "failed to build upstream request", http.StatusInternalServerError)
 		return
 	}
-	mhttputil.CopyHeaders(req.Header, r.Header, "Accept", "Content-Type")
+	mhttputil.CopyHeaders(req.Header, r.Header, "Accept", "Content-Type", "X-Telegram-Init-Data", "X-Init-Data")
 	req.Header.Set("X-User-ID", strconv.FormatInt(user.ID, 10))
 	req.Header.Set("X-User-Name", user.Username)
 	if user.Email != nil {
 		req.Header.Set("X-User-Email", *user.Email)
 	}
 	req.Header.Set("X-User-Role", user.Role)
+	if initData := strings.TrimSpace(r.Header.Get("X-Telegram-Init-Data")); initData != "" {
+		req.Header.Set("X-Telegram-Init-Data", initData)
+	}
+	if initData := strings.TrimSpace(r.Header.Get("X-Init-Data")); initData != "" {
+		req.Header.Set("X-Init-Data", initData)
+	}
 
 	client := s.httpClient
+	if upstreamPath == "/roulette/stream" {
+		client = &http.Client{}
+	}
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -100,5 +231,23 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	mhttputil.CopyAllHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
+
+	if upstreamPath == "/roulette/stream" {
+		if flusher, ok := w.(http.Flusher); ok {
+			buf := make([]byte, 2048)
+			for {
+				n, err := resp.Body.Read(buf)
+				if n > 0 {
+					_, _ = w.Write(buf[:n])
+					flusher.Flush()
+				}
+				if err != nil {
+					break
+				}
+			}
+			return
+		}
+	}
+
 	_, _ = io.Copy(w, resp.Body)
 }

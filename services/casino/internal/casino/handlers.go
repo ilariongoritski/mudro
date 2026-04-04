@@ -3,9 +3,12 @@ package casino
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Handler struct {
@@ -23,6 +26,32 @@ func (h *Handler) Router() http.Handler {
 	mux.HandleFunc("/history", h.handleHistory)
 	mux.HandleFunc("/spin", h.handleSpin)
 	mux.HandleFunc("/config", h.handleConfig)
+	mux.HandleFunc("/bonus/state", h.handleBonusState)
+	mux.HandleFunc("/bonus/claim-subscription", h.handleBonusClaimSubscription)
+	mux.HandleFunc("/bonus/history", h.handleBonusHistory)
+	mux.HandleFunc("/casino/bonus/state", h.handleBonusState)
+	mux.HandleFunc("/casino/bonus/claim-subscription", h.handleBonusClaimSubscription)
+	mux.HandleFunc("/casino/bonus/history", h.handleBonusHistory)
+
+	mux.HandleFunc("/roulette/state", h.handleRouletteState)
+	mux.HandleFunc("/roulette/bets", h.handleRouletteBets)
+	mux.HandleFunc("/roulette/history", h.handleRouletteHistory)
+	mux.HandleFunc("/roulette/stream", h.handleRouletteStream)
+
+	mux.HandleFunc("/profile", h.handleProfile)
+	mux.HandleFunc("/activity", h.handleActivity)
+	mux.HandleFunc("/live-feed", h.handleLiveFeed)
+	mux.HandleFunc("/top-wins", h.handleTopWins)
+	mux.HandleFunc("/reactions", h.handleReactions)
+	mux.HandleFunc("/casino/profile", h.handleProfile)
+	mux.HandleFunc("/casino/activity", h.handleActivity)
+	mux.HandleFunc("/casino/live-feed", h.handleLiveFeed)
+	mux.HandleFunc("/casino/top-wins", h.handleTopWins)
+	mux.HandleFunc("/casino/reactions", h.handleReactions)
+
+	mux.HandleFunc("/plinko/config", h.handlePlinkoConfig)
+	mux.HandleFunc("/plinko/state", h.handlePlinkoState)
+	mux.HandleFunc("/plinko/drop", h.handlePlinkoDrop)
 	return mux
 }
 
@@ -40,7 +69,7 @@ func (h *Handler) handleBalance(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
-	balance, err := h.store.GetBalance(r.Context(), actor)
+	balance, freeSpins, bonusClaimed, err := h.store.GetBalanceDetails(r.Context(), actor)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -51,9 +80,11 @@ func (h *Handler) handleBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"balance":  balance,
-		"rtp":      cfg.RTPPercent,
-		"currency": "credits",
+		"balance":            balance,
+		"free_spins_balance": freeSpins,
+		"bonus_claimed":      bonusClaimed || freeSpins > 0,
+		"rtp":                cfg.RTPPercent,
+		"currency":           "credits",
 	})
 }
 
@@ -63,7 +94,7 @@ func (h *Handler) handleHistory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
-	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
+	limit := parseLimit(r, 20)
 	items, err := h.store.GetHistory(r.Context(), actor.UserID, limit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -91,16 +122,76 @@ func (h *Handler) handleSpin(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.store.Spin(r.Context(), actor, req.Bet)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, ErrInsufficientBalance) {
-			status = http.StatusConflict
-		} else if strings.Contains(err.Error(), "max bet") {
-			status = http.StatusBadRequest
-		}
-		writeError(w, status, err)
+		writeDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleBonusState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	state, err := h.store.GetBonusState(r.Context(), actor, parseLimit(r, 10))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (h *Handler) handleBonusClaimSubscription(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	initData, err := extractBonusInitData(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	resp, claimErr := h.store.ClaimSubscriptionBonus(r.Context(), actor, initData)
+	if claimErr != nil {
+		status := bonusClaimErrorStatus(claimErr)
+		if resp != nil {
+			writeJSON(w, status, resp)
+			return
+		}
+		writeError(w, status, claimErr)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) handleBonusHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	items, err := h.store.GetBonusHistory(r.Context(), actor.UserID, parseLimit(r, 10))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, BonusClaimList{Items: items})
 }
 
 func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -138,6 +229,250 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) handleRouletteState(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	state, err := h.store.GetCurrentRouletteState(r.Context(), actor.UserID)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (h *Handler) handleRouletteBets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	var req RoulettePlaceBetsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if req.RoundID == 0 {
+		state, err := h.store.GetCurrentRouletteState(r.Context(), actor.UserID)
+		if err != nil {
+			writeDomainError(w, err)
+			return
+		}
+		req.RoundID = state.Round.ID
+	}
+
+	resp, err := h.store.PlaceRouletteBets(r.Context(), actor, req.RoundID, req.Bets)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) handleRouletteHistory(w http.ResponseWriter, r *http.Request) {
+	if _, err := authContextFromHeaders(r); err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	items, err := h.store.GetRouletteHistory(r.Context(), parseLimit(r, 20))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *Handler) handleRouletteStream(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("streaming unsupported"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	sendState := func() bool {
+		state, err := h.store.GetCurrentRouletteState(r.Context(), actor.UserID)
+		if err != nil {
+			_ = writeSSE(w, "error", map[string]string{"error": err.Error()})
+			flusher.Flush()
+			return false
+		}
+		if err := writeSSE(w, "state", state); err != nil {
+			return false
+		}
+		flusher.Flush()
+		return true
+	}
+
+	if !sendState() {
+		return
+	}
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			if !sendState() {
+				return
+			}
+		}
+	}
+}
+
+func (h *Handler) handleProfile(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	profile, err := h.store.GetProfile(r.Context(), actor, parseLimit(r, 20))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, profile)
+}
+
+func (h *Handler) handleActivity(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	items, err := h.store.GetActivity(r.Context(), actor.UserID, parseLimit(r, 20))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, ActivityList{Items: items})
+}
+
+func (h *Handler) handleLiveFeed(w http.ResponseWriter, r *http.Request) {
+	if _, err := authContextFromHeaders(r); err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	items, err := h.store.GetLiveFeed(r.Context(), parseLimit(r, 20))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, LiveFeedResponse{Items: items})
+}
+
+func (h *Handler) handleTopWins(w http.ResponseWriter, r *http.Request) {
+	if _, err := authContextFromHeaders(r); err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	items, err := h.store.GetTopWins(r.Context(), parseLimit(r, 10))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, LiveFeedResponse{Items: items})
+}
+
+func (h *Handler) handleReactions(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		items, err := h.store.GetReactions(r.Context(), parseLimit(r, 20))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, ReactionList{Items: items})
+	case http.MethodPost:
+		var req ReactionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+		item, err := h.store.AddReaction(r.Context(), actor, req)
+		if err != nil {
+			writeDomainError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, item)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) handlePlinkoConfig(w http.ResponseWriter, r *http.Request) {
+	if _, err := authContextFromHeaders(r); err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, h.store.GetPlinkoConfig())
+}
+
+func (h *Handler) handlePlinkoState(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	state, err := h.store.GetPlinkoState(r.Context(), actor)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (h *Handler) handlePlinkoDrop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	var req PlinkoDropRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	result, err := h.store.DropPlinko(r.Context(), actor, req)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
 func authContextFromHeaders(r *http.Request) (ParticipantInput, error) {
 	userIDRaw := strings.TrimSpace(r.Header.Get("X-User-ID"))
 	if userIDRaw == "" {
@@ -163,4 +498,102 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, err error) {
 	writeJSON(w, status, map[string]string{"error": err.Error()})
+}
+
+func writeDomainError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	switch {
+	case errors.Is(err, ErrUnauthorized):
+		status = http.StatusUnauthorized
+	case errors.Is(err, ErrInsufficientBalance):
+		status = http.StatusConflict
+	case errors.Is(err, ErrRoundClosed):
+		status = http.StatusConflict
+	case errors.Is(err, ErrNoActiveRound):
+		status = http.StatusNotFound
+	case errors.Is(err, ErrBonusAlreadyClaimed):
+		status = http.StatusConflict
+	case errors.Is(err, ErrBonusVerificationRequired):
+		status = http.StatusPreconditionRequired
+	case errors.Is(err, ErrBonusVerificationNotConfigured):
+		status = http.StatusServiceUnavailable
+	case errors.Is(err, ErrBonusVerificationDenied):
+		status = http.StatusForbidden
+	case errors.Is(err, ErrBonusVerificationUnavailable):
+		status = http.StatusServiceUnavailable
+	case strings.Contains(err.Error(), "max bet"),
+		strings.Contains(err.Error(), "positive"),
+		strings.Contains(err.Error(), "unsupported"),
+		strings.Contains(err.Error(), "invalid"),
+		strings.Contains(err.Error(), "duplicate"):
+		status = http.StatusBadRequest
+	}
+	writeError(w, status, err)
+}
+
+func writeSSE(w http.ResponseWriter, event string, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "event: %s\n", event); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func parseLimit(r *http.Request, fallback int) int {
+	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
+	if limit <= 0 {
+		return fallback
+	}
+	return limit
+}
+
+func extractBonusInitData(r *http.Request) (string, error) {
+	var req BonusClaimRequest
+	if r.Body != nil {
+		payload, err := io.ReadAll(r.Body)
+		if err != nil {
+			return "", err
+		}
+		if len(payload) > 0 {
+			if err := json.Unmarshal(payload, &req); err != nil {
+				return "", err
+			}
+		}
+	}
+	if initData := strings.TrimSpace(req.InitData); initData != "" {
+		return initData, nil
+	}
+	if initData := strings.TrimSpace(req.TelegramInitData); initData != "" {
+		return initData, nil
+	}
+	if initData := strings.TrimSpace(r.Header.Get("X-Telegram-Init-Data")); initData != "" {
+		return initData, nil
+	}
+	if initData := strings.TrimSpace(r.Header.Get("X-Init-Data")); initData != "" {
+		return initData, nil
+	}
+	return "", nil
+}
+
+func bonusClaimErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, ErrBonusAlreadyClaimed):
+		return http.StatusConflict
+	case errors.Is(err, ErrBonusVerificationRequired):
+		return http.StatusPreconditionRequired
+	case errors.Is(err, ErrBonusVerificationNotConfigured):
+		return http.StatusServiceUnavailable
+	case errors.Is(err, ErrBonusVerificationDenied):
+		return http.StatusForbidden
+	case errors.Is(err, ErrBonusVerificationUnavailable):
+		return http.StatusServiceUnavailable
+	default:
+		return http.StatusInternalServerError
+	}
 }

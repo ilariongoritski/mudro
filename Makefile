@@ -30,6 +30,7 @@ ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
 MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
+AUTH_MIGRATIONS ?= $(USERS_AUTH_MIGRATION) $(USER_ROLES_MIGRATION) $(SIMPLIFY_AUTH_MIGRATION) $(USERS_PROFILE_MIGRATION) $(USERS_TELEGRAM_MIGRATION)
 RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(AGENT_EVENTS_FK_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_AUTH_MIGRATION) $(USER_ROLES_MIGRATION) $(SIMPLIFY_AUTH_MIGRATION) $(USERS_PROFILE_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(MOVIE_CATALOG_MIGRATION)
 RUNTIME_DOWN_MIGRATIONS ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.down.sql $(MIGRATIONS_DIR)/016_chat.down.sql $(MIGRATIONS_DIR)/015_users_telegram.down.sql $(MIGRATIONS_DIR)/012_users_and_auth.down.sql $(MIGRATIONS_DIR)/011_simplify_auth.down.sql $(MIGRATIONS_DIR)/010_user_roles_and_subscriptions.down.sql $(MIGRATIONS_DIR)/009_users_and_auth.down.sql $(MIGRATIONS_DIR)/009_comment_model.down.sql $(MIGRATIONS_DIR)/009_agent_events_fk.down.sql $(MIGRATIONS_DIR)/008_media_link_constraints.down.sql $(MIGRATIONS_DIR)/007_media_assets.down.sql $(MIGRATIONS_DIR)/006_agent_task_events.down.sql $(MIGRATIONS_DIR)/005_agent_review_gate.down.sql $(MIGRATIONS_DIR)/004_post_comments.down.sql $(MIGRATIONS_DIR)/002b_agent_queue.down.sql $(MIGRATIONS_DIR)/002_account_post_likes.down.sql $(MIGRATIONS_DIR)/001_init.down.sql
 
@@ -172,11 +173,14 @@ else
 endif
 
 migrate-users-auth:
-ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
-endif
+	@for f in $(AUTH_MIGRATIONS); do \
+		echo "==> applying $$f"; \
+		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
+			cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; \
+		else \
+			$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; \
+		fi || exit $$?; \
+	done
 
 migrate-casino:
 	bash ./scripts/migrate-casino.sh
