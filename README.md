@@ -4,6 +4,11 @@ MUDRO is a microservices-first monorepo for feed ingestion, agent workflows, Tel
 
 The repository is already in an active transition to `services/*`, `tools/*`, and `ops/*`. The canonical local runtime is the `core` contour under `ops/compose`, while legacy and transitional paths are still present for compatibility and recovery.
 
+## Release Notes
+
+**Current Version: v0.1.0-mvp**
+See [CHANGELOG.md](CHANGELOG.md) for details. Key features include a premium dark UI, mobile responsiveness, and a complete CI/CD pipeline.
+
 ## Canonical State
 
 Active runtime services:
