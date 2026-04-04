@@ -48,18 +48,30 @@ const trackNumbers = Array.from({ length: rouletteWheelOrder.length * 3 }, (_, i
 
 const makeDraftBetId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-const mergeRouletteState = (previous: RouletteStateResponse | null, incoming: Partial<RouletteStateResponse>) => {
+const mergeRouletteState = (previous: RouletteStateResponse | null, incoming: Partial<RouletteStateResponse>): RouletteStateResponse | null => {
   if (!incoming || typeof incoming !== 'object') {
     return previous
   }
 
+  // If we don't have a previous state and incoming is missing required fields, we can't form a full state
+  if (!previous && (!incoming.round_id || !incoming.phase)) {
+    return null
+  }
+
   return {
-    ...(previous ?? {}),
-    ...incoming,
-    history: incoming.history ?? previous?.history,
-    my_bets: incoming.my_bets ?? previous?.my_bets,
-    display_sequence: incoming.display_sequence ?? previous?.display_sequence,
-    result_sequence: incoming.result_sequence ?? previous?.result_sequence,
+    round_id: incoming.round_id ?? previous?.round_id ?? '',
+    phase: incoming.phase ?? previous?.phase ?? 'idle',
+    server_time: incoming.server_time ?? previous?.server_time ?? null,
+    betting_opens_at: incoming.betting_opens_at ?? previous?.betting_opens_at ?? null,
+    betting_closes_at: incoming.betting_closes_at ?? previous?.betting_closes_at ?? null,
+    spin_started_at: incoming.spin_started_at ?? previous?.spin_started_at ?? null,
+    resolved_at: incoming.resolved_at ?? previous?.resolved_at ?? null,
+    winning_number: incoming.winning_number ?? previous?.winning_number ?? null,
+    winning_color: incoming.winning_color ?? previous?.winning_color ?? 'unknown',
+    display_sequence: incoming.display_sequence ?? previous?.display_sequence ?? [],
+    result_sequence: incoming.result_sequence ?? previous?.result_sequence ?? [],
+    history: incoming.history ?? previous?.history ?? [],
+    my_bets: incoming.my_bets ?? previous?.my_bets ?? [],
   }
 }
 

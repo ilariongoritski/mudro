@@ -1,6 +1,5 @@
-import React from 'react';
-import { Sidebar } from '@/widgets/Sidebar';
-import { Toolbar } from '@/widgets/Toolbar';
+import { Sidebar } from '@/widgets/layout/ui/Sidebar';
+import { TopBar } from '@/widgets/layout/ui/TopBar';
 import './AdminPage.css';
 
 export const AdminPage = () => {
@@ -14,7 +13,7 @@ export const AdminPage = () => {
     <div className="admin-page">
       <Sidebar />
       <div className="admin-page__content">
-        <Toolbar title="Панель управления" />
+        <TopBar />
         <main className="admin-page__main">
           <section className="admin-page__card">
             <header className="admin-page__card-header">

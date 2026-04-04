@@ -1,4 +1,4 @@
-import { Film, Home, LogIn, LogOut, MessageCircle, Sparkles, User, UserPlus } from 'lucide-react'
+import { Film, Home, LogIn, LogOut, MessageCircle, Shield, Sparkles, User, UserPlus } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { logout } from '@/entities/session/model/sessionSlice'
@@ -46,6 +46,21 @@ export const Sidebar = () => {
               </span>
             </NavLink>
           ))}
+
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => cn('mudro-sidebar__link mudro-sidebar__link_admin', isActive && 'mudro-sidebar__link_active')}
+            >
+              <span className="mudro-sidebar__link-icon">
+                <Shield size={18} />
+              </span>
+              <span className="mudro-sidebar__link-copy">
+                <strong>Админ</strong>
+                <span>Панель управления</span>
+              </span>
+            </NavLink>
+          )}
         </nav>
       </div>
 
