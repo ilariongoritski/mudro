@@ -1,0 +1,213 @@
+.casino-live-sidebar {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.casino-live-sidebar__card {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(36, 18, 51, 0.92), rgba(21, 13, 31, 0.92));
+  box-shadow: 0 24px 44px rgba(4, 3, 11, 0.34);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  overscroll-behavior: contain;
+}
+
+.casino-live-sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.casino-live-sidebar__eyebrow {
+  display: inline-flex;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(242, 223, 255, 0.56);
+}
+
+.casino-live-sidebar__head h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #fff7ff;
+}
+
+.casino-live-sidebar__live-pill {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 135, 255, 0.22);
+  background: rgba(181, 135, 255, 0.14);
+  color: #d9c2ff;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.casino-live-sidebar__list,
+.casino-live-sidebar__stack {
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.casino-live-sidebar__row,
+.casino-live-sidebar__mini {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.casino-live-sidebar__mini {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.casino-live-sidebar__mini_reaction {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.casino-live-sidebar__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(255, 205, 110, 0.42), rgba(255, 101, 184, 0.42));
+  color: #fff9ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.casino-live-sidebar__avatar_image {
+  object-fit: cover;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.casino-live-sidebar__copy,
+.casino-live-sidebar__meta {
+  display: grid;
+  gap: 2px;
+}
+
+.casino-live-sidebar__copy strong,
+.casino-live-sidebar__mini strong {
+  color: #fff6ff;
+  font-size: 0.85rem;
+}
+
+.casino-live-sidebar__copy span,
+.casino-live-sidebar__mini span,
+.casino-live-sidebar__meta small,
+.casino-live-sidebar__mini small {
+  color: rgba(242, 223, 255, 0.58);
+  font-size: 0.75rem;
+}
+
+.casino-live-sidebar__meta {
+  text-align: right;
+}
+
+.casino-live-sidebar__meta_compact {
+  align-items: end;
+}
+
+.casino-live-sidebar__amount {
+  font-size: 0.86rem;
+}
+
+.casino-live-sidebar__amount_win {
+  color: #73ffc6;
+}
+
+.casino-live-sidebar__amount_loss {
+  color: #ff7e9e;
+}
+
+.casino-live-sidebar__reaction-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.casino-live-sidebar__reaction-chip {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff8ff;
+  font-size: 1rem;
+}
+
+.casino-live-sidebar__empty {
+  margin: 0;
+  color: rgba(242, 223, 255, 0.6);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.casino-live-sidebar__fair-strip {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(242, 223, 255, 0.72);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.casino-live-sidebar__fair-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.casino-live-sidebar__fair-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.casino-live-sidebar__fair-card span {
+  color: rgba(242, 223, 255, 0.54);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.casino-live-sidebar__fair-card strong {
+  color: #fff7ff;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 1080px) {
+  .casino-live-sidebar__list,
+  .casino-live-sidebar__stack {
+    max-height: none;
+  }
+
+  .casino-live-sidebar__fair-grid {
+    grid-template-columns: 1fr;
+  }
+}

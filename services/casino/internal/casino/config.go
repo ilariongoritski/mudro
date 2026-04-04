@@ -13,11 +13,17 @@ import (
 )
 
 const (
-	DefaultAddr          = ":8081"
-	DefaultDSN           = "postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable"
-	DefaultInitialCoins  = 2500
-	DefaultRTPBasisPoint = 9500
-	DefaultMaxBet        = 1000
+	DefaultAddr               = ":8081"
+	DefaultDSN                = "postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable"
+	DefaultInitialCoins       = 500
+	DefaultRTPBasisPoint      = 9500
+	DefaultMaxBet             = 1000
+	DefaultRouletteBettingMS  = 15000
+	DefaultRouletteLockMS     = 1500
+	DefaultRouletteSpinMS     = 4500
+	DefaultRouletteResultMS    = 3500
+	DefaultBonusFreeSpins      = 10
+	DefaultTelegramAPIBaseURL  = "https://api.telegram.org"
 )
 
 func Addr() string {
@@ -34,7 +40,22 @@ func DSN() string {
 	return DefaultDSN
 }
 
+func MainDSN() string {
+	if v := strings.TrimSpace(os.Getenv("CASINO_MAIN_DSN")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
+		return v
+	}
+	return ""
+}
+
 func InitialCoins() int64 {
+	if v := strings.TrimSpace(os.Getenv("CASINO_START_BALANCE")); v != "" {
+		if n, ok := parsePositiveInt64(v); ok {
+			return n
+		}
+	}
 	if v := strings.TrimSpace(os.Getenv("CASINO_INITIAL_COINS")); v != "" {
 		if n, ok := parsePositiveInt64(v); ok {
 			return n
@@ -61,12 +82,80 @@ func MaxBet() int64 {
 	return DefaultMaxBet
 }
 
+func RouletteBettingDuration() time.Duration {
+	return durationFromEnv("CASINO_ROULETTE_BETTING_MS", DefaultRouletteBettingMS)
+}
+
+func RouletteLockDuration() time.Duration {
+	return durationFromEnv("CASINO_ROULETTE_LOCK_MS", DefaultRouletteLockMS)
+}
+
+func RouletteSpinDuration() time.Duration {
+	return durationFromEnv("CASINO_ROULETTE_SPIN_MS", DefaultRouletteSpinMS)
+}
+
+func RouletteResultDuration() time.Duration {
+	return durationFromEnv("CASINO_ROULETTE_RESULT_MS", DefaultRouletteResultMS)
+}
+
+func BonusFreeSpins() int64 {
+	if v := strings.TrimSpace(os.Getenv("CASINO_BONUS_FREE_SPINS")); v != "" {
+		if n, ok := parsePositiveInt64(v); ok {
+			return n
+		}
+	}
+	return DefaultBonusFreeSpins
+}
+
+func BonusTelegramBotToken() string {
+	if v := strings.TrimSpace(os.Getenv("CASINO_BONUS_TELEGRAM_BOT_TOKEN")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("CASINO_BOT_TOKEN")); v != "" {
+		return v
+	}
+	return ""
+}
+
+func BonusTelegramChannel() string {
+	if v := strings.TrimSpace(os.Getenv("CASINO_BONUS_TELEGRAM_CHANNEL")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("CASINO_BONUS_CHANNEL")); v != "" {
+		return v
+	}
+	return ""
+}
+
+func BonusTelegramAPIBaseURL() string {
+	if v := strings.TrimSpace(os.Getenv("CASINO_BONUS_TELEGRAM_API_BASE")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return DefaultTelegramAPIBaseURL
+}
+
 func OpenPool(ctx context.Context) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(DSN())
 	if err != nil {
 		return nil, err
 	}
 	cfg.MaxConns = 6
+	return pgxpool.NewWithConfig(ctx, cfg)
+}
+
+func OpenMainPool(ctx context.Context) (*pgxpool.Pool, error) {
+	dsn := MainDSN()
+	if strings.TrimSpace(dsn) == "" {
+		return nil, nil
+	}
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	cfg.MaxConns = 4
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
@@ -135,6 +224,15 @@ func parsePositiveInt64(v string) (int64, bool) {
 		}
 	}
 	return n, n > 0
+}
+
+func durationFromEnv(name string, fallbackMS int64) time.Duration {
+	if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+		if n, ok := parsePositiveInt64(v); ok {
+			return time.Duration(n) * time.Millisecond
+		}
+	}
+	return time.Duration(fallbackMS) * time.Millisecond
 }
 
 func nowUTC() time.Time {

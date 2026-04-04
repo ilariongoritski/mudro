@@ -1,0 +1,225 @@
+.bonus-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.bonus-panel__header,
+.bonus-panel__hero,
+.bonus-panel__grid,
+.bonus-panel__history,
+.bonus-panel__fair-strip {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(42, 20, 61, 0.94), rgba(21, 13, 33, 0.94));
+  box-shadow: 0 26px 54px rgba(5, 4, 14, 0.34);
+}
+
+.bonus-panel__header,
+.bonus-panel__hero,
+.bonus-panel__history {
+  padding: 16px;
+}
+
+.bonus-panel__eyebrow {
+  display: inline-flex;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 226, 255, 0.58);
+}
+
+.bonus-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.bonus-panel__header h2,
+.bonus-panel__history-head strong {
+  margin: 0;
+  color: #fff8ff;
+}
+
+.bonus-panel__header p,
+.bonus-panel__claim p,
+.bonus-panel__history-head small,
+.bonus-panel__history-item span,
+.bonus-panel__history-item small {
+  margin: 0;
+  color: rgba(244, 226, 255, 0.62);
+}
+
+.bonus-panel__counter {
+  min-width: 120px;
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.bonus-panel__counter strong {
+  font-size: 2rem;
+  color: #8effc8;
+}
+
+.bonus-panel__layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.bonus-panel__hero {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: center;
+}
+
+.bonus-panel__wheel {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18), transparent 44%),
+    conic-gradient(from 90deg, #ff64ba, #8f5bff, #47d6ff, #4deda7, #ffcf6f, #ff64ba);
+  box-shadow:
+    0 0 0 12px rgba(255, 255, 255, 0.04),
+    0 18px 44px rgba(139, 91, 255, 0.25);
+}
+
+.bonus-panel__wheel-core {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.12), rgba(16, 9, 25, 0.96));
+  color: #fff9ff;
+  text-align: center;
+}
+
+.bonus-panel__wheel-core span {
+  font-size: 2.1rem;
+  font-weight: 900;
+}
+
+.bonus-panel__wheel-core small {
+  color: rgba(244, 226, 255, 0.62);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.bonus-panel__claim {
+  display: grid;
+  gap: 12px;
+}
+
+.bonus-panel__status-chip {
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e9d8ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.bonus-panel__primary {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, #4de9a8, #49c8ff);
+  color: #071018;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.bonus-panel__grid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bonus-panel__grid-item {
+  min-height: 76px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 4px;
+  place-items: center;
+}
+
+.bonus-panel__grid-item strong {
+  color: #fff6ff;
+  font-size: 1rem;
+}
+
+.bonus-panel__grid-item span {
+  color: rgba(244, 226, 255, 0.52);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.bonus-panel__fair-strip {
+  padding: 12px 16px;
+  color: rgba(244, 226, 255, 0.68);
+  font-size: 0.8rem;
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.bonus-panel__history {
+  display: grid;
+  gap: 12px;
+}
+
+.bonus-panel__history-head,
+.bonus-panel__history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bonus-panel__history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bonus-panel__history-item {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bonus-panel__empty {
+  margin: 0;
+  color: rgba(244, 226, 255, 0.62);
+}
+
+@media (max-width: 980px) {
+  .bonus-panel__layout,
+  .bonus-panel__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .bonus-panel__wheel {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+  }
+}

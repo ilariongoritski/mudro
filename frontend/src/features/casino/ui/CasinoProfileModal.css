@@ -1,0 +1,502 @@
+.casino-profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(740px, 100vw);
+}
+
+.casino-profile-modal__backdrop {
+  border: 0;
+  padding: 0;
+  background: rgba(8, 6, 12, 0.72);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.casino-profile-modal__panel {
+  height: 100vh;
+  overflow-y: auto;
+  padding: 1rem;
+  color: #fff7fb;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 79, 176, 0.16), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(255, 207, 88, 0.08), transparent 22%),
+    linear-gradient(180deg, #130b18 0%, #0b0910 100%);
+  box-shadow: -24px 0 60px rgba(5, 3, 7, 0.36);
+  display: grid;
+  gap: 1rem;
+}
+
+.casino-profile-modal__panel[data-theme='neon'] {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(80, 216, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(255, 79, 176, 0.14), transparent 24%),
+    linear-gradient(180deg, #0e0f1a 0%, #090a10 100%);
+}
+
+.casino-profile-modal__panel[data-theme='dark'] {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 79, 176, 0.12), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(255, 207, 88, 0.06), transparent 22%),
+    linear-gradient(180deg, #120b16 0%, #09080e 100%);
+}
+
+.casino-profile-modal__head,
+.casino-profile-modal__summary-card,
+.casino-profile-modal__progress,
+.casino-profile-modal__metrics article,
+.casino-profile-modal__activity-item,
+.casino-profile-modal__activity-head {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+}
+
+.casino-profile-modal__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 24px;
+  padding: 1rem 1.1rem;
+}
+
+.casino-profile-modal__eyebrow {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  color: rgba(255, 244, 249, 0.62);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.casino-profile-modal__head h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+
+.casino-profile-modal__head p {
+  margin: 0.35rem 0 0;
+  color: rgba(255, 244, 249, 0.72);
+}
+
+.casino-profile-modal__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.casino-profile-modal__ghost-action,
+.casino-profile-modal__close {
+  min-height: 2.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff7fb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0 0.9rem;
+}
+
+.casino-profile-modal__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.casino-profile-modal__summary-card {
+  border-radius: 20px;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.casino-profile-modal__summary-card span,
+.casino-profile-modal__progress-head span,
+.casino-profile-modal__metrics span,
+.casino-profile-modal__activity-head span,
+.casino-profile-modal__activity-head small {
+  color: rgba(255, 244, 249, 0.58);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.casino-profile-modal__summary-card strong {
+  font-size: 1.25rem;
+}
+
+.casino-profile-modal__summary-card small,
+.casino-profile-modal__progress p,
+.casino-profile-modal__activity-copy small,
+.casino-profile-modal__activity-result small {
+  color: rgba(255, 244, 249, 0.68);
+}
+
+.casino-profile-modal__progress {
+  border-radius: 22px;
+  padding: 0.95rem 1rem 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.casino-profile-modal__progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.casino-profile-modal__progress-head strong {
+  font-size: 1rem;
+}
+
+.casino-profile-modal__progress-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.casino-profile-modal__progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4df4a2, #4cc2ff);
+}
+
+.casino-profile-modal__progress p {
+  margin: 0;
+}
+
+.casino-profile-modal__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.casino-profile-modal__metrics article {
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.casino-profile-modal__metrics strong {
+  font-size: 1.1rem;
+}
+
+.casino-profile-modal__activity {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.casino-profile-modal__activity-head {
+  border-radius: 18px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.casino-profile-modal__activity-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.casino-profile-modal__activity-group {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.casino-profile-modal__activity-group_secondary {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.casino-profile-modal__activity-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.casino-profile-modal__activity-group-head span {
+  color: rgba(255, 244, 249, 0.84);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.casino-profile-modal__activity-group-head small {
+  color: rgba(255, 244, 249, 0.58);
+  font-size: 0.72rem;
+}
+
+.casino-profile-modal__activity-group-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.casino-profile-modal__activity-item {
+  border-radius: 18px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.casino-profile-modal__activity-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.casino-profile-modal__activity-game {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 249, 0.58);
+}
+
+.casino-profile-modal__activity-game_slots {
+  color: #ffd76b;
+}
+
+.casino-profile-modal__activity-game_roulette {
+  color: #6cd7ff;
+}
+
+.casino-profile-modal__activity-game_plinko {
+  color: #76f0bf;
+}
+
+.casino-profile-modal__activity-game_crash {
+  color: #ff9c76;
+}
+
+.casino-profile-modal__activity-game_coinflip {
+  color: #d39bff;
+}
+
+.casino-profile-modal__activity-game_bonus {
+  color: #8effd7;
+}
+
+.casino-profile-modal__activity-game_default {
+  color: rgba(255, 244, 249, 0.58);
+}
+
+.casino-profile-modal__activity-copy strong {
+  font-size: 1rem;
+}
+
+.casino-profile-modal__activity-copy p {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 244, 249, 0.68);
+  overflow-wrap: anywhere;
+}
+
+.casino-profile-modal__activity-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.casino-profile-modal__activity-marker {
+  display: inline-flex;
+  min-height: 1.6rem;
+  align-items: center;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 244, 249, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.casino-profile-modal__activity-marker_fairness {
+  background: rgba(76, 194, 255, 0.12);
+  color: #92ddff;
+}
+
+.casino-profile-modal__activity-result {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: end;
+  text-align: right;
+}
+
+.casino-profile-modal__activity-amount_positive {
+  color: #56efb2;
+}
+
+.casino-profile-modal__activity-amount_negative {
+  color: #ff7a9d;
+}
+
+.casino-profile-modal__activity-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.casino-profile-modal__activity-status_win {
+  background: rgba(86, 239, 178, 0.12);
+  color: #78f5c0;
+}
+
+.casino-profile-modal__activity-status_lost {
+  background: rgba(255, 122, 157, 0.12);
+  color: #ff96b0;
+}
+
+.casino-profile-modal__activity-status_cashout {
+  background: rgba(76, 194, 255, 0.12);
+  color: #87d7ff;
+}
+
+.casino-profile-modal__empty {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  color: rgba(255, 244, 249, 0.72);
+}
+
+.casino-profile-modal__settings {
+  border-radius: 22px;
+  padding: 0.95rem 1rem;
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+}
+
+.casino-profile-modal__settings-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.casino-profile-modal__settings-head span,
+.casino-profile-modal__settings-head p,
+.casino-profile-modal__settings-label {
+  margin: 0;
+}
+
+.casino-profile-modal__settings-head span,
+.casino-profile-modal__settings-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: rgba(255, 244, 249, 0.76);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.casino-profile-modal__settings-head p {
+  margin-top: 0.25rem;
+  color: rgba(255, 244, 249, 0.64);
+}
+
+.casino-profile-modal__settings-toggle,
+.casino-profile-modal__settings-pill {
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff7fb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.casino-profile-modal__settings-toggle {
+  white-space: nowrap;
+}
+
+.casino-profile-modal__settings-body {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.casino-profile-modal__settings-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.casino-profile-modal__settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.casino-profile-modal__settings-pill_active {
+  border-color: rgba(255, 207, 88, 0.72);
+  background: rgba(255, 207, 88, 0.14);
+}
+
+@media (max-width: 980px) {
+  .casino-profile-modal {
+    grid-template-columns: 1fr;
+  }
+
+  .casino-profile-modal__backdrop {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .casino-profile-modal__summary-grid,
+  .casino-profile-modal__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .casino-profile-modal__head,
+  .casino-profile-modal__activity-item {
+    flex-direction: column;
+  }
+
+  .casino-profile-modal__settings-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .casino-profile-modal__activity-result {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .casino-profile-modal__summary-grid,
+  .casino-profile-modal__metrics {
+    grid-template-columns: 1fr;
+  }
+}

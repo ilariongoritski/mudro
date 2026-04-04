@@ -1,0 +1,354 @@
+.plinko-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.plinko-panel__header,
+.plinko-panel__surface {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(11, 8, 16, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.plinko-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+}
+
+.plinko-panel__eyebrow,
+.plinko-panel__kicker {
+  display: inline-flex;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: var(--mudro-casino-soft);
+}
+
+.plinko-panel__header h2,
+.plinko-panel__surface-head h3 {
+  margin: 0;
+}
+
+.plinko-panel__header p {
+  margin: 8px 0 0;
+  color: rgba(249, 241, 255, 0.76);
+}
+
+.plinko-panel__wallet {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.plinko-panel__wallet span,
+.plinko-panel__wallet small,
+.plinko-panel__result-pill small {
+  color: rgba(249, 241, 255, 0.72);
+}
+
+.plinko-panel__wallet strong {
+  font-size: 1.6rem;
+  color: var(--mudro-casino-gold);
+}
+
+.plinko-panel__board {
+  display: grid;
+  gap: 8px;
+  padding: 18px 16px 8px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 50% 16%, rgba(120, 77, 255, 0.22), transparent 32%),
+    radial-gradient(circle at 20% 82%, rgba(61, 214, 161, 0.14), transparent 28%),
+    rgba(7, 8, 14, 0.92);
+}
+
+.plinko-panel__row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.plinko-panel__peg {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.plinko-panel__peg_visited {
+  background: rgba(98, 245, 188, 0.42);
+  box-shadow: 0 0 16px rgba(98, 245, 188, 0.18);
+}
+
+.plinko-panel__peg_current {
+  background: rgba(255, 207, 88, 0.9);
+  box-shadow: 0 0 22px rgba(255, 207, 88, 0.4);
+}
+
+.plinko-panel__ball {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #ffcf58 48%, #ff4fb0 100%);
+  box-shadow: 0 0 24px rgba(255, 207, 88, 0.45);
+  animation: plinkoBallPulse 0.8s ease-in-out infinite;
+}
+
+.plinko-panel__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.95fr);
+  gap: 16px;
+}
+
+.plinko-panel__surface {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.plinko-panel__surface-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plinko-panel__result-pill,
+.plinko-panel__surface-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plinko-panel__result-pill span {
+  color: #ffe7bc;
+  font-weight: 800;
+}
+
+.plinko-panel__row-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plinko-panel__chip {
+  display: grid;
+  gap: 2px;
+  min-width: 112px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f9f1ff;
+  text-align: left;
+}
+
+.plinko-panel__chip strong {
+  font-size: 0.94rem;
+}
+
+.plinko-panel__chip small {
+  color: rgba(249, 241, 255, 0.68);
+}
+
+.plinko-panel__chip_active {
+  border-color: rgba(255, 207, 88, 0.72);
+  background: linear-gradient(120deg, rgba(255, 79, 176, 0.18), rgba(255, 207, 88, 0.18));
+}
+
+.plinko-panel__form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.plinko-panel__field {
+  display: grid;
+  gap: 6px;
+}
+
+.plinko-panel__field span,
+.plinko-panel__field_readonly strong {
+  color: rgba(249, 241, 255, 0.8);
+}
+
+.plinko-panel__field input {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9f1ff;
+  padding: 0 12px;
+}
+
+.plinko-panel__field_readonly {
+  align-content: center;
+  min-height: 70px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.plinko-panel__quick-stakes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plinko-panel__quick-stake {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f9f1ff;
+}
+
+.plinko-panel__quick-stake_active {
+  border-color: rgba(255, 207, 88, 0.72);
+  background: rgba(255, 207, 88, 0.12);
+}
+
+.plinko-panel__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.plinko-panel__primary,
+.plinko-panel__secondary {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.plinko-panel__primary {
+  background: linear-gradient(120deg, #4ee7b5, #ffcf58);
+  color: #110b14;
+  font-weight: 800;
+}
+
+.plinko-panel__secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9f1ff;
+}
+
+.plinko-panel__result {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plinko-panel__result > div {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plinko-panel__result span {
+  color: rgba(249, 241, 255, 0.68);
+  font-size: 0.82rem;
+}
+
+.plinko-panel__status {
+  margin: 0;
+  color: rgba(249, 241, 255, 0.84);
+}
+
+.plinko-panel__history {
+  display: grid;
+  gap: 10px;
+}
+
+.plinko-panel__history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 79, 176, 0.09);
+  border: 1px solid rgba(255, 79, 176, 0.14);
+}
+
+.plinko-panel__history-item_win {
+  background: rgba(78, 231, 181, 0.1);
+  border-color: rgba(78, 231, 181, 0.14);
+}
+
+.plinko-panel__history-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.plinko-panel__history-copy strong {
+  font-size: 0.98rem;
+}
+
+.plinko-panel__history-copy span,
+.plinko-panel__history-copy small,
+.plinko-panel__history-result span {
+  color: rgba(249, 241, 255, 0.72);
+  font-size: 0.82rem;
+}
+
+.plinko-panel__history-result {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.plinko-panel__history-result strong {
+  font-size: 1rem;
+}
+
+.plinko-panel__empty {
+  margin: 0;
+  color: rgba(249, 241, 255, 0.64);
+}
+
+@keyframes plinkoBallPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 900px) {
+  .plinko-panel__controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .plinko-panel__header {
+    flex-direction: column;
+  }
+
+  .plinko-panel__wallet {
+    text-align: left;
+  }
+
+  .plinko-panel__form-grid,
+  .plinko-panel__result {
+    grid-template-columns: 1fr;
+  }
+}
+
