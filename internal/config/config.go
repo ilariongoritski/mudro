@@ -10,22 +10,23 @@ import (
 )
 
 const (
-	DefaultDSN              = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
-	DefaultTelegramLimit    = 3800
-	DefaultOpenAIModel      = "gpt-4.1-mini"
-	DefaultAPIAddr          = ":8080"
-	DefaultAPIBaseURL       = "http://127.0.0.1:8080"
-	DefaultCasinoServiceURL = "http://127.0.0.1:8081"
-	DefaultAPIRateRPS       = 20
-	DefaultAPIRateBurst     = 40
-	DefaultCodexLogsDir     = ".codex/logs"
-	DefaultReportMinutes    = 30
-	DefaultRedisAddr        = "localhost:6379"
-	DefaultKafkaClientID    = "mudro"
-	DefaultKafkaTopic       = "mudro.agent.tasks.v1"
-	DefaultMudroLocalRoot   = "E:\\mudr\\_mudro-local"
-	DefaultSkaroDashboard   = "http://127.0.0.1:4700/dashboard"
-	DefaultClaudeProxyURL   = "http://127.0.0.1:8788"
+	DefaultDSN               = "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable"
+	DefaultTelegramLimit     = 3800
+	DefaultOpenAIModel       = "gpt-4.1-mini"
+	DefaultOpenRouterBaseURL = "https://openrouter.ai/api/v1"
+	DefaultAPIAddr           = ":8080"
+	DefaultAPIBaseURL        = "http://127.0.0.1:8080"
+	DefaultCasinoServiceURL  = "http://127.0.0.1:8081"
+	DefaultAPIRateRPS        = 20
+	DefaultAPIRateBurst      = 40
+	DefaultCodexLogsDir      = ".codex/logs"
+	DefaultReportMinutes     = 30
+	DefaultRedisAddr         = "localhost:6379"
+	DefaultKafkaClientID     = "mudro"
+	DefaultKafkaTopic        = "mudro.agent.tasks.v1"
+	DefaultMudroLocalRoot    = "E:\\mudr\\_mudro-local"
+	DefaultSkaroDashboard    = "http://127.0.0.1:4700/dashboard"
+	DefaultClaudeProxyURL    = "http://127.0.0.1:8788"
 )
 
 func DSN() string {
@@ -48,12 +49,30 @@ func TelegramAllowedUsername() string {
 	return strings.ToLower(strings.TrimSpace(os.Getenv("TELEGRAM_ALLOWED_USERNAME")))
 }
 
-func OpenAIAPIKey() string {
+func OpenRouterAPIKey() string {
+	if v := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); v != "" {
+		return v
+	}
 	return strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
 }
 
-func OpenAIModel() string {
+func OpenRouterModel() string {
+	if v := strings.TrimSpace(os.Getenv("OPENROUTER_MODEL")); v != "" {
+		return v
+	}
 	return envOr("OPENAI_MODEL", DefaultOpenAIModel)
+}
+
+func OpenRouterBaseURL() string {
+	return strings.TrimRight(envOr("OPENROUTER_BASE_URL", DefaultOpenRouterBaseURL), "/")
+}
+
+func OpenAIAPIKey() string {
+	return OpenRouterAPIKey()
+}
+
+func OpenAIModel() string {
+	return OpenRouterModel()
 }
 
 func ReportBotToken() string {

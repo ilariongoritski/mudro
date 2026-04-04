@@ -217,8 +217,8 @@ func handleTextFollowup(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 			if query, ok := r.handleChatText(update.Message.Text); ok {
 				out, err := r.AskMudro(query)
 				if err != nil {
-					if strings.Contains(err.Error(), "OPENAI_API_KEY") {
-						sendPlainWithCommand(bot, update, "/mudro_chat", "Режим чата включен, но OPENAI_API_KEY не задан.\nДобавь ключ в .env или выключи режим: /chat off")
+					if strings.Contains(err.Error(), "OPENROUTER_API_KEY") {
+						sendPlainWithCommand(bot, update, "/mudro_chat", "Режим чата включен, но OPENROUTER_API_KEY не задан.\nДобавь ключ в .env или выключи режим: /chat off")
 						return
 					}
 					sendPlainWithCommand(bot, update, "/mudro_chat", "Ошибка chat-mode: "+err.Error())
@@ -318,8 +318,8 @@ func handleChatMode(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	switch arg {
 	case "on", "enable", "1":
 		out, err := r.SetChatMode(update.Message.Chat.ID, true)
-		if err == nil && config.OpenAIAPIKey() == "" {
-			out = append(out, []byte("\nВнимание: OPENAI_API_KEY не задан, ответы LLM недоступны.")...)
+		if err == nil && config.OpenRouterAPIKey() == "" {
+			out = append(out, []byte("\nВнимание: OPENROUTER_API_KEY не задан, ответы LLM недоступны.")...)
 		}
 		sendReply(bot, update, "/chat", out, err)
 	case "off", "disable", "0":

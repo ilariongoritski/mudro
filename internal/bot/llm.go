@@ -13,17 +13,15 @@ import (
 	"github.com/goritskimihail/mudro/internal/config"
 )
 
-const openAIChatCompletionsURL = "https://api.openai.com/v1/chat/completions"
-
 func (r *Runner) AskMudro(query string) ([]byte, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return []byte("Использование: /mudro <ваш вопрос>\nПример: /mudro что изменилось в боте за сегодня?"), nil
 	}
 
-	apiKey := config.OpenAIAPIKey()
+	apiKey := config.OpenRouterAPIKey()
 	if apiKey == "" {
-		return nil, fmt.Errorf("OPENAI_API_KEY is not set")
+		return nil, fmt.Errorf("OPENROUTER_API_KEY is not set")
 	}
 
 	systemPrompt := strings.Join([]string{
@@ -36,7 +34,7 @@ func (r *Runner) AskMudro(query string) ([]byte, error) {
 	projectContext := r.buildProjectContext()
 
 	body := chatCompletionsRequest{
-		Model: config.OpenAIModel(),
+		Model: config.OpenRouterModel(),
 		Messages: []chatMessage{
 			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: "Контекст проекта:\n" + projectContext + "\n\nЗапрос пользователя:\n" + query},
@@ -49,12 +47,14 @@ func (r *Runner) AskMudro(query string) ([]byte, error) {
 		return nil, fmt.Errorf("marshal llm request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, openAIChatCompletionsURL, bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPost, config.OpenRouterBaseURL()+"/chat/completions", bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("build llm request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", config.APIBaseURL())
+	req.Header.Set("X-Title", "Mudro")
 
 	client := &http.Client{Timeout: 45 * time.Second}
 	resp, err := client.Do(req)
