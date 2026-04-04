@@ -21,9 +21,9 @@ type Server struct {
 	postsSvc         *posts.Service
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
-	tgVisiblePostIDs []string
 	httpClient       *http.Client
 	casinoServiceURL string
+	tgVisiblePostIDs []string
 }
 
 // NewServer constructs a Server with the provided service dependencies.
@@ -60,10 +60,33 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/auth/login", s.handleAuthLogin)
 		mux.HandleFunc("/api/auth/register", s.handleAuthRegister)
 		mux.HandleFunc("/api/auth/me", s.handleAuthMe)
+		mux.HandleFunc("/api/auth/refresh", s.handleAuthRefresh)
+		mux.HandleFunc("/api/auth/telegram", s.handleAuthTelegram)
+
 		mux.HandleFunc("/api/casino/balance", s.handleCasinoBalance)
 		mux.HandleFunc("/api/casino/history", s.handleCasinoHistory)
 		mux.HandleFunc("/api/casino/spin", s.handleCasinoSpin)
 		mux.HandleFunc("/api/casino/config", s.handleCasinoConfig)
+
+		mux.HandleFunc("/api/casino/bonus/state", s.handleCasinoBonusState)
+		mux.HandleFunc("/api/casino/bonus/claim-subscription", s.handleCasinoBonusClaimSubscription)
+		mux.HandleFunc("/api/casino/bonus/history", s.handleCasinoBonusHistory)
+		mux.HandleFunc("/api/casino/profile", s.handleCasinoProfile)
+		mux.HandleFunc("/api/casino/activity", s.handleCasinoActivity)
+		mux.HandleFunc("/api/casino/live-feed", s.handleCasinoLiveFeed)
+		mux.HandleFunc("/api/casino/top-wins", s.handleCasinoTopWins)
+		mux.HandleFunc("/api/casino/reactions", s.handleCasinoReactions)
+		mux.HandleFunc("/api/casino/roulette/state", s.handleCasinoRouletteState)
+		mux.HandleFunc("/api/casino/roulette/bets", s.handleCasinoRouletteBets)
+		mux.HandleFunc("/api/casino/roulette/history", s.handleCasinoRouletteHistory)
+		mux.HandleFunc("/api/casino/roulette/stream", s.handleCasinoRouletteStream)
+		mux.HandleFunc("/api/casino/plinko/config", s.handleCasinoPlinkoConfig)
+		mux.HandleFunc("/api/casino/plinko/state", s.handleCasinoPlinkoState)
+		mux.HandleFunc("/api/casino/plinko/drop", s.handleCasinoPlinkoDrop)
+
+		mux.HandleFunc("/api/casino/blackjack/state", s.handleCasinoBlackjackState)
+		mux.HandleFunc("/api/casino/blackjack/start", s.handleCasinoBlackjackStart)
+		mux.HandleFunc("/api/casino/blackjack/action", s.handleCasinoBlackjackAction)
 	}
 	if s.chatHandler != nil {
 		mux.HandleFunc("/api/chat/ws", s.chatHandler.HandleWS)

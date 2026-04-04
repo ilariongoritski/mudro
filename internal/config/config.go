@@ -107,6 +107,11 @@ func RepoRoot() string {
 }
 
 func APIAddr() string {
+	// Railway (and many PaaS) inject PORT; honour it so the process binds on
+	// the right port without extra env configuration.
+	if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
+		return ":" + port
+	}
 	return envOr("API_ADDR", DefaultAPIAddr)
 }
 

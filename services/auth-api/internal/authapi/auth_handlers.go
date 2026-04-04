@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/goritskimihail/mudro/internal/auth"
-	"github.com/goritskimihail/mudro/internal/casino"
+	"github.com/goritskimihail/mudro/pkg/tgauth"
 )
 
 type contextKey string
@@ -195,7 +195,7 @@ func (h *AuthHandlers) HandleTelegramAuth(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	tgAuth, err := casino.ValidateInitData(botToken, req.InitData)
+	tgAuth, err := tgauth.ValidateInitData(botToken, req.InitData)
 	if err != nil {
 		http.Error(w, "invalid telegram initData", http.StatusUnauthorized)
 		return

@@ -160,13 +160,18 @@ func (r *pgUserRepository) CountActiveSubscriptions(ctx context.Context) (int64,
 func (r *pgUserRepository) AddSubscription(ctx context.Context, userID int64, planID string, duration time.Duration) error {
 	expiresAt := time.Now().Add(duration)
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO user_subscriptions (user_id, plan_id, expires_at)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_id) DO UPDATE SET
-			plan_id = EXCLUDED.plan_id,
-			expires_at = EXCLUDED.expires_at,
-			status = 'active',
-			updated_at = NOW()
+		WITH updated AS (
+			UPDATE user_subscriptions
+			SET plan_id = $2,
+				expires_at = $3,
+				status = 'active',
+				updated_at = NOW()
+			WHERE user_id = $1
+			RETURNING 1
+		)
+		INSERT INTO user_subscriptions (user_id, plan_id, status, expires_at)
+		SELECT $1, $2, 'active', $3
+		WHERE NOT EXISTS (SELECT 1 FROM updated)
 	`, userID, planID, expiresAt)
 	return err
 }

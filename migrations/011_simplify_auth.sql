@@ -10,7 +10,16 @@ UPDATE users SET username = split_part(email, '@', 1) WHERE username IS NULL;
 ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
 
 -- Добавляем уникальность для username
-ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_username_key'
+      AND conrelid = 'users'::regclass
+  ) THEN
+    ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username);
+  END IF;
+END $$;
 
 -- Обновляем таблицу токенов (если используется)
 ALTER TABLE auth_tokens ADD COLUMN IF NOT EXISTS username text;

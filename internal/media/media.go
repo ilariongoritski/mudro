@@ -82,11 +82,11 @@ func parseLegacyItem(row map[string]any) (Item, bool) {
 	if item.Title == "" {
 		item.Title = guessMediaTitle(item.URL)
 	}
-	if item.Kind == "" {
-		item.Kind = "image"
-	}
 	if item.Kind == "" && item.URL == "" && item.PreviewURL == "" && item.Title == "" && len(item.Extra) == 0 {
 		return Item{}, false
+	}
+	if item.Kind == "" {
+		item.Kind = "image"
 	}
 	return item, true
 }

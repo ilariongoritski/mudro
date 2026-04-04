@@ -1,10 +1,10 @@
 ##################################################
 # Multi-stage Dockerfile for all Go services
-# Usage: docker build --build-arg SERVICE=cmd/api -t mudro-api .
+# Usage: docker build --build-arg SERVICE=services/feed-api/cmd -t mudro-api .
 ##################################################
 FROM golang:1.24-alpine AS build
 
-ARG SERVICE=cmd/api
+ARG SERVICE=services/feed-api/cmd
 
 RUN apk add --no-cache git ca-certificates tzdata
 

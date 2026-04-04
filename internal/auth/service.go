@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
-	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -88,7 +89,7 @@ func (s *Service) IssueToken(user *User) (string, error) {
 		return "", errors.New("user is nil")
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":  user.ID,
+		"sub": user.ID,
 		"exp":  time.Now().Add(s.tokenExpiry).Unix(),
 		"role": user.Role,
 	})
