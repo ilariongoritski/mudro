@@ -8,15 +8,17 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Handler struct {
-	store *Store
+	store       *Store
+	userLimiter *UserRateLimiter
 }
 
 func NewHandler(store *Store) *Handler {
-	return &Handler{store: store}
+	return &Handler{store: store, userLimiter: NewUserRateLimiter(10, time.Minute)}
 }
 
 func (h *Handler) Router() http.Handler {
@@ -29,9 +31,6 @@ func (h *Handler) Router() http.Handler {
 	mux.HandleFunc("/bonus/state", h.handleBonusState)
 	mux.HandleFunc("/bonus/claim-subscription", h.handleBonusClaimSubscription)
 	mux.HandleFunc("/bonus/history", h.handleBonusHistory)
-	mux.HandleFunc("/casino/bonus/state", h.handleBonusState)
-	mux.HandleFunc("/casino/bonus/claim-subscription", h.handleBonusClaimSubscription)
-	mux.HandleFunc("/casino/bonus/history", h.handleBonusHistory)
 
 	mux.HandleFunc("/roulette/state", h.handleRouletteState)
 	mux.HandleFunc("/roulette/bets", h.handleRouletteBets)
@@ -44,11 +43,6 @@ func (h *Handler) Router() http.Handler {
 	mux.HandleFunc("/live-feed", h.handleLiveFeed)
 	mux.HandleFunc("/top-wins", h.handleTopWins)
 	mux.HandleFunc("/reactions", h.handleReactions)
-	mux.HandleFunc("/casino/profile", h.handleProfile)
-	mux.HandleFunc("/casino/activity", h.handleActivity)
-	mux.HandleFunc("/casino/live-feed", h.handleLiveFeed)
-	mux.HandleFunc("/casino/top-wins", h.handleTopWins)
-	mux.HandleFunc("/casino/reactions", h.handleReactions)
 
 	mux.HandleFunc("/plinko/config", h.handlePlinkoConfig)
 	mux.HandleFunc("/plinko/state", h.handlePlinkoState)
@@ -57,9 +51,6 @@ func (h *Handler) Router() http.Handler {
 	mux.HandleFunc("/blackjack/state", h.handleBlackjackState)
 	mux.HandleFunc("/blackjack/start", h.handleBlackjackStart)
 	mux.HandleFunc("/blackjack/action", h.handleBlackjackAction)
-	mux.HandleFunc("/casino/blackjack/state", h.handleBlackjackState)
-	mux.HandleFunc("/casino/blackjack/start", h.handleBlackjackStart)
-	mux.HandleFunc("/casino/blackjack/action", h.handleBlackjackAction)
 	return mux
 }
 
@@ -119,6 +110,10 @@ func (h *Handler) handleSpin(w http.ResponseWriter, r *http.Request) {
 	actor, err := authContextFromHeaders(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
 		return
 	}
 	var req struct {
@@ -493,6 +488,10 @@ func (h *Handler) handlePlinkoDrop(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+		return
+	}
 	var req PlinkoDropRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
@@ -684,4 +683,51 @@ func (h *Handler) handleBlackjackAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, state)
+}
+
+type UserRateLimiter struct {
+	mu       sync.Mutex
+	requests map[int64]*userBucket
+	rate     int
+	window   time.Duration
+}
+
+type userBucket struct {
+	count       int
+	windowStart time.Time
+}
+
+func NewUserRateLimiter(rate int, window time.Duration) *UserRateLimiter {
+	return &UserRateLimiter{
+		requests: make(map[int64]*userBucket),
+		rate:     rate,
+		window:   window,
+	}
+}
+
+func (l *UserRateLimiter) Allow(userID int64) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	now := time.Now()
+	bucket, exists := l.requests[userID]
+
+	if !exists || now.Sub(bucket.windowStart) > l.window {
+		l.requests[userID] = &userBucket{count: 1, windowStart: now}
+		return true
+	}
+
+	if bucket.count >= l.rate {
+		return false
+	}
+
+	bucket.count++
+	return true
+}
+
+func (h *Handler) rateLimited(actor ParticipantInput) bool {
+	if h.userLimiter == nil {
+		return false
+	}
+	return !h.userLimiter.Allow(actor.UserID)
 }

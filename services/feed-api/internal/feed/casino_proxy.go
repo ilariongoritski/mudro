@@ -233,7 +233,7 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	client := s.httpClient
 	if upstreamPath == "/roulette/stream" {
-		client = &http.Client{}
+		client = &http.Client{Timeout: 0}
 	}
 	if client == nil {
 		client = http.DefaultClient
