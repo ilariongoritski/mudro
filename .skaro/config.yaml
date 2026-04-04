@@ -37,13 +37,14 @@ theme: dark
 ui:
   auto_open_browser: true
 verify_commands:
-- command: wsl bash -lc "cd /mnt/d/mudr/mudro11-main && make dbcheck"
+- command: wsl bash -lc "cd /mnt/e/mudr/mudro11-reference-reference && make dbcheck"
   name: dbcheck
-- command: wsl bash -lc "cd /mnt/d/mudr/mudro11-main && make tables"
+- command: wsl bash -lc "cd /mnt/e/mudr/mudro11-reference-reference && make tables"
   name: tables
-- command: wsl bash -lc "cd /mnt/d/mudr/mudro11-main && go test $(go list ./... | grep -v '/tmp$')"
+- command: wsl bash -lc "cd /mnt/e/mudr/mudro11-reference-reference && go test $(go list ./... | grep -v '/tmp$')"
   name: go-test
 - command: npm.cmd --prefix frontend run build
   name: frontend-build
 - command: npm.cmd --prefix frontend run lint
   name: frontend-lint
+

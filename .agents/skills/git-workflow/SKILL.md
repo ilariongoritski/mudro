@@ -23,7 +23,7 @@ agent/<YYYYMMDD>-<slug>
 
 ## Создание рабочей ветки
 ```bash
-cd d:\mudr\mudro11-main
+cd E:\mudr\mudro11-reference
 git checkout -b agent/$(date +%Y%m%d)-<slug>
 ```
 Или в PowerShell:
@@ -101,7 +101,7 @@ git push -u origin agent/<дата>-<slug>
 
 | Директория | Ветка | Назначение |
 |-----------|-------|-----------|
-| `mudro11-main` | `codex/mainline-base` | Чистая base, чтение, MCP |
+| `mudro11-reference` | `codex/mainline-base` | Чистая base, чтение, MCP |
 | `mudro11-automation` | `codex/automation-track` | Агентский контур, автоматизация |
 | `mudro11-bugs` | `codex/bugs-repo-db` | Багфиксы, тесты, БД, API |
 | `mudro11-devops` | `codex/devops-vps` | VPS, deploy, nginx, infra |

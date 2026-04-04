@@ -12,7 +12,7 @@ description: Деплой frontend на VPS через server-side rollout scrip
 ## Шаги
 1. Собрать бандл:
 ```powershell
-cd d:\mudr\mudro11-main\frontend
+cd E:\mudr\mudro11-reference\frontend
 npm.cmd ci
 npm.cmd run build
 ```

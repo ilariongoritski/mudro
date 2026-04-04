@@ -11,10 +11,10 @@ description: Полный health check mudro для локального и VPS-
 
 ## Локальный контур
 ```powershell
-docker compose -f d:\mudr\mudro11-main\docker-compose.yml ps
-docker compose -f d:\mudr\mudro11-main\docker-compose.yml exec -T db psql -U postgres -d gallery -c "select 1;"
-docker compose -f d:\mudr\mudro11-main\docker-compose.yml exec -T db psql -U postgres -d gallery -c "\dt"
-cd d:\mudr\mudro11-main\frontend && npm.cmd run build
+docker compose -f E:\mudr\mudro11-reference\docker-compose.yml ps
+docker compose -f E:\mudr\mudro11-reference\docker-compose.yml exec -T db psql -U postgres -d gallery -c "select 1;"
+docker compose -f E:\mudr\mudro11-reference\docker-compose.yml exec -T db psql -U postgres -d gallery -c "\dt"
+cd E:\mudr\mudro11-reference\frontend && npm.cmd run build
 ```
 
 ## VPS-first контур

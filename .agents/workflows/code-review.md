@@ -10,12 +10,12 @@ description: Код-ревью изменений перед коммитом в
 
 1. Проверить текущий статус git:
 ```powershell
-cd d:\mudr\mudro11-main && git status --short
+cd E:\mudr\mudro11-reference && git status --short
 ```
 
 2. Посмотреть diff изменений:
 ```powershell
-cd d:\mudr\mudro11-main && git diff --stat
+cd E:\mudr\mudro11-reference && git diff --stat
 ```
 
 3. Убедиться что в diff нет чувствительных файлов:
@@ -29,7 +29,7 @@ wsl -d Ubuntu -- bash -c "cd ~/projects/mudro && go test ./..."
 
 5. Прогнать frontend проверки (если менялся frontend/):
 ```powershell
-cd d:\mudr\mudro11-main\frontend && npm.cmd run build && npm.cmd run lint
+cd E:\mudr\mudro11-reference\frontend && npm.cmd run build && npm.cmd run lint
 ```
 
 6. Обновить `.codex/done.md` с кратким результатом.

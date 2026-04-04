@@ -1,0 +1,4 @@
+- name: adrs-exist
+  command: powershell -ExecutionPolicy Bypass -Command "$paths = @('.skaro/architecture/adrs/ADR-001-media-normalization.md','.skaro/architecture/adrs/ADR-002-comment-model.md','.skaro/architecture/adrs/ADR-003-vk-snapshot-only.md','.skaro/architecture/adrs/ADR-004-vps-self-hosted-frontend.md'); foreach ($p in $paths) { if (-not (Test-Path $p)) { Write-Error \"Missing $p\"; exit 1 } }"
+- name: skaro-status
+  command: powershell -ExecutionPolicy Bypass -File .\scripts\skaro-local.ps1 status

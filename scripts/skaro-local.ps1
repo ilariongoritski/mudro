@@ -3,14 +3,16 @@ param(
     [string[]]$SkaroArgs
 )
 
-$toolRoot = 'D:\mudr\toolchain'
-$localRoot = 'D:\mudr\_mudro-local\skaro'
-$claudeOrchRoot = Join-Path 'D:\mudr\_mudro-local' 'claude-orch'
+$workspaceRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
+$toolRoot = Join-Path $workspaceRoot 'toolchain'
+$localRoot = Join-Path $workspaceRoot '_mudro-local\skaro'
+$claudeOrchRoot = Join-Path $workspaceRoot '_mudro-local\claude-orch'
 $localEnvFile = Join-Path $localRoot 'claude.env'
 $binDir = Join-Path $toolRoot 'uv-bin'
 $toolDir = Join-Path $toolRoot 'uv-tools'
 $cacheDir = Join-Path $toolRoot 'uv-cache'
 $pythonDir = Join-Path $toolRoot 'uv-python'
+$skaroExe = Join-Path $binDir 'skaro.exe'
 
 function Import-LocalEnvFile {
     param(
@@ -83,5 +85,5 @@ $env:PATH = "$binDir;$env:PATH"
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 $OutputEncoding = [System.Text.UTF8Encoding]::new()
 
-& skaro @SkaroArgs
+& $skaroExe @SkaroArgs
 exit $LASTEXITCODE
