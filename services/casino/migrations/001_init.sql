@@ -12,7 +12,7 @@ create table if not exists casino_participants (
   username text not null default '',
   email text not null default '',
   role text not null default '',
-  coins bigint not null default 0,
+  coins bigint not null default 500,
   spins_count bigint not null default 0,
   last_spin_at timestamptz,
   created_at timestamptz not null default now(),

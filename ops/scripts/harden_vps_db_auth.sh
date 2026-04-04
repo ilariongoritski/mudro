@@ -69,7 +69,7 @@ MUDRO_ROOT=/opt/mudro/app
 DSN=${APP_DSN}
 API_ADDR=:8080
 JWT_SECRET=change-me
-CASINO_SERVICE_URL=http://127.0.0.1:8081
+CASINO_SERVICE_URL=http://127.0.0.1:8082
 MEDIA_ROOT=/var/lib/mudro/media
 EOF
 chmod 600 "${SYSTEMD_ENV_FILE}"

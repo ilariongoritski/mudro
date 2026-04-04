@@ -13,7 +13,7 @@ import (
 )
 
 func Run() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	pool, err := casino.OpenPool(ctx)
@@ -22,10 +22,26 @@ func Run() {
 	}
 	defer pool.Close()
 
-	store := casino.NewStore(pool, casino.NewEngine())
+	mainPool, err := casino.OpenMainPool(ctx)
+	if err != nil {
+		log.Printf("casino: main pool not available, using local-only mode: %v", err)
+	}
+	if mainPool != nil {
+		defer mainPool.Close()
+	}
+
+	store := casino.NewStoreWithMainPool(pool, mainPool, casino.NewEngine())
 	if err := store.EnsureSeedConfig(ctx); err != nil {
 		log.Fatalf("casino seed config: %v", err)
 	}
+
+	applicationCtx, applicationCancel := context.WithCancel(context.Background())
+	defer applicationCancel()
+
+	// Start background services
+	casino.NewRouletteLoop(store).Start(applicationCtx)
+	store.StartBalanceReconciler(applicationCtx, 15*time.Second)
+	store.StartRouletteSessionJanitor(applicationCtx, 30*time.Second)
 
 	srv := &http.Server{
 		Addr:              casino.Addr(),
@@ -49,6 +65,7 @@ func Run() {
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
+	applicationCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("casino shutdown: %v", err)

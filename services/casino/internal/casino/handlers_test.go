@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-type fakeStore struct{}
 
 func TestAuthContextFromHeaders(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
@@ -48,6 +47,32 @@ func TestWriteJSON(t *testing.T) {
 	if !strings.Contains(rec.Body.String(), "status") {
 		t.Fatalf("unexpected body: %s", rec.Body.String())
 	}
+}
+
+func TestExtractBonusInitData(t *testing.T) {
+	t.Run("body wins", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/bonus/claim-subscription", strings.NewReader(`{"init_data":"body-value"}`))
+		req.Header.Set("X-Telegram-Init-Data", "header-value")
+		got, err := extractBonusInitData(req)
+		if err != nil {
+			t.Fatalf("extractBonusInitData() error = %v", err)
+		}
+		if got != "body-value" {
+			t.Fatalf("got %q, want body-value", got)
+		}
+	})
+
+	t.Run("header fallback", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/bonus/claim-subscription", nil)
+		req.Header.Set("X-Init-Data", "header-value")
+		got, err := extractBonusInitData(req)
+		if err != nil {
+			t.Fatalf("extractBonusInitData() error = %v", err)
+		}
+		if got != "header-value" {
+			t.Fatalf("got %q, want header-value", got)
+		}
+	})
 }
 
 var _ = context.Background

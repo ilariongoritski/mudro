@@ -1,8 +1,7 @@
-package casino
+package tgauth
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type TelegramAuth struct {
@@ -92,42 +90,8 @@ func ValidateInitData(botToken, rawInitData string) (*TelegramAuth, error) {
 	}, nil
 }
 
-func DevInitData(botToken string, telegramID int64) string {
-	user := telegramUser{
-		ID:        telegramID,
-		Username:  "demo_player",
-		FirstName: "Demo",
-		LastName:  "Player",
-	}
-	userJSON, _ := json.Marshal(user)
-
-	params := url.Values{}
-	params.Set("auth_date", strconv.FormatInt(time.Now().Unix(), 10))
-	params.Set("query_id", "dev-"+randomHex(16))
-	params.Set("user", string(userJSON))
-
-	pairs := make([]string, 0)
-	for key := range params {
-		pairs = append(pairs, key+"="+params.Get(key))
-	}
-	sort.Strings(pairs)
-	dataCheckString := strings.Join(pairs, "\n")
-
-	secret := hmacSHA256([]byte("WebAppData"), []byte(botToken))
-	hash := hex.EncodeToString(hmacSHA256(secret, []byte(dataCheckString)))
-
-	params.Set("hash", hash)
-	return params.Encode()
-}
-
 func hmacSHA256(key, data []byte) []byte {
 	h := hmac.New(sha256.New, key)
 	h.Write(data)
 	return h.Sum(nil)
-}
-
-func randomHex(n int) string {
-	b := make([]byte, n)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
 }
