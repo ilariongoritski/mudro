@@ -21,7 +21,7 @@
 - Path: `services/casino/cmd`
 - Run: `go run ./services/casino/cmd/casino`
 - Purpose: isolated casino runtime with its own Postgres database, RTP/admin settings, and separate API surface.
-- Note: `go run ./services/casino/cmd` is kept only as a compatibility alias and now resolves to the same runtime.
+- Note: `go run ./services/casino/cmd` is kept only as a compatibility alias and resolves to the same runtime.
 
 ## Bootstrap / Migration Services
 

@@ -126,6 +126,18 @@ make agent-work
 make casino-run
 ```
 
+Casino is a separate contour. For a Supabase-backed casino DB, point `CASINO_DSN` at the casino DB, point `CASINO_MAIN_DSN`
+at the main Mudro wallet DB, keep `CASINO_START_BALANCE=500`, and apply both migration tracks:
+
+```bash
+bash ./scripts/migrate-casino-main.sh
+bash ./scripts/migrate-casino.sh
+```
+
+Rollout checklist:
+
+- [`docs/casino-db-stabilization-checklist.md`](docs/casino-db-stabilization-checklist.md)
+
 ## Import, Backfill, and Maintenance
 
 The repository contains operational CLI tooling under [`tools/`](tools/), including:

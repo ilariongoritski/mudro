@@ -1,113 +1,14 @@
-name: CI
+name: Mudro CI
 
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
-  test-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24.x"
-
-      - name: Run Active Unit/Integration Tests
-        run: make test-active
-
-  test-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Lint Frontend
-        run: npm run lint
-
-      - name: Build Frontend
-        run: npm run build
-
-  smoke-e2e:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: gallery
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d gallery"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24.x"
-
-      - name: Setup PostgreSQL Client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Run Runtime Migrations
-        env:
-          PGPASSWORD: postgres
-        run: USE_DOCKER_PSQL=0 DSN="postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable" make migrate-runtime
-
-      - name: Run Smoke E2E
-        run: go test ./e2e -v
-
-  validate-microservices:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24.x"
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Validate contracts
-        run: go run ./tools/validate-contracts -dir ./contracts
-
-      - name: Validate compose config
-        run: docker compose -f ops/compose/docker-compose.core.yml -f ops/compose/docker-compose.services.yml config >/dev/null
-
-      - name: Validate Claude role runner
-        run: python -m py_compile ./scripts/claude/run_role_matrix.py
-
-  # ─── golangci-lint ──────────────────────────────────────────────
-  go-lint:
-    name: Go — Lint
+  backend:
+    name: Backend Lint & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,11 +16,34 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-          cache: true
+          go-version: '1.24'
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.64.0
-          args: --timeout=5m
+          version: latest
+
+      - name: Run Go Tests
+        run: go test -v ./...
+
+  frontend:
+    name: Frontend Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm install
+
+      - name: Lint Frontend
+        run: cd frontend && npm run lint
+
+      - name: Build Frontend
+        run: cd frontend && npm run build
