@@ -139,6 +139,28 @@ One-command health loop:
 make health
 ```
 
+## Casino on Supabase
+
+Use this when the casino contour should run against Supabase instead of the local `casino-db` container.
+
+Checklist:
+- set `CASINO_DSN` to the Supabase direct connection string and keep `sslmode=require`
+- keep `CASINO_START_BALANCE=500`
+- run `bash ./scripts/migrate-casino.sh`
+- verify the casino service health endpoint after migration
+
+Notes:
+- `scripts/migrate-casino.sh` applies every `*.sql` file in `services/casino/migrations/`
+- legacy slot tables stay in place; the new casino tables extend the schema for multi-game history and roulette
+
+## Railway rollout
+
+Railway-specific split deployment for `frontend + feed-api + casino` is described in:
+
+- `ops/runbooks/railway-casino-miniapp.md`
+
+Use that runbook when the mini app should be deployed as three Railway services with `casino` pointed at Supabase.
+
 ## Local Demo (localhost, no Vercel)
 
 ```bash

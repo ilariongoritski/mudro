@@ -52,6 +52,13 @@ func (h *Handler) Router() http.Handler {
 	mux.HandleFunc("/plinko/config", h.handlePlinkoConfig)
 	mux.HandleFunc("/plinko/state", h.handlePlinkoState)
 	mux.HandleFunc("/plinko/drop", h.handlePlinkoDrop)
+
+	mux.HandleFunc("/blackjack/state", h.handleBlackjackState)
+	mux.HandleFunc("/blackjack/start", h.handleBlackjackStart)
+	mux.HandleFunc("/blackjack/action", h.handleBlackjackAction)
+	mux.HandleFunc("/casino/blackjack/state", h.handleBlackjackState)
+	mux.HandleFunc("/casino/blackjack/start", h.handleBlackjackStart)
+	mux.HandleFunc("/casino/blackjack/action", h.handleBlackjackAction)
 	return mux
 }
 
@@ -596,4 +603,59 @@ func bonusClaimErrorStatus(err error) int {
 	default:
 		return http.StatusInternalServerError
 	}
+}
+func (h *Handler) handleBlackjackState(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	state, err := h.store.BlackjackGetState(r.Context(), actor.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if state == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "no_game"})
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (h *Handler) handleBlackjackStart(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	var req BlackjackGameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	state, err := h.store.BlackjackStart(r.Context(), actor, req.Bet)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (h *Handler) handleBlackjackAction(w http.ResponseWriter, r *http.Request) {
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	var req BlackjackActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	state, err := h.store.BlackjackAction(r.Context(), actor, req.Action)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
 }

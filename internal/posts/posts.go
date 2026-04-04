@@ -128,7 +128,7 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 	for rows.Next() {
 		var p Post
 		if err := rows.Scan(
-			&p.ID, &p.Source, &p.SourcePostID, &p.PublishedAt, &p.Text, &p.Media,
+			&p.ID, &p.Source, &p.SourcePostID, &p.PublishedAt, &p.Text,
 			&p.LikesCount, &p.ViewsCount, &p.CommentsCount, &p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			return nil, nil, err
@@ -174,8 +174,17 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 }
 
 func (s *Service) buildPostsQuery(source, query string, page *int, beforeTS *time.Time, beforeID *int64, limit int, order, comparator string) (string, []any, bool) {
+	// Whitelist guard: only "asc"/"desc" are valid ORDER BY directions.
+	// The comparator must be one of the two keyset-pagination operators.
+	if order != "asc" && order != "desc" {
+		return "", nil, false
+	}
+	if comparator != "<" && comparator != ">" {
+		return "", nil, false
+	}
+
 	base := `
-		select id, source, source_post_id, published_at, text, media, likes_count, views_count, comments_count, created_at, updated_at
+		select id, source, source_post_id, published_at, text, likes_count, views_count, comments_count, created_at, updated_at
 		from posts
 	`
 	args := make([]any, 0, 4)
@@ -279,7 +288,7 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		select id, post_id, parent_comment_id, author_name, published_at, text, reactions, media
+		select id, post_id, parent_comment_id, author_name, published_at, text
 		from post_comments
 		where post_id = any($1)
 		order by post_id asc, published_at asc, id asc
@@ -292,6 +301,14 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 	}
 	defer rows.Close()
 
+	type commentEntry struct {
+		id      int64
+		postID  int64
+		comment Comment
+	}
+	entries := make([]commentEntry, 0)
+	commentIDs := make([]int64, 0)
+
 	for rows.Next() {
 		var (
 			commentID       int64
@@ -300,10 +317,8 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 			authorName      *string
 			publishedAt     time.Time
 			text            *string
-			reactionsRaw    []byte
-			mediaRaw        []byte
 		)
-		if err := rows.Scan(&commentID, &postID, &parentCommentID, &authorName, &publishedAt, &text, &reactionsRaw, &mediaRaw); err != nil {
+		if err := rows.Scan(&commentID, &postID, &parentCommentID, &authorName, &publishedAt, &text); err != nil {
 			return nil, err
 		}
 
@@ -317,21 +332,60 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 		if text != nil {
 			comment.Text = *text
 		}
-		if len(reactionsRaw) > 0 {
-			if err := json.Unmarshal(reactionsRaw, &comment.Reactions); err != nil {
-				slog.Error("unmarshal comment reactions", "comment", comment.SourceCommentID, "err", err)
-			}
-		}
-		if len(mediaRaw) > 0 {
-			comment.Media = append(json.RawMessage(nil), mediaRaw...)
-		}
 
-		out[postID] = append(out[postID], comment)
+		commentIDs = append(commentIDs, commentID)
+		entries = append(entries, commentEntry{id: commentID, postID: postID, comment: comment})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
+	// Загружаем реакции и медиа из нормализованных таблиц
+	commentReactions, err := s.loadCommentReactions(ctx, commentIDs)
+	if err != nil {
+		slog.Error("load comment reactions", "err", err)
+	}
+	commentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
+	if err != nil {
+		slog.Error("load comment media", "err", err)
+	}
+
+	for _, e := range entries {
+		e.comment.Reactions = commentReactions[e.id]
+		if raw, ok := commentMedia[e.id]; ok {
+			e.comment.Media = raw
+		}
+		out[e.postID] = append(out[e.postID], e.comment)
+	}
 	return out, nil
+}
+
+func (s *Service) loadCommentReactions(ctx context.Context, commentIDs []int64) (map[int64]map[string]int, error) {
+	out := make(map[int64]map[string]int, len(commentIDs))
+	if len(commentIDs) == 0 {
+		return out, nil
+	}
+	rows, err := s.pool.Query(ctx, `
+		select comment_id, emoji, count from comment_reactions
+		where comment_id = any($1)
+	`, commentIDs)
+	if err != nil {
+		return out, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int64
+		var emoji string
+		var count int
+		if err := rows.Scan(&cid, &emoji, &count); err != nil {
+			return out, err
+		}
+		if out[cid] == nil {
+			out[cid] = make(map[string]int)
+		}
+		out[cid][emoji] = count
+	}
+	return out, rows.Err()
 }
 
 

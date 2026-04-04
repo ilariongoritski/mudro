@@ -293,3 +293,50 @@ type SpinResult struct {
 	Symbols          []string     `json:"symbols,omitempty"`
 	Win              int64        `json:"win,omitempty"`
 }
+
+type BlackjackCard struct {
+	Suit  string `json:"suit"`
+	Rank  string `json:"rank"`
+	Value int    `json:"value"`
+}
+
+type BlackjackHand struct {
+	Cards  []BlackjackCard `json:"cards"`
+	Score  int             `json:"score"`
+	IsBust bool            `json:"is_bust"`
+}
+
+type BlackjackStatus string
+
+const (
+	BlackjackStatusPlayerTurn BlackjackStatus = "player_turn"
+	BlackjackStatusDealerTurn BlackjackStatus = "dealer_turn"
+	BlackjackStatusResolved   BlackjackStatus = "resolved"
+)
+
+type BlackjackState struct {
+	ID         int64           `json:"id"`
+	UserID     int64           `json:"user_id"`
+	Bet        int64           `json:"bet"`
+	PlayerHand BlackjackHand   `json:"player_hand"`
+	DealerHand BlackjackHand   `json:"dealer_hand"`
+	Status     BlackjackStatus `json:"status"`
+	Winner     string          `json:"winner,omitempty"` // "player", "dealer", "push"
+	Payout     int64           `json:"payout"`
+	CreatedAt  time.Time       `json:"created_at"`
+}
+
+type BlackjackAction string
+
+const (
+	BlackjackActionHit   BlackjackAction = "hit"
+	BlackjackActionStand BlackjackAction = "stand"
+)
+
+type BlackjackGameRequest struct {
+	Bet int64 `json:"bet"`
+}
+
+type BlackjackActionRequest struct {
+	Action BlackjackAction `json:"action"`
+}

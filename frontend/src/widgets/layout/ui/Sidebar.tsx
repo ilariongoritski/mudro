@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { logout } from '@/entities/session/model/sessionSlice'
 import { cn } from '@/shared/lib/utils'
+import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Лента', description: 'Посты и обновления' },
@@ -19,7 +20,7 @@ export const Sidebar = () => {
   return (
     <aside className="mudro-sidebar">
       <div className="mudro-sidebar__brand">
-        <span className="mudro-sidebar__brand-mark">M</span>
+        <span className="mudro-sidebar__brand-mark"><MudroLogoMark /></span>
         <span className="mudro-sidebar__brand-copy">
           <strong>Mudro</strong>
           <small>Социальная сеть</small>

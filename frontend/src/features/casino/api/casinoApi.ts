@@ -217,6 +217,40 @@ export interface PlinkoDropResponse {
   created_at: string
 }
 
+export interface BlackjackCard {
+  suit: 'hearts' | 'diamonds' | 'clubs' | 'spades'
+  rank: string
+  value: number
+}
+
+export interface BlackjackHand {
+  cards: BlackjackCard[]
+  score: number
+  is_bust: boolean
+}
+
+export type BlackjackStatus = 'player_turn' | 'dealer_turn' | 'resolved'
+
+export interface BlackjackStateResponse {
+  id: number
+  user_id: number
+  bet: number
+  player_hand: BlackjackHand
+  dealer_hand: BlackjackHand
+  status: BlackjackStatus
+  winner?: 'player' | 'dealer' | 'push' | null
+  payout: number
+  created_at: string
+}
+
+export interface BlackjackStartRequest {
+  bet: number
+}
+
+export interface BlackjackActionRequest {
+  action: 'hit' | 'stand'
+}
+
 export interface BonusHistoryItem {
   id: string | number
   title: string
@@ -779,6 +813,29 @@ export const casinoApi = mudroApi.injectEndpoints({
       }),
       invalidatesTags: ['Casino'],
     }),
+    getBlackjackState: build.query<BlackjackStateResponse | { status: 'no_game' }, void>({
+      query: () => ({
+        url: '/casino/blackjack/state',
+        cache: 'no-store',
+      }),
+      providesTags: ['Casino'],
+    }),
+    startBlackjack: build.mutation<BlackjackStateResponse, BlackjackStartRequest>({
+      query: (body) => ({
+        url: '/casino/blackjack/start',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Casino'],
+    }),
+    actionBlackjack: build.mutation<BlackjackStateResponse, BlackjackActionRequest>({
+      query: (body) => ({
+        url: '/casino/blackjack/action',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Casino'],
+    }),
   }),
 })
 
@@ -802,4 +859,7 @@ export const {
   useClaimCasinoBonusSubscriptionMutation,
   useUpdateCasinoConfigMutation,
   useSpinCasinoMutation,
+  useGetBlackjackStateQuery,
+  useStartBlackjackMutation,
+  useActionBlackjackMutation,
 } = casinoApi

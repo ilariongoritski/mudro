@@ -126,6 +126,13 @@ make agent-work
 make casino-run
 ```
 
+Casino is a separate contour. For a Supabase-backed casino DB, point `CASINO_DSN` at the Supabase direct connection string with `sslmode=require`,
+keep `CASINO_START_BALANCE=500`, and apply only casino migrations with:
+
+```bash
+bash ./scripts/migrate-casino.sh
+```
+
 ## Import, Backfill, and Maintenance
 
 The repository contains operational CLI tooling under [`tools/`](tools/), including:

@@ -133,3 +133,170 @@ func TestHandleCasinoBalanceRejectsMissingToken(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestHandleCasinoProfileProxiesAuthenticatedUser(t *testing.T) {
+	user := &auth.User{
+		ID:       7,
+		Username: "bob",
+		Role:     "user",
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/profile" {
+			t.Fatalf("path = %s, want /profile", r.URL.Path)
+		}
+		if got := r.Header.Get("X-User-ID"); got != "7" {
+			t.Fatalf("X-User-ID = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"user_id":7,"balance":500}`)
+	}))
+	defer upstream.Close()
+
+	authSvc := auth.NewService(&casinoProxyUserRepo{user: user}, "test-secret")
+	token, err := authSvc.IssueToken(user)
+	if err != nil {
+		t.Fatalf("IssueToken() error = %v", err)
+	}
+
+	s := NewServer(nil, nil, authSvc)
+	s.casinoServiceURL = upstream.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/casino/profile", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if got := strings.TrimSpace(w.Body.String()); got != `{"user_id":7,"balance":500}` {
+		t.Fatalf("body = %q", got)
+	}
+}
+
+func TestHandleCasinoBonusClaimSubscriptionProxiesInitData(t *testing.T) {
+	user := &auth.User{
+		ID:       9,
+		Username: "carol",
+		Role:     "user",
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/bonus/claim-subscription" {
+			t.Fatalf("path = %s, want /bonus/claim-subscription", r.URL.Path)
+		}
+		if got := r.Header.Get("X-Telegram-Init-Data"); got != "user=1&hash=abc" {
+			t.Fatalf("X-Telegram-Init-Data = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"status":"claimed","verification_status":"verified","state":{"user_id":9,"bonus_kind":"subscription","claimed":true}}`)
+	}))
+	defer upstream.Close()
+
+	authSvc := auth.NewService(&casinoProxyUserRepo{user: user}, "test-secret")
+	token, err := authSvc.IssueToken(user)
+	if err != nil {
+		t.Fatalf("IssueToken() error = %v", err)
+	}
+
+	s := NewServer(nil, nil, authSvc)
+	s.casinoServiceURL = upstream.URL
+
+	req := httptest.NewRequest(http.MethodPost, "/api/casino/bonus/claim-subscription", strings.NewReader(`{"init_data":"user=1&hash=abc"}`))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Telegram-Init-Data", "user=1&hash=abc")
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if got := strings.TrimSpace(w.Body.String()); !strings.Contains(got, `"verification_status":"verified"`) {
+		t.Fatalf("body = %q", got)
+	}
+}
+
+func TestHandleCasinoBonusStateProxiesAuthenticatedUser(t *testing.T) {
+	user := &auth.User{
+		ID:       11,
+		Username: "dave",
+		Role:     "user",
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/bonus/state" {
+			t.Fatalf("path = %s, want /bonus/state", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"user_id":11,"bonus_kind":"subscription","claimed":false,"verification_status":"verification_required","free_spins_balance":0}`)
+	}))
+	defer upstream.Close()
+
+	authSvc := auth.NewService(&casinoProxyUserRepo{user: user}, "test-secret")
+	token, err := authSvc.IssueToken(user)
+	if err != nil {
+		t.Fatalf("IssueToken() error = %v", err)
+	}
+
+	s := NewServer(nil, nil, authSvc)
+	s.casinoServiceURL = upstream.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/casino/bonus/state", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if got := strings.TrimSpace(w.Body.String()); !strings.Contains(got, `"verification_status":"verification_required"`) {
+		t.Fatalf("body = %q", got)
+	}
+}
+
+func TestHandleCasinoLiveFeedProxiesAuthenticatedUser(t *testing.T) {
+	user := &auth.User{
+		ID:       9,
+		Username: "eve",
+		Role:     "user",
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/live-feed" {
+			t.Fatalf("path = %s, want /live-feed", r.URL.Path)
+		}
+		if got := r.Header.Get("X-User-ID"); got != "9" {
+			t.Fatalf("X-User-ID = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"items":[]}`)
+	}))
+	defer upstream.Close()
+
+	authSvc := auth.NewService(&casinoProxyUserRepo{user: user}, "test-secret")
+	token, err := authSvc.IssueToken(user)
+	if err != nil {
+		t.Fatalf("IssueToken() error = %v", err)
+	}
+
+	s := NewServer(nil, nil, authSvc)
+	s.casinoServiceURL = upstream.URL
+
+	req := httptest.NewRequest(http.MethodGet, "/api/casino/live-feed", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if got := strings.TrimSpace(w.Body.String()); got != `{"items":[]}` {
+		t.Fatalf("body = %q", got)
+	}
+}

@@ -7,11 +7,11 @@ import {
   reactionLabel,
   resolveMediaDisplayUrl,
   resolveMediaKind,
-  resolveMediaPosterUrl,
   resolveMediaTitle,
   resolveMediaUrl,
 } from "@/entities/post/lib/postPresentation";
 import { formatDateTime } from "@/shared/lib/format/date";
+import { MudroLogoMark } from "@/shared/ui/MudroLogoMark";
 import "./PostCard.css";
 
 interface PostCardProps {
@@ -34,12 +34,15 @@ const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
 export const PostCard = ({ post, onOpen }: PostCardProps) => {
   const reactions = normalizeReactions(post.reactions);
   const mediaItems = post.media ?? [];
-  const visibleMedia = mediaItems.slice(0, 3);
-  const hiddenMediaCount = Math.max(mediaItems.length - visibleMedia.length, 0);
+  const imageMedia = mediaItems.filter((item) => resolveMediaKind(item) === "image");
+  const attachmentMedia = mediaItems.filter((item) => resolveMediaKind(item) !== "image");
+  const visibleMedia = imageMedia.slice(0, 3);
+  const hiddenMediaCount = Math.max(imageMedia.length - visibleMedia.length, 0);
   const previewComments = (post.comments ?? []).slice(0, 2);
   const totalComments = post.comments_count ?? post.comments?.length ?? 0;
   const bodyText = post.text?.trim() || "Описание для этого поста пока не подтянулось.";
   const viewsMetric = metricDisplay(post.views_count);
+  const sourceName = post.source === "tg" ? "Мудро (тг)" : "Мудро (вк)";
 
   return (
     <article
@@ -48,12 +51,10 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
     >
       <header className={`post-card__head post-card__source_${post.source}`}>
         <div className="post-card__source-avatar">
-          {post.source[0].toUpperCase()}
+          <MudroLogoMark label={sourceName} />
         </div>
         <div className="post-card__head-info">
-          <div className="post-card__source-name">
-            {post.source === 'tg' ? 'Telegram' : 'ВКонтакте'}
-          </div>
+          <div className="post-card__source-name">{sourceName}</div>
           <div className="post-card__meta">{formatDateTime(post.published_at)}</div>
         </div>
       </header>
@@ -61,6 +62,58 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
       <div className="post-card__body">
         <p className="post-card__text">{bodyText}</p>
       </div>
+
+      {visibleMedia.length > 0 && (
+        <div className="post-card__media-grid">
+          {visibleMedia.map((item, index) => {
+            const title = resolveMediaTitle(item);
+            const displayUrl = resolveMediaDisplayUrl(item);
+            const showOverlay = hiddenMediaCount > 0 && index === visibleMedia.length - 1;
+
+            return (
+              <div
+                key={`${item.url ?? item.title ?? item.kind}-${index}`}
+                className="post-media-card"
+              >
+                {displayUrl ? <img src={displayUrl} loading="lazy" alt={title} /> : null}
+                {showOverlay ? (
+                  <span className="post-media-card__more">+{hiddenMediaCount}</span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {attachmentMedia.length > 0 && (
+        <div className="post-card__media-attachments">
+          {attachmentMedia.map((item, index) => {
+            const kind = resolveMediaKind(item);
+            const title = resolveMediaTitle(item);
+            const mediaUrl = resolveMediaUrl(item.url);
+
+            return (
+              <div
+                key={`${item.url ?? item.title ?? item.kind}-${index}`}
+                className="post-card__media-attachment"
+                title={title}
+              >
+                <span>{mediaKindLabel(kind)}: {title}</span>
+                {mediaUrl ? (
+                  <a
+                    href={mediaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    открыть
+                  </a>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="post-card__actions">
         <div className="post-card__action">
@@ -84,58 +137,6 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
               {reactionLabel(reaction)} {count}
             </span>
           ))}
-        </div>
-      )}
-
-      {mediaItems.length > 0 && (
-        <div className="post-card__media-grid">
-          {visibleMedia.map((item, index) => {
-            const kind = resolveMediaKind(item);
-            const title = resolveMediaTitle(item);
-            const mediaUrl = resolveMediaUrl(item.url);
-            const displayUrl = resolveMediaDisplayUrl(item);
-            const posterUrl = resolveMediaPosterUrl(item);
-            const showOverlay = hiddenMediaCount > 0 && index === visibleMedia.length - 1;
-
-            return (
-              <div
-                key={`${item.url ?? item.title ?? item.kind}-${index}`}
-                className="post-media-card"
-              >
-                {kind === "image" && displayUrl ? (
-                  <img src={displayUrl} loading="lazy" alt={title} />
-                ) : null}
-                {kind === "video" && mediaUrl ? (
-                  <video
-                    src={mediaUrl}
-                    poster={posterUrl}
-                    preload="metadata"
-                    muted
-                    loop
-                    playsInline
-                  />
-                ) : null}
-                {showOverlay ? (
-                  <span className="post-media-card__more">+{hiddenMediaCount}</span>
-                ) : null}
-
-                <div className="post-media-card__info">
-                  <strong>{mediaKindLabel(kind)}</strong>
-                  <span>{title}</span>
-                  {mediaUrl ? (
-                    <a
-                      href={mediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      Открыть оригинал
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -217,4 +218,3 @@ export const PostCard = ({ post, onOpen }: PostCardProps) => {
     </article>
   );
 };
-

@@ -23,10 +23,11 @@ var (
 const levelStepWagered int64 = 1000
 
 type Store struct {
-	pool     *pgxpool.Pool
-	mainPool *pgxpool.Pool
-	engine   *Engine
-	plinko   *PlinkoEngine
+	pool      *pgxpool.Pool
+	mainPool  *pgxpool.Pool
+	engine    *Engine
+	plinko    *PlinkoEngine
+	blackjack *BlackjackEngine
 }
 
 func NewStore(pool *pgxpool.Pool, engine *Engine) *Store {
@@ -38,10 +39,11 @@ func NewStoreWithMainPool(pool, mainPool *pgxpool.Pool, engine *Engine) *Store {
 		engine = NewEngine()
 	}
 	return &Store{
-		pool:     pool,
-		mainPool: mainPool,
-		engine:   engine,
-		plinko:   NewPlinkoEngine(),
+		pool:      pool,
+		mainPool:  mainPool,
+		engine:    engine,
+		plinko:    NewPlinkoEngine(),
+		blackjack: NewBlackjackEngine(),
 	}
 }
 
@@ -574,7 +576,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 	}); err != nil {
 		return nil, err
 	}
-	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "slots_spin"); err != nil {
+	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "slots_spin", &newBalance); err != nil {
 		return nil, err
 	}
 
@@ -769,7 +771,7 @@ func (s *Store) PlaceRouletteBets(ctx context.Context, actor ParticipantInput, r
 		placed = append(placed, placedBet)
 	}
 
-	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "roulette_bet"); err != nil {
+	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "roulette_bet", &newBalance); err != nil {
 		return nil, err
 	}
 
@@ -935,7 +937,7 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 	}); err != nil {
 		return nil, err
 	}
-	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "plinko_drop"); err != nil {
+	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "plinko_drop", &newBalance); err != nil {
 		return nil, err
 	}
 
@@ -1361,7 +1363,8 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 		if err := s.updatePlayerStatsTx(ctx, tx, userID, delta.wagered, delta.won, delta.gamesPlayed, delta.rouletteRounds); err != nil {
 			return err
 		}
-		if err := s.enqueueBalanceSyncTx(ctx, tx, userID, "roulette_settlement"); err != nil {
+		targetBalance := balance + delta.balanceDelta
+		if err := s.enqueueBalanceSyncTx(ctx, tx, userID, "roulette_settlement", &targetBalance); err != nil {
 			return err
 		}
 	}
@@ -1482,4 +1485,228 @@ func nullableInt64(v *int64) any {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func (s *Store) BlackjackGetState(ctx context.Context, userID int64) (*BlackjackState, error) {
+	var (
+		state     BlackjackState
+		pHandJson []byte
+		dHandJson []byte
+	)
+	err := s.pool.QueryRow(ctx, `
+		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at
+		from casino_blackjack_games
+		where user_id = $1 and status != 'resolved'
+		order by created_at desc
+		limit 1
+	`, userID).Scan(
+		&state.ID,
+		&state.UserID,
+		&state.Bet,
+		&pHandJson,
+		&dHandJson,
+		&state.Status,
+		&state.Winner,
+		&state.Payout,
+		&state.CreatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(pHandJson, &state.PlayerHand); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(dHandJson, &state.DealerHand); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet int64) (*BlackjackState, error) {
+	if bet <= 0 {
+		return nil, errors.New("bet must be positive")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	cfg, err := s.getConfigTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensurePlayer(ctx, tx, actor, cfg); err != nil {
+		return nil, err
+	}
+
+	// Double check no active game
+	var activeID int64
+	err = tx.QueryRow(ctx, `select id from casino_blackjack_games where user_id = $1 and status != 'resolved'`, actor.UserID).Scan(&activeID)
+	if err == nil {
+		return nil, errors.New("already have an active blackjack game")
+	}
+
+	balance, _, _, err := s.getWalletStateForUpdate(ctx, tx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if balance < bet {
+		return nil, ErrInsufficientBalance
+	}
+
+	state, err := s.blackjack.NewGame(bet)
+	if err != nil {
+		return nil, err
+	}
+	state.UserID = actor.UserID
+
+	newBalance := balance - bet
+	if err := s.setBalanceTx(ctx, tx, actor.UserID, newBalance); err != nil {
+		return nil, err
+	}
+
+	err = tx.QueryRow(ctx, `
+		insert into casino_blackjack_games (user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at)
+		values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8)
+		returning id
+	`, state.UserID, state.Bet, marshalJSON(state.PlayerHand), marshalJSON(state.DealerHand), state.Status, state.Winner, state.Payout, state.CreatedAt).Scan(&state.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if state.Status == BlackjackStatusResolved {
+		if err := s.resolveBlackjackTx(ctx, tx, state); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "blackjack_start", &newBalance); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func (s *Store) BlackjackAction(ctx context.Context, actor ParticipantInput, action BlackjackAction) (*BlackjackState, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	state, err := s.blackjackGetStateTx(ctx, tx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if state == nil {
+		return nil, errors.New("no active game")
+	}
+
+	var next *BlackjackState
+	switch action {
+	case BlackjackActionHit:
+		next, err = s.blackjack.Hit(state)
+	case BlackjackActionStand:
+		next, err = s.blackjack.Stand(state)
+	default:
+		return nil, errors.New("invalid action")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		update casino_blackjack_games
+		set player_hand = $1::jsonb, dealer_hand = $2::jsonb, status = $3, winner = $4, payout = $5
+		where id = $6
+	`, marshalJSON(next.PlayerHand), marshalJSON(next.DealerHand), next.Status, next.Winner, next.Payout, next.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if next.Status == BlackjackStatusResolved {
+		if err := s.resolveBlackjackTx(ctx, tx, next); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return next, nil
+}
+
+func (s *Store) blackjackGetStateTx(ctx context.Context, tx pgx.Tx, userID int64) (*BlackjackState, error) {
+	var (
+		state     BlackjackState
+		pHandJson []byte
+		dHandJson []byte
+	)
+	err := tx.QueryRow(ctx, `
+		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at
+		from casino_blackjack_games
+		where user_id = $1 and status != 'resolved'
+		for update
+	`, userID).Scan(
+		&state.ID,
+		&state.UserID,
+		&state.Bet,
+		&pHandJson,
+		&dHandJson,
+		&state.Status,
+		&state.Winner,
+		&state.Payout,
+		&state.CreatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(pHandJson, &state.PlayerHand); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(dHandJson, &state.DealerHand); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+func (s *Store) resolveBlackjackTx(ctx context.Context, tx pgx.Tx, state *BlackjackState) error {
+	balance, _, _, err := s.getWalletStateForUpdate(ctx, tx, state.UserID)
+	if err != nil {
+		return err
+	}
+	newBalance := balance + state.Payout
+	if err := s.setBalanceTx(ctx, tx, state.UserID, newBalance); err != nil {
+		return err
+	}
+
+	if err := s.updatePlayerStatsTx(ctx, tx, state.UserID, state.Bet, state.Payout, 1, 0); err != nil {
+		return err
+	}
+
+	status := strings.ToUpper(state.Winner)
+	if status == "" {
+		status = "FINISHED"
+	}
+
+	if err := s.insertActivityTx(ctx, tx, state.UserID, "blackjack", fmt.Sprintf("%d", state.ID), state.Bet, state.Payout, state.Payout-state.Bet, status, map[string]any{
+		"player_hand": state.PlayerHand,
+		"dealer_hand": state.DealerHand,
+		"winner":      state.Winner,
+	}); err != nil {
+		return err
+	}
+
+	return s.enqueueBalanceSyncTx(ctx, tx, state.UserID, "blackjack_resolve", &newBalance)
 }

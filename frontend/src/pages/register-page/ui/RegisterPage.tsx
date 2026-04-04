@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux'
 import { useRegisterMutation } from '@/entities/session/api/authApi'
 import { setCredentials } from '@/entities/session/model/sessionSlice'
 import { getErrorMessage } from '@/shared/lib/apiError'
+import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
 import '@/pages/login-page/ui/Auth.css'
 
@@ -31,7 +32,7 @@ export const RegisterPage = () => {
     <div className="auth-container">
       <div className="auth-card">
         <Link to="/" className="auth-logo">
-          <span className="auth-logo-mark">M</span>
+          <span className="auth-logo-mark"><MudroLogoMark /></span>
           <span className="auth-logo-text">
             <strong>Mudro</strong>
             <small>Социальная сеть</small>

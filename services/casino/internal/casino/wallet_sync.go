@@ -146,14 +146,20 @@ func (s *Store) RebuildPlayerProjection(ctx context.Context, userID int64) error
 	return err
 }
 
-func (s *Store) enqueueBalanceSyncTx(ctx context.Context, tx pgx.Tx, userID int64, reason string) error {
+func (s *Store) enqueueBalanceSyncTx(ctx context.Context, tx pgx.Tx, userID int64, reason string, balance *int64) error {
 	if s == nil || s.mainPool == nil || tx == nil || userID <= 0 {
 		return nil
+	}
+	var val *int64
+	if balance != nil {
+		copyVal := *balance
+		val = &copyVal
 	}
 	_, err := tx.Exec(ctx, `
 		insert into casino_balance_sync_queue (
 			user_id,
 			reason,
+			requested_projection_balance,
 			status,
 			attempts,
 			last_error,
@@ -161,15 +167,16 @@ func (s *Store) enqueueBalanceSyncTx(ctx context.Context, tx pgx.Tx, userID int6
 			processed_at,
 			updated_at
 		)
-		values ($1, $2, 'pending', 0, '', now(), null, now())
+		values ($1, $2, $3, 'pending', 0, '', now(), null, now())
 		on conflict (user_id) do update set
 			reason = excluded.reason,
+			requested_projection_balance = excluded.requested_projection_balance,
 			status = 'pending',
 			last_error = '',
 			available_at = now(),
 			processed_at = null,
 			updated_at = now()
-	`, userID, strings.TrimSpace(reason))
+	`, userID, strings.TrimSpace(reason), val)
 	return err
 }
 
@@ -239,18 +246,19 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 	}()
 
 	var (
-		queueID int64
-		userID  int64
-		reason  string
+		queueID          int64
+		userID           int64
+		reason           string
+		requestedBalance *int64
 	)
 	err = tx.QueryRow(ctx, `
-		select id, user_id, reason
+		select id, user_id, reason, requested_projection_balance
 		from casino_balance_sync_queue
 		where status = 'pending' and available_at <= now()
 		order by available_at asc, updated_at asc, id asc
 		limit 1
 		for update skip locked
-	`).Scan(&queueID, &userID, &reason)
+	`).Scan(&queueID, &userID, &reason, &requestedBalance)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -271,36 +279,50 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 
 	mainBalance, found, syncErr := s.lookupMainWalletBalance(ctx, userID)
 	if syncErr == nil && found {
-		if _, syncErr = tx.Exec(ctx, `
-			insert into casino_players (
-				user_id,
-				display_name,
-				balance,
-				level,
-				xp_progress,
-				wallet_projection_source,
-				wallet_projection_note,
-				wallet_projection_updated_at,
-				wallet_projection_synced_at,
-				updated_at
-			)
-			values ($1, '', $2, 1, 0, 'main_wallet_reconcile', $3, now(), now(), now())
-			on conflict (user_id) do update set
-				balance = excluded.balance,
-				wallet_projection_source = excluded.wallet_projection_source,
-				wallet_projection_note = excluded.wallet_projection_note,
-				wallet_projection_updated_at = now(),
-				wallet_projection_synced_at = now(),
-				updated_at = now()
-		`, userID, mainBalance, fallbackWalletReason(reason, "main_wallet_reconcile")); syncErr == nil {
-			_, syncErr = tx.Exec(ctx, `
-				update casino_balance_sync_queue
-				set status = 'done',
-					processed_at = now(),
-					updated_at = now(),
-					last_error = ''
-				where id = $1
-			`, queueID)
+		if requestedBalance != nil && *requestedBalance != mainBalance {
+			// Push drift to main ledger with audit context
+			if err := s.pushBalanceToMainWallet(ctx, userID, *requestedBalance, reason); err != nil {
+				log.Printf("wallet_sync: push drift failed for user %d: %v", userID, err)
+				// continue to pull what's there if push failed? 
+				// No, let it retry via syncErr
+				syncErr = err
+			} else {
+				mainBalance = *requestedBalance
+			}
+		}
+
+		if syncErr == nil {
+			if _, syncErr = tx.Exec(ctx, `
+				insert into casino_players (
+					user_id,
+					display_name,
+					balance,
+					level,
+					xp_progress,
+					wallet_projection_source,
+					wallet_projection_note,
+					wallet_projection_updated_at,
+					wallet_projection_synced_at,
+					updated_at
+				)
+				values ($1, '', $2, 1, 0, 'main_wallet_reconcile', $3, now(), now(), now())
+				on conflict (user_id) do update set
+					balance = excluded.balance,
+					wallet_projection_source = excluded.wallet_projection_source,
+					wallet_projection_note = excluded.wallet_projection_note,
+					wallet_projection_updated_at = now(),
+					wallet_projection_synced_at = now(),
+					updated_at = now()
+			`, userID, mainBalance, fallbackWalletReason(reason, "main_wallet_reconcile")); syncErr == nil {
+				_, syncErr = tx.Exec(ctx, `
+					update casino_balance_sync_queue
+					set status = 'done',
+						processed_at = now(),
+						updated_at = now(),
+						last_error = ''
+					where id = $1
+				`, queueID)
+			}
 		}
 	}
 	if syncErr == nil && !found {
@@ -324,6 +346,34 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (s *Store) pushBalanceToMainWallet(ctx context.Context, userID int64, balance int64, reason string) error {
+	if s == nil || s.mainPool == nil {
+		return nil
+	}
+	tx, err := s.mainPool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	// Set audit context
+	_, _ = tx.Exec(ctx, "SELECT set_config('app.casino_reason', $1, true)", reason)
+	_, _ = tx.Exec(ctx, "SELECT set_config('app.casino_changed_by', 'casino_service', true)")
+
+	_, err = tx.Exec(ctx, `
+		update casino_accounts
+		set balance = $1, updated_at = now()
+		where code = $2 and type = 'user'
+	`, float64(balance), fmt.Sprintf("USER_%d", userID))
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (s *Store) loadRouletteSession(ctx context.Context) (RouletteState, bool, error) {

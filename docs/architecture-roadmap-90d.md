@@ -8,7 +8,7 @@
 
 ### Структура репозитория
 ```
-mudro11-main/
+mudro11-reference/
 ├── cmd/
 │   ├── api/          # HTTP API (pgxpool, auth, posts service)
 │   ├── bot/          # Telegram bot (команды /health, /feed5, /mudro)

@@ -54,9 +54,13 @@ services:
     environment:
       CASINO_ADDR: ":8081"
       CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
-      CASINO_INITIAL_COINS: "${CASINO_INITIAL_COINS:-2500}"
+      CASINO_START_BALANCE: "${CASINO_START_BALANCE:-500}"
       CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
       CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
+      CASINO_ROULETTE_BETTING_MS: "${CASINO_ROULETTE_BETTING_MS:-15000}"
+      CASINO_ROULETTE_LOCK_MS: "${CASINO_ROULETTE_LOCK_MS:-1500}"
+      CASINO_ROULETTE_SPIN_MS: "${CASINO_ROULETTE_SPIN_MS:-4500}"
+      CASINO_ROULETTE_RESULT_MS: "${CASINO_ROULETTE_RESULT_MS:-3500}"
     depends_on:
       casino-db:
         condition: service_healthy
