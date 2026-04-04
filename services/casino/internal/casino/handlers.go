@@ -256,6 +256,10 @@ func (h *Handler) handleRouletteBets(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+		return
+	}
 
 	var req RoulettePlaceBetsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -288,6 +292,10 @@ func (h *Handler) handleRouletteInstantSpin(w http.ResponseWriter, r *http.Reque
 	actor, err := authContextFromHeaders(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
 		return
 	}
 
@@ -651,6 +659,10 @@ func (h *Handler) handleBlackjackStart(w http.ResponseWriter, r *http.Request) {
 	actor, err := authContextFromHeaders(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
 		return
 	}
 	var req BlackjackGameRequest

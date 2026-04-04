@@ -12,6 +12,7 @@ import (
 	mediadb "github.com/goritskimihail/mudro/internal/media"
 	"github.com/goritskimihail/mudro/pkg/models"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 )
 
 type Service struct {
@@ -144,16 +145,33 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 		return posts, nil, nil
 	}
 
-	normalizedPostMedia, err := mediadb.LoadPostMediaJSON(ctx, s.pool, ids)
-	if err != nil {
-		return nil, nil, err
-	}
-	postReactions, err := s.loadPostReactions(ctx, ids)
-	if err != nil {
-		return nil, nil, err
-	}
-	commentsMap, err := s.loadPostComments(ctx, ids)
-	if err != nil {
+	var (
+		normalizedPostMedia map[int64]json.RawMessage
+		postReactions       map[int64]map[string]int
+		commentsMap         map[int64][]Comment
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		var err error
+		normalizedPostMedia, err = mediadb.LoadPostMediaJSON(gctx, s.pool, ids)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		postReactions, err = s.loadPostReactions(gctx, ids)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		commentsMap, err = s.loadPostComments(gctx, ids)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
 

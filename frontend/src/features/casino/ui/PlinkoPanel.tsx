@@ -46,30 +46,38 @@ const buildLanePath = (path: number[]) => {
 }
 
 export const PlinkoPanel = ({ isAuthenticated, isActive, balance, userName, onMainActionChange }: PlinkoPanelProps) => {
-  const [wallet, setWallet] = useState(balance)
-  const [stake, setStake] = useState(String(defaultStake))
-  const [risk, setRisk] = useState<PlinkoRisk>(defaultRisk)
-  const [status, setStatus] = useState('Plinko подключён к casino service. Выберите риск и нажмите drop.')
-  const [history, setHistory] = useState<PlinkoVisualRound[]>([])
-  const [activeRound, setActiveRound] = useState<PlinkoVisualRound | null>(null)
-  const [activeStep, setActiveStep] = useState(0)
-  const [isDropping, setIsDropping] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+   const [wallet, setWallet] = useState(balance)
+   const [stake, setStake] = useState(String(defaultStake))
+   const [risk, setRisk] = useState<PlinkoRisk>(defaultRisk)
+   const [status, setStatus] = useState('Plinko подключён к casino service. Выберите риск и нажмите drop.')
+   const [history, setHistory] = useState<PlinkoVisualRound[]>([])
+   const [activeRound, setActiveRound] = useState<PlinkoVisualRound | null>(null)
+   const [activeStep, setActiveStep] = useState(0)
+   const [isDropping, setIsDropping] = useState(false)
+   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const shouldQuery = isAuthenticated && isActive
-  const { data: plinkoConfig } = useGetPlinkoConfigQuery(undefined, {
-    skip: !shouldQuery,
-  })
-  const { data: plinkoState } = useGetPlinkoStateQuery(undefined, {
-    skip: !shouldQuery,
-    pollingInterval: shouldQuery ? 12000 : 0,
-    refetchOnFocus: true,
-  })
-  const [dropPlinko, { isLoading: isSubmitting }] = useDropPlinkoMutation()
+   const shouldQuery = isAuthenticated && isActive
+   const { data: plinkoConfig } = useGetPlinkoConfigQuery(undefined, {
+     skip: !shouldQuery,
+   })
+   const { data: plinkoState } = useGetPlinkoStateQuery(undefined, {
+     skip: !shouldQuery,
+     pollingInterval: shouldQuery ? 12000 : 0,
+     refetchOnFocus: true,
+   })
+   const [dropPlinko, { isLoading: isSubmitting }] = useDropPlinkoMutation()
 
-  useEffect(() => {
-    setWallet(plinkoState?.balance ?? balance)
-  }, [balance, plinkoState?.balance])
+   // Update wallet when external balance changes or plinko state updates
+   useEffect(() => {
+     setWallet(balance)
+   }, [balance])
+
+   // Sync wallet with plinko state when it updates
+   useEffect(() => {
+     if (plinkoState?.balance !== undefined) {
+       setWallet(plinkoState.balance)
+     }
+   }, [plinkoState?.balance])
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {

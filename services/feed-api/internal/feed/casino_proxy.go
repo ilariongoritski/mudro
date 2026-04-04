@@ -3,6 +3,7 @@ package feed
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -241,10 +242,15 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[casino-proxy] upstream error method=%s path=%s user_id=%d: %v", r.Method, upstreamPath, user.ID, err)
 		http.Error(w, "casino upstream unavailable", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 500 {
+		log.Printf("[casino-proxy] upstream 5xx method=%s path=%s user_id=%d status=%d", r.Method, upstreamPath, user.ID, resp.StatusCode)
+	}
 
 	httputil.CopyAllHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)

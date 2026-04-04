@@ -11,10 +11,19 @@ import (
 
 var ErrInvalidConfig = errors.New("invalid casino config")
 
+// Provably Fair seed-based configuration (optional)
+// When set, spins are produced deterministically from server/client seeds and a nonce.
+type Fairness struct {
+	ServerSeed string
+	ClientSeed string
+	Nonce      int64
+}
+
 type randFunc func(max int) (int, error)
 
 type Engine struct {
-	draw randFunc
+	draw     randFunc
+	fairness *Fairness
 }
 
 func NewEngine() *Engine {
@@ -23,6 +32,16 @@ func NewEngine() *Engine {
 
 func NewEngineWithDraw(draw randFunc) *Engine {
 	return &Engine{draw: draw}
+}
+
+// EnableFairness activates Provably Fair spins for this engine.
+func (e *Engine) EnableFairness(serverSeed, clientSeed string, nonce int64) {
+	e.fairness = &Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce}
+}
+
+// DisableFairness disables Provably Fair spins for this engine.
+func (e *Engine) DisableFairness() {
+	e.fairness = nil
 }
 
 func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
@@ -47,11 +66,29 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 		return nil, 0, ErrInvalidConfig
 	}
 
+	// Prepare 3 spins: either deterministic rolls (provably fair) or random rolls.
 	symbols := make([]string, 3)
-	for i := range symbols {
-		roll, err := e.draw(totalWeight)
-		if err != nil {
-			return nil, 0, err
+	var rolls [3]int
+	if e.fairness != nil {
+		// Generate 3 deterministic rolls based on server/client seeds and nonce
+		for i := 0; i < 3; i++ {
+			r, err := fairnessRoll(e.fairness.ServerSeed, e.fairness.ClientSeed, e.fairness.Nonce, i, totalWeight)
+			if err != nil {
+				return nil, 0, err
+			}
+			rolls[i] = r
+		}
+	}
+	for i := 0; i < 3; i++ {
+		var roll int
+		if e.fairness != nil {
+			roll = rolls[i]
+		} else {
+			var err error
+			roll, err = e.draw(totalWeight)
+			if err != nil {
+				return nil, 0, err
+			}
 		}
 		cumulative := 0
 		for _, symbol := range keys {

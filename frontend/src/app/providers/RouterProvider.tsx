@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider as RRProvider } from 'react-router-dom'
 
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
@@ -61,7 +61,7 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
 }
 
 export const AppRouterProvider = () => {
-  const router = createBrowserRouter([
+  const router = useMemo(() => createBrowserRouter([
     // Публичные роуты вне AppLayout
     {
       path: '/login',
@@ -129,7 +129,7 @@ export const AppRouterProvider = () => {
       path: '*',
       element: <NotFoundPage />,
     },
-  ])
+  ]), [])
 
   return <RRProvider router={router} />
 }

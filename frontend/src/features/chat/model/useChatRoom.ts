@@ -61,15 +61,16 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
 
   const [sendChatMessage, { isLoading: isSending }] = useSendChatMessageMutation()
 
-  // Sync initial data to state
-  useEffect(() => {
-    if (initialData?.items) {
-      setMessages((current) => mergeMessages(current, initialData.items))
-      if (initialData.items.length < limit) {
-        setHasMore(false)
-      }
-    }
-  }, [initialData, limit])
+   // Sync initial data to state
+   useEffect(() => {
+     if (initialData?.items) {
+       // Update messages using functional update to avoid stale state
+       setMessages(prevMessages => mergeMessages(prevMessages, initialData.items))
+       if (initialData.items.length < limit) {
+         setHasMore(false)
+       }
+     }
+   }, [initialData, limit])
 
   const loadMore = useCallback(async () => {
     if (isMoreLoading || !hasMore || messages.length === 0) {
@@ -92,12 +93,13 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
     }
   }, [isMoreLoading, hasMore, messages, room, limit, triggerLoadMore])
 
-  useEffect(() => {
-    if (!token) {
-      setConnectionState('idle')
-      setMessages([])
-      return
-    }
+   useEffect(() => {
+     if (!token) {
+       // Use functional updates to avoid stale state
+       setConnectionState('idle')
+       setMessages([])
+       return
+     }
 
     const socket = new WebSocket(buildChatWsUrl(room, token))
     setConnectionState('connecting')

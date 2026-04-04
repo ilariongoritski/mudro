@@ -94,20 +94,20 @@ const connectionLabel: Record<'idle' | 'connecting' | 'connected' | 'disconnecte
 }
 
 export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActionChange }: RoulettePanelProps) => {
-  const [gameMode, setGameMode] = useState<'live' | 'instant'>('live')
-  const [liveState, setLiveState] = useState<RouletteStateResponse | null>(null)
-  const [draftBetType, setDraftBetType] = useState<RouletteBetType>('straight')
-  const [draftBetValue, setDraftBetValue] = useState('0')
-  const [draftStake, setDraftStake] = useState(String(defaultStake))
-  const [basket, setBasket] = useState<DraftBet[]>([])
-  const [feedback, setFeedback] = useState('Соберите купон и дождитесь открытия ставок.')
-  const [visualNumber, setVisualNumber] = useState<number>(0)
-  const [isSpinningPreview, setIsSpinningPreview] = useState(false)
-  const [serverClock, setServerClock] = useState(() => Date.now())
-  const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const previousRoundId = useRef<string | null>(null)
+   const [gameMode, setGameMode] = useState<'live' | 'instant'>('live')
+   const [liveState, setLiveState] = useState<RouletteStateResponse | null>(null)
+   const [draftBetType, setDraftBetType] = useState<RouletteBetType>('straight')
+   const [draftBetValue, setDraftBetValue] = useState('0')
+   const [draftStake, setDraftStake] = useState(String(defaultStake))
+   const [basket, setBasket] = useState<DraftBet[]>([])
+   const [feedback, setFeedback] = useState('Соберите купон и дождитесь открытия ставок.')
+   const [visualNumber, setVisualNumber] = useState<number>(0)
+   const [isSpinningPreview, setIsSpinningPreview] = useState(false)
+   const [serverClock, setServerClock] = useState(() => Date.now())
+   const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
+   const previousRoundId = useRef<string | null>(null)
 
-  const shouldQuery = isAuthenticated && isActive
+   const shouldQuery = isAuthenticated && isActive
 
   const {
     data: rouletteSnapshot,
@@ -156,33 +156,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       }
     },
   })
-
-  useEffect(() => {
-    if (!isActive) {
-      onMainActionChange?.(null)
-      return
-    }
-
-    const mergedState = streamState ?? liveState ?? rouletteSnapshot ?? null
-    const canSubmit = isAuthenticated && basket.length > 0 && mergedState?.phase === 'betting' && !isSubmitting
-    const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
-
-    onMainActionChange?.({
-      label: isSubmitting
-        ? 'Отправляем купон...'
-        : basket.length > 0
-          ? `Поставить ${formatCompactNumber(totalStake)}`
-          : 'Соберите ставку',
-      busy: isSubmitting,
-      disabled: !canSubmit,
-      onTrigger: () => {
-        if (canSubmit) {
-          void submitBets()
-        }
-      },
-    })
-
-  }, [basket, isActive, isAuthenticated, isSubmitting, liveState, onMainActionChange, rouletteSnapshot, streamState])
 
   const rouletteState = streamState ?? liveState ?? rouletteSnapshot ?? null
   const rouletteHistory = rouletteState?.history ?? historySnapshot?.items ?? []
@@ -365,6 +338,32 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       setFeedback('Не удалось отправить ставки. Проверьте соединение с casino proxy.')
     }
   }, [basket, isAuthenticated, liveState, placeRouletteBets, rouletteSnapshot, rouletteState])
+
+  useEffect(() => {
+    if (!isActive) {
+      onMainActionChange?.(null)
+      return
+    }
+
+    const mergedState = streamState ?? liveState ?? rouletteSnapshot ?? null
+    const canSubmit = isAuthenticated && basket.length > 0 && mergedState?.phase === 'betting' && !isSubmitting
+    const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
+
+    onMainActionChange?.({
+      label: isSubmitting
+        ? 'Отправляем купон...'
+        : basket.length > 0
+          ? `Поставить ${formatCompactNumber(totalStake)}`
+          : 'Соберите ставку',
+      busy: isSubmitting,
+      disabled: !canSubmit,
+      onTrigger: () => {
+        if (canSubmit) {
+          void submitBets()
+        }
+      },
+    })
+  }, [basket, isActive, isAuthenticated, isSubmitting, liveState, onMainActionChange, rouletteSnapshot, streamState, submitBets])
 
   const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
   const currentWinningNumber = typeof rouletteState?.winning_number === 'number' ? rouletteState.winning_number : null

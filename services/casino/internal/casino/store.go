@@ -555,10 +555,43 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 
 	var spinID int64
 	if err := tx.QueryRow(ctx, `
-		insert into casino_spins (user_id, bet, win, symbols)
-		values ($1, $2, $3, $4::jsonb)
-		returning id
-	`, actor.UserID, bet, win, marshalJSON(symbols)).Scan(&spinID); err != nil {
+        insert into casino_spins (user_id, bet, win, symbols)
+        values ($1, $2, $3, $4::jsonb)
+        returning id
+    `, actor.UserID, bet, win, marshalJSON(symbols)).Scan(&spinID); err != nil {
+		return nil, err
+	}
+
+	// Provably Fair / Ledger integration (minimal): record bet as a ledger transfer with debit to user and credit to house
+	// Note: This is a best-effort first step towards a full double-entry ledger.
+	var transferID string
+	metadata := marshalJSON(map[string]interface{}{"spin_id": spinID, "user_id": actor.UserID, "bet": bet})
+	if err := tx.QueryRow(ctx, `
+        insert into casino_transfers (kind, metadata, created_at)
+        values ('bet_stake', $1, now())
+        returning id
+    `, metadata).Scan(&transferID); err != nil {
+		return nil, err
+	}
+	// Resolve user and house accounts within the same transaction for atomicity
+	var userAccountID string
+	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'user'`, fmt.Sprintf("USER_%d", actor.UserID)).Scan(&userAccountID); err != nil {
+		return nil, err
+	}
+	var houseAccountID string
+	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'system'`, "SYSTEM_HOUSE_POOL").Scan(&houseAccountID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+        insert into casino_ledger_entries (transfer_id, account_id, direction, amount, created_at)
+        values ($1, $2, 'debit', $3, now())
+    `, transferID, userAccountID, bet); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+        insert into casino_ledger_entries (transfer_id, account_id, direction, amount, created_at)
+        values ($1, $2, 'credit', $3, now())
+    `, transferID, houseAccountID, bet); err != nil {
 		return nil, err
 	}
 
@@ -570,8 +603,8 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		netResult = win
 	}
 	if err := s.insertActivityTx(ctx, tx, actor.UserID, "slots", fmt.Sprintf("%d", spinID), bet, win, netResult, slotStatus(win, bet), map[string]any{
-		"symbols": symbols,
-		"free_spin_used": freeSpinUsed,
+		"symbols":            symbols,
+		"free_spin_used":     freeSpinUsed,
 		"free_spins_balance": freeSpins,
 	}); err != nil {
 		return nil, err

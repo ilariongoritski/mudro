@@ -45,25 +45,45 @@ function ReelColumn({ middleSym, isSpinning, stopDelay }: ReelColumnProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const stopRef     = useRef<ReturnType<typeof setTimeout>  | null>(null)
 
-  useEffect(() => {
-    if (isSpinning) {
-      setSpinning(true)
-      intervalRef.current = setInterval(() => {
-        setStrip([randomSym(), randomSym(), randomSym(), randomSym(), randomSym()])
-      }, 75)
-    } else {
-      stopRef.current = setTimeout(() => {
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        setSpinning(false)
-        setStrip([randomSym(), randomSym(), middleSym, randomSym(), randomSym()])
-      }, stopDelay)
-    }
+   // Sync spinning state with prop
+   useEffect(() => {
+     setSpinning(isSpinning)
+   }, [isSpinning])
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (stopRef.current)     clearTimeout(stopRef.current)
-    }
-  }, [isSpinning, middleSym, stopDelay])
+   // Handle strip updates when spinning
+   useEffect(() => {
+     if (!isSpinning) return
+     
+     intervalRef.current = setInterval(() => {
+       setStrip([randomSym(), randomSym(), randomSym(), randomSym(), randomSym()])
+     }, 75)
+     
+     return () => {
+       if (intervalRef.current) clearInterval(intervalRef.current)
+     }
+   }, [isSpinning])
+
+   // Handle stopping when spinning stops
+   useEffect(() => {
+     if (isSpinning) return
+     
+     stopRef.current = setTimeout(() => {
+       if (intervalRef.current) clearInterval(intervalRef.current)
+       setStrip([randomSym(), randomSym(), middleSym, randomSym(), randomSym()])
+     }, stopDelay)
+     
+     return () => {
+       if (stopRef.current) clearTimeout(stopRef.current)
+     }
+   }, [isSpinning, middleSym, stopDelay])
+
+   // Cleanup
+   useEffect(() => {
+     return () => {
+       if (intervalRef.current) clearInterval(intervalRef.current)
+       if (stopRef.current)     clearTimeout(stopRef.current)
+     }
+   }, [])
 
   const clipHeight   = CELL_PX * 4
   const ghostOffset  = CELL_PX * 0.5

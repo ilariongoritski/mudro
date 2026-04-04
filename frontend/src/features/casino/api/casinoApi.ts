@@ -768,10 +768,10 @@ export const casinoApi = mudroApi.injectEndpoints({
           })),
         },
       }),
-      transformResponse: (response: any) => ({
-        ...response,
-        bets: (response.bets ?? []).map(normalizeRouletteBetItem),
-      }),
+       transformResponse: (response: RouletteInstantSpinResponse) => ({
+         ...response,
+         bets: (response.bets ?? []).map(normalizeRouletteBetItem),
+       }),
       invalidatesTags: ['Casino'],
     }),
     getPlinkoConfig: build.query<PlinkoConfigResponse, void>({

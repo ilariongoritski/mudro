@@ -11,6 +11,32 @@ linters:
     - goimports
     - misspell
     - unparam
+    - gosec
+    - gocritic
+    - bodyclose
+    - contextcheck
+    - nilerr
+    - wrapcheck
+    - err113
+    - predeclared
+
+  settings:
+    gosec:
+      excludes:
+        - G104
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - wrapcheck
+      - path: services/casino
+        linters:
+          - wrapcheck
+      - path: services/movie-catalog
+        linters:
+          - wrapcheck
 
 run:
   timeout: 5m
