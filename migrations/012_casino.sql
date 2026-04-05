@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS casino_rounds (
     client_seed      TEXT,
     nonce            INT NOT NULL DEFAULT 0,
     round_hash       TEXT,
+    game_type        TEXT NOT NULL DEFAULT 'slots',
     roll             INT,
     bet_amount       NUMERIC(30,10),
     payout_amount    NUMERIC(30,10),

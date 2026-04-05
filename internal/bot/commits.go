@@ -119,8 +119,10 @@ func classifyDomain(path string) string {
 	switch {
 	case strings.HasPrefix(path, "internal/bot"):
 		return "бот/команды"
-	case strings.HasPrefix(path, "cmd/bot"):
+	case strings.HasPrefix(path, "services/bot/cmd"):
 		return "запуск бота"
+	case strings.HasPrefix(path, "legacy/old/cmd-runtime/bot"):
+		return "legacy бот"
 	case strings.HasPrefix(path, "internal/config"):
 		return "конфигурация"
 	case strings.HasPrefix(path, ".codex/"):

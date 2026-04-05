@@ -108,9 +108,12 @@ type PlayerProfile struct {
 	GamesPlayed          int64          `json:"games_played"`
 	RouletteRoundsPlayed int64          `json:"roulette_rounds_played"`
 	Level                int64          `json:"level"`
-	ProgressCurrent      int64          `json:"progress_current"`
+	XPProgress           int64          `json:"xp_progress"`
 	ProgressTarget       int64          `json:"progress_target"`
 	LastGameAt           *time.Time     `json:"last_game_at,omitempty"`
+	ClientSeed           string         `json:"client_seed"`
+	CurrentNonce         int            `json:"current_nonce"`
+	ServerSeedHash       string         `json:"server_seed_hash"`
 	RecentActivity       []ActivityItem `json:"recent_activity"`
 }
 

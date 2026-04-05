@@ -1,85 +1,23 @@
-# WARNING: This docker-compose is for LOCAL DEVELOPMENT ONLY.
-# Do NOT use in production. Secrets are hardcoded or use insecure defaults.
-
+version: '3.8'
 services:
-  db:
-    image: postgres:16
+  postgres_main:
+    image: postgres:15
     environment:
-      POSTGRES_DB: gallery
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_USER: mudro
+      POSTGRES_PASSWORD: mudropass
+      POSTGRES_DB: mudro_main
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d gallery"]
-      interval: 2s
-      timeout: 5s
-      retries: 20
+      - ./db/main:/var/lib/postgresql/data
 
-  casino-db:
-    image: postgres:16
+  postgres_casino:
+    image: postgres:15
     environment:
+      POSTGRES_USER: mudro
+      POSTGRES_PASSWORD: mudropass
       POSTGRES_DB: mudro_casino
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:${CASINO_POSTGRES_PORT:-5434}:5432"
+      - "5433:5432"
     volumes:
-      - casino_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mudro_casino"]
-      interval: 2s
-      timeout: 5s
-      retries: 20
-
-  minio:
-    image: minio/minio:RELEASE.2024-06-22T05-26-45Z
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-MudroAdmin2026}
-    ports:
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  casino-api:
-    image: golang:1.24
-    working_dir: /app
-    command: sh -c "go run ./services/casino/cmd/main.go"  # DEV ONLY
-    environment:
-      CASINO_ADDR: ":8081"
-      CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
-      CASINO_MAIN_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      CASINO_START_BALANCE: "${CASINO_START_BALANCE:-500}"
-      CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
-      CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
-      CASINO_ROULETTE_BETTING_MS: "${CASINO_ROULETTE_BETTING_MS:-15000}"
-      CASINO_ROULETTE_LOCK_MS: "${CASINO_ROULETTE_LOCK_MS:-1500}"
-      CASINO_ROULETTE_SPIN_MS: "${CASINO_ROULETTE_SPIN_MS:-4500}"
-      CASINO_ROULETTE_RESULT_MS: "${CASINO_ROULETTE_RESULT_MS:-3500}"
-    depends_on:
-      casino-db:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
-    volumes:
-      - ./:/app
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-volumes:
-  pgdata:
-  casino_pgdata:
-  minio_data:
+      - ./db/casino:/var/lib/postgresql/data

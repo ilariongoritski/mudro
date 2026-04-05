@@ -109,7 +109,7 @@ services:
     build:
       context: .
       args:
-        SERVICE: cmd/api
+        SERVICE: services/feed-api/cmd
     restart: unless-stopped
     environment:
       API_ADDR: ":8080"

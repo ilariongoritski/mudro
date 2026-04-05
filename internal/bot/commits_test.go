@@ -23,11 +23,12 @@ D	internal/config/config.go`
 
 func TestClassifyDomain(t *testing.T) {
 	cases := map[string]string{
-		"internal/bot/handler.go": "бот/команды",
-		"cmd/bot/main.go":         "запуск бота",
-		"README.md":               "документация",
-		"Makefile":                "инфраструктура",
-		"internal/agent/repo.go":  "internal",
+		"internal/bot/handler.go":          "бот/команды",
+		"services/bot/cmd/main.go":         "запуск бота",
+		"legacy/old/cmd-runtime/bot/main.go": "legacy бот",
+		"README.md":                        "документация",
+		"Makefile":                         "инфраструктура",
+		"internal/agent/repo.go":           "internal",
 	}
 	for in, want := range cases {
 		if got := classifyDomain(in); got != want {

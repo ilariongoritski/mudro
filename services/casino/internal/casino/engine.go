@@ -29,11 +29,15 @@ func NewEngineWithDraw(draw randFunc) *Engine {
 // EnableFairness activates Provably Fair spins for this engine.
 func (e *Engine) EnableFairness(serverSeed, clientSeed string, nonce int64) {
 	e.fairness = &Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0}
+	// Also wire global fairness for non-slot engines (roulette, plinko, blackjack)
+	SetGlobalFairness(&Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0})
 }
 
 // DisableFairness disables Provably Fair spins for this engine.
 func (e *Engine) DisableFairness() {
 	e.fairness = nil
+	// Clear global fairness for non-slot engines
+	SetGlobalFairness(nil)
 }
 
 func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {

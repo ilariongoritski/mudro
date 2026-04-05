@@ -13,7 +13,6 @@ var rouletteRed = map[int]struct{}{
 }
 
 func drawRouletteNumber() int {
-	// Use Provably Fair draw primitive if globally configured, otherwise crypto
 	return DrawInt(37)
 }
 
