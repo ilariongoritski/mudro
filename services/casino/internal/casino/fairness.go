@@ -78,23 +78,28 @@ func cryptoDrawFallback(max int) (int, error) {
 	return int(n.Int64()), nil
 }
 
-var globalFairness *Fairness
-
-func SetGlobalFairness(f *Fairness) {
-	globalFairness = f
+func NewFairness(serverSeed, clientSeed string, nonce int64) *Fairness {
+	if serverSeed == "" {
+		return nil
+	}
+	return &Fairness{
+		ServerSeed:  serverSeed,
+		ClientSeed:  clientSeed,
+		Nonce:       nonce,
+		DrawCounter: 0,
+	}
 }
 
-func DrawIntGlobal(max int) int {
-	if globalFairness != nil {
-		v, err := globalFairness.NextRoll(max)
+func DrawIntWithFairness(fairness *Fairness, max int) int {
+	if fairness != nil {
+		v, err := fairness.NextRoll(max)
 		if err == nil {
 			return v
 		}
 	}
-	// fallback to crypto
 	v, _ := cryptoDrawFallback(max)
 	return v
 }
 
-// DrawInt is the main entry point for RNG in game logic
-func DrawInt(max int) int { return DrawIntGlobal(max) }
+// DrawInt is the main entry point for RNG in game logic without fairness context.
+func DrawInt(max int) int { return DrawIntWithFairness(nil, max) }

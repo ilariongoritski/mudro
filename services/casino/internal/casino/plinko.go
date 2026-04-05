@@ -38,7 +38,7 @@ func (e *PlinkoEngine) Config() PlinkoConfig {
 	}
 }
 
-func (e *PlinkoEngine) Drop(bet int64, risk PlinkoRisk) (*PlinkoDropResult, error) {
+func (e *PlinkoEngine) Drop(bet int64, risk PlinkoRisk, fairness *Fairness) (*PlinkoDropResult, error) {
 	cfg := e.Config()
 	normalizedRisk, multipliers, err := e.resolveRisk(cfg, risk)
 	if err != nil {
@@ -48,7 +48,7 @@ func (e *PlinkoEngine) Drop(bet int64, risk PlinkoRisk) (*PlinkoDropResult, erro
 	path := make([]int, 0, cfg.Rows)
 	slotIndex := 0
 	for i := 0; i < cfg.Rows; i++ {
-		step := DrawInt(2)
+		step := DrawIntWithFairness(fairness, 2)
 		path = append(path, step)
 		slotIndex += step
 	}

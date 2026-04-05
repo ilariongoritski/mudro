@@ -14,9 +14,13 @@ ALTER TABLE casino_blackjack_games ADD COLUMN IF NOT EXISTS server_seed TEXT;
 ALTER TABLE casino_blackjack_games ADD COLUMN IF NOT EXISTS server_seed_hash TEXT;
 ALTER TABLE casino_blackjack_games ADD COLUMN IF NOT EXISTS client_seed TEXT;
 ALTER TABLE casino_blackjack_games ADD COLUMN IF NOT EXISTS nonce INT DEFAULT 0;
+ALTER TABLE casino_blackjack_games ADD COLUMN IF NOT EXISTS round_hash TEXT;
 ALTER TABLE casino_spins ADD COLUMN IF NOT EXISTS server_seed TEXT;
 ALTER TABLE casino_spins ADD COLUMN IF NOT EXISTS client_seed TEXT;
 ALTER TABLE casino_spins ADD COLUMN IF NOT EXISTS nonce INT DEFAULT 0;
+
+-- 3. Add metadata to ledger entries
+ALTER TABLE casino_ledger_entries ADD COLUMN IF NOT EXISTS metadata JSONB;
 
 -- 4. Add player fairness settings
 ALTER TABLE casino_players ADD COLUMN IF NOT EXISTS client_seed TEXT DEFAULT 'default';

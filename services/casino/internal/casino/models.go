@@ -74,14 +74,14 @@ type LiveFeedResponse struct {
 }
 
 type ReactionFeedItem struct {
-	ActivityID int64      `json:"activity_id"`
-	Emoji      string     `json:"emoji"`
-	Count      int64      `json:"count"`
+	ActivityID int64       `json:"activity_id"`
+	Emoji      string      `json:"emoji"`
+	Count      int64       `json:"count"`
 	Player     PlayerBadge `json:"player"`
-	GameType   string     `json:"game_type"`
-	NetResult  int64      `json:"net_result"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LatestAt   time.Time  `json:"latest_at"`
+	GameType   string      `json:"game_type"`
+	NetResult  int64       `json:"net_result"`
+	CreatedAt  time.Time   `json:"created_at"`
+	LatestAt   time.Time   `json:"latest_at"`
 }
 
 type ReactionList struct {
@@ -139,8 +139,8 @@ type BonusState struct {
 }
 
 type BonusClaimRequest struct {
-	InitData          string `json:"init_data,omitempty"`
-	TelegramInitData  string `json:"telegram_init_data,omitempty"`
+	InitData         string `json:"init_data,omitempty"`
+	TelegramInitData string `json:"telegram_init_data,omitempty"`
 }
 
 type BonusClaimResponse struct {
@@ -160,7 +160,7 @@ type BonusClaimItem struct {
 	TelegramUserID     *int64          `json:"telegram_user_id,omitempty"`
 	TelegramUsername   string          `json:"telegram_username,omitempty"`
 	TelegramChannel    string          `json:"telegram_channel,omitempty"`
-	Metadata           json.RawMessage  `json:"metadata,omitempty"`
+	Metadata           json.RawMessage `json:"metadata,omitempty"`
 	ClaimedAt          time.Time       `json:"claimed_at"`
 	CreatedAt          time.Time       `json:"created_at"`
 	UpdatedAt          time.Time       `json:"updated_at"`
@@ -173,8 +173,8 @@ type BonusClaimList struct {
 type RoulettePhase string
 
 const (
-	RoulettePhaseBetting RoulettePhase = "betting"
-	RoulettePhaseLocking RoulettePhase = "locking"
+	RoulettePhaseBetting  RoulettePhase = "betting"
+	RoulettePhaseLocking  RoulettePhase = "locking"
 	RoulettePhaseSpinning RoulettePhase = "spinning"
 	RoulettePhaseResult   RoulettePhase = "result"
 )
@@ -208,7 +208,7 @@ type RouletteRound struct {
 	BettingClosesAt time.Time     `json:"betting_closes_at"`
 	SpinStartedAt   *time.Time    `json:"spin_started_at,omitempty"`
 	ResolvedAt      *time.Time    `json:"resolved_at,omitempty"`
-	ServerSeed      string        `json:"server_seed,omitempty"`
+	ServerSeed      string        `json:"-"`
 	ServerSeedHash  string        `json:"server_seed_hash,omitempty"`
 	ClientSeed      string        `json:"client_seed,omitempty"`
 	Nonce           int64         `json:"nonce,omitempty"`
@@ -266,10 +266,10 @@ const (
 )
 
 type PlinkoConfig struct {
-	Rows        int                     `json:"rows"`
-	Slots       int                     `json:"slots"`
-	MinBet      int64                   `json:"min_bet"`
-	MaxBet      int64                   `json:"max_bet"`
+	Rows        int                      `json:"rows"`
+	Slots       int                      `json:"slots"`
+	MinBet      int64                    `json:"min_bet"`
+	MaxBet      int64                    `json:"max_bet"`
 	Multipliers map[PlinkoRisk][]float64 `json:"multipliers"`
 }
 
@@ -284,17 +284,17 @@ type PlinkoDropRequest struct {
 }
 
 type PlinkoDropResult struct {
-	Balance    int64       `json:"balance"`
-	Bet        int64       `json:"bet"`
-	Risk       PlinkoRisk  `json:"risk"`
-	Path       []int       `json:"path"`
-	Rows       int         `json:"rows"`
-	SlotIndex  int         `json:"slot_index"`
-	Multiplier float64     `json:"multiplier"`
-	Payout     int64       `json:"payout"`
-	NetResult  int64       `json:"net_result"`
-	Status     string      `json:"status"`
-	CreatedAt  time.Time   `json:"created_at"`
+	Balance    int64      `json:"balance"`
+	Bet        int64      `json:"bet"`
+	Risk       PlinkoRisk `json:"risk"`
+	Path       []int      `json:"path"`
+	Rows       int        `json:"rows"`
+	SlotIndex  int        `json:"slot_index"`
+	Multiplier float64    `json:"multiplier"`
+	Payout     int64      `json:"payout"`
+	NetResult  int64      `json:"net_result"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type SpinRecord struct {
@@ -346,6 +346,9 @@ type BlackjackState struct {
 	Winner     string          `json:"winner,omitempty"` // "player", "dealer", "push"
 	Payout     int64           `json:"payout"`
 	CreatedAt  time.Time       `json:"created_at"`
+	ServerSeed string          `json:"-"`
+	ClientSeed string          `json:"-"`
+	Nonce      int64           `json:"-"`
 }
 
 type BlackjackAction string

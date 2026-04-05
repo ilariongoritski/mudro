@@ -12,8 +12,8 @@ var rouletteRed = map[int]struct{}{
 	30: {}, 32: {}, 34: {}, 36: {},
 }
 
-func drawRouletteNumber() int {
-	return DrawInt(37)
+func drawRouletteNumber(fairness *Fairness) int {
+	return DrawIntWithFairness(fairness, 37)
 }
 
 func rouletteColor(number int) string {
@@ -29,7 +29,7 @@ func rouletteColor(number int) string {
 func buildRouletteDisplaySequence(winningNumber int) []int {
 	sequence := make([]int, 0, 24)
 	for len(sequence) < 23 {
-		sequence = append(sequence, drawRouletteNumber())
+		sequence = append(sequence, drawRouletteNumber(nil))
 	}
 	sequence = append(sequence, winningNumber)
 	return sequence

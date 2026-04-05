@@ -6,6 +6,7 @@ MAIN_CASINO_MIGRATIONS=(
   "migrations/012_casino.sql"
   "migrations/017_casino_emoji_v2.sql"
   "migrations/018_casino_stabilization.sql"
+  "migrations/019_unified_fairness.sql"
 )
 
 apply_file() {

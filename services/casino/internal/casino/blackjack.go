@@ -8,15 +8,15 @@ func NewBlackjackEngine() *BlackjackEngine {
 	return &BlackjackEngine{}
 }
 
-func (e *BlackjackEngine) NewGame(bet int64) (*BlackjackState, error) {
+func (e *BlackjackEngine) NewGame(bet int64, fairness *Fairness) (*BlackjackState, error) {
 	deck := e.generateDeck()
 	playerHand := BlackjackHand{Cards: []BlackjackCard{}}
 	dealerHand := BlackjackHand{Cards: []BlackjackCard{}}
 
 	// Deal initial cards
 	for i := 0; i < 2; i++ {
-		playerHand.Cards = append(playerHand.Cards, e.drawCard(&deck))
-		dealerHand.Cards = append(dealerHand.Cards, e.drawCard(&deck))
+		playerHand.Cards = append(playerHand.Cards, e.drawCard(&deck, fairness))
+		dealerHand.Cards = append(dealerHand.Cards, e.drawCard(&deck, fairness))
 	}
 
 	playerHand.Score = e.calculateScore(playerHand.Cards)
@@ -32,42 +32,43 @@ func (e *BlackjackEngine) NewGame(bet int64) (*BlackjackState, error) {
 
 	// Check for immediate blackjack
 	if playerHand.Score == 21 {
-		return e.Resolve(state)
+		return e.Resolve(state, fairness)
 	}
 
 	return state, nil
 }
 
-func (e *BlackjackEngine) Hit(state *BlackjackState) (*BlackjackState, error) {
+func (e *BlackjackEngine) Hit(state *BlackjackState, fairness *Fairness) (*BlackjackState, error) {
 	if state.Status != BlackjackStatusPlayerTurn {
 		return state, nil
 	}
 
 	deck := e.generateDeckFromHands(state.PlayerHand, state.DealerHand)
-	state.PlayerHand.Cards = append(state.PlayerHand.Cards, e.drawCard(&deck))
+	resetBlackjackFairnessCounter(fairness, state)
+	state.PlayerHand.Cards = append(state.PlayerHand.Cards, e.drawCard(&deck, fairness))
 	state.PlayerHand.Score = e.calculateScore(state.PlayerHand.Cards)
 
 	if state.PlayerHand.Score > 21 {
 		state.PlayerHand.IsBust = true
-		return e.Resolve(state)
+		return e.Resolve(state, fairness)
 	}
 
 	if state.PlayerHand.Score == 21 {
-		return e.Resolve(state)
+		return e.Resolve(state, fairness)
 	}
 
 	return state, nil
 }
 
-func (e *BlackjackEngine) Stand(state *BlackjackState) (*BlackjackState, error) {
+func (e *BlackjackEngine) Stand(state *BlackjackState, fairness *Fairness) (*BlackjackState, error) {
 	if state.Status != BlackjackStatusPlayerTurn {
 		return state, nil
 	}
 	state.Status = BlackjackStatusDealerTurn
-	return e.Resolve(state)
+	return e.Resolve(state, fairness)
 }
 
-func (e *BlackjackEngine) Resolve(state *BlackjackState) (*BlackjackState, error) {
+func (e *BlackjackEngine) Resolve(state *BlackjackState, fairness *Fairness) (*BlackjackState, error) {
 	if state.PlayerHand.IsBust {
 		state.Status = BlackjackStatusResolved
 		state.Winner = "dealer"
@@ -77,8 +78,9 @@ func (e *BlackjackEngine) Resolve(state *BlackjackState) (*BlackjackState, error
 
 	// Dealer Turn AI
 	deck := e.generateDeckFromHands(state.PlayerHand, state.DealerHand)
+	resetBlackjackFairnessCounter(fairness, state)
 	for state.DealerHand.Score < 17 {
-		state.DealerHand.Cards = append(state.DealerHand.Cards, e.drawCard(&deck))
+		state.DealerHand.Cards = append(state.DealerHand.Cards, e.drawCard(&deck, fairness))
 		state.DealerHand.Score = e.calculateScore(state.DealerHand.Cards)
 	}
 
@@ -140,14 +142,21 @@ func (e *BlackjackEngine) generateDeckFromHands(player, dealer BlackjackHand) []
 	return deck
 }
 
-func (e *BlackjackEngine) drawCard(deck *[]BlackjackCard) BlackjackCard {
+func (e *BlackjackEngine) drawCard(deck *[]BlackjackCard, fairness *Fairness) BlackjackCard {
 	if len(*deck) == 0 {
 		return BlackjackCard{}
 	}
-	idx := DrawInt(len(*deck))
+	idx := DrawIntWithFairness(fairness, len(*deck))
 	card := (*deck)[idx]
 	*deck = append((*deck)[:idx], (*deck)[idx+1:]...)
 	return card
+}
+
+func resetBlackjackFairnessCounter(fairness *Fairness, state *BlackjackState) {
+	if fairness == nil {
+		return
+	}
+	fairness.DrawCounter = len(state.PlayerHand.Cards) + len(state.DealerHand.Cards)
 }
 
 func (e *BlackjackEngine) calculateScore(cards []BlackjackCard) int {

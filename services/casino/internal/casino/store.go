@@ -544,12 +544,9 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 	if err != nil {
 		return nil, err
 	}
-
-	// Auto-initialize server seed if missing
-	if serverSeed == "" {
-		serverSeed, _ = GenerateServerSeed()
-		sHash := HashServerSeed(serverSeed)
-		_, _ = tx.Exec(ctx, `update casino_players set server_seed = $2, server_seed_hash = $3 where user_id = $1`, actor.UserID, serverSeed, sHash)
+	serverSeed, serverSeedHash, err := s.ensurePlayerServerSeedTx(ctx, tx, actor.UserID, serverSeed)
+	if err != nil {
+		return nil, err
 	}
 
 	freeSpinUsed := false
@@ -584,10 +581,10 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 
 	var spinID int64
 	if err := tx.QueryRow(ctx, `
-        insert into casino_spins (user_id, bet, win, symbols, game_type, server_seed, client_seed, nonce)
-        values ($1, $2, $3, $4::jsonb, 'slots', $5, $6, $7)
+        insert into casino_spins (user_id, bet, win, symbols, game_type, server_seed, server_seed_hash, client_seed, nonce)
+        values ($1, $2, $3, $4::jsonb, 'slots', $5, $6, $7, $8)
         returning id
-    `, actor.UserID, bet, win, marshalJSON(symbols), serverSeed, clientSeed, nonce).Scan(&spinID); err != nil {
+    `, actor.UserID, bet, win, marshalJSON(symbols), serverSeed, serverSeedHash, clientSeed, nonce).Scan(&spinID); err != nil {
 		return nil, err
 	}
 
@@ -609,6 +606,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		"free_spins_balance": freeSpins,
 		"nonce":              nonce,
 		"client_seed":        clientSeed,
+		"server_seed_hash":   serverSeedHash,
 	}); err != nil {
 		return nil, err
 	}
@@ -870,24 +868,19 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 	if err != nil {
 		return nil, err
 	}
-	// Auto-initialize server seed if missing
-	if serverSeed == "" {
-		serverSeed, _ = GenerateServerSeed()
-		sHash := HashServerSeed(serverSeed)
-		_, _ = tx.Exec(ctx, `update casino_players set server_seed = $2, server_seed_hash = $3 where user_id = $1`, actor.UserID, serverSeed, sHash)
+	serverSeed, serverSeedHash, err := s.ensurePlayerServerSeedTx(ctx, tx, actor.UserID, serverSeed)
+	if err != nil {
+		return nil, err
 	}
 
 	if balance < totalStake {
 		return nil, ErrInsufficientBalance
 	}
 
-	// Configure Fairness for the draw
-	s.engine.EnableFairness(serverSeed, clientSeed, int64(nonce))
-	winningNumber := drawRouletteNumber()
+	winningNumber := drawRouletteNumber(NewFairness(serverSeed, clientSeed, int64(nonce)))
 	winningColor := rouletteColor(winningNumber)
 	displaySequence := buildRouletteDisplaySequence(winningNumber)
 	resultSequence := buildRouletteResultSequence(displaySequence, winningNumber)
-	s.engine.DisableFairness() // Cleanup
 
 	now := nowUTC()
 	var roundID int64
@@ -897,11 +890,11 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 			display_sequence, result_sequence, 
 			betting_opens_at, betting_closes_at, 
 			spin_started_at, resolved_at,
-			server_seed, client_seed, nonce
+			server_seed, server_seed_hash, client_seed, nonce
 		) values (
-			'result', $1, $2, $3::jsonb, $4::jsonb, $5, $5, $5, $5, $6, $7, $8
+			'result', $1, $2, $3::jsonb, $4::jsonb, $5, $5, $5, $5, $6, $7, $8, $9
 		) returning id
-	`, winningNumber, winningColor, marshalJSON(displaySequence), marshalJSON(resultSequence), now, serverSeed, clientSeed, nonce).Scan(&roundID)
+	`, winningNumber, winningColor, marshalJSON(displaySequence), marshalJSON(resultSequence), now, serverSeed, serverSeedHash, clientSeed, nonce).Scan(&roundID)
 	if err != nil {
 		return nil, err
 	}
@@ -965,10 +958,12 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 	}
 
 	if err := s.insertActivityTx(ctx, tx, actor.UserID, "roulette_instant", fmt.Sprintf("%d", roundID), totalStake, totalPayout, netResult, activityStatus, map[string]any{
-		"winning_number":  winningNumber,
-		"winning_color":   winningColor,
-		"result_sequence": resultSequence,
-		"nonce":           nonce,
+		"winning_number":   winningNumber,
+		"winning_color":    winningColor,
+		"result_sequence":  resultSequence,
+		"client_seed":      clientSeed,
+		"nonce":            nonce,
+		"server_seed_hash": serverSeedHash,
 	}); err != nil {
 		return nil, err
 	}
@@ -1041,13 +1036,11 @@ func (s *Store) TransitionRouletteRound(ctx context.Context, round RouletteRound
 	case RoulettePhaseLocking:
 		spinAt := round.BettingClosesAt.Add(RouletteLockDuration())
 		if !now.Before(spinAt) {
-			// Set deterministic fairness for this draw
-			s.engine.EnableFairness(round.ServerSeed, round.ClientSeed, int64(round.Nonce))
-			winningNumber := drawRouletteNumber()
+			fairness := NewFairness(round.ServerSeed, round.ClientSeed, round.Nonce)
+			winningNumber := drawRouletteNumber(fairness)
 			winningColor := rouletteColor(winningNumber)
 			displaySequence := buildRouletteDisplaySequence(winningNumber)
 			resultSequence := buildRouletteResultSequence(displaySequence, winningNumber)
-			s.engine.DisableFairness() // Reset after drawing
 			spinStartedAt := now
 			return s.updateRouletteRoundStatus(ctx, round.ID, RoulettePhaseSpinning, &winningNumber, winningColor, &spinStartedAt, nil, displaySequence, resultSequence)
 		}
@@ -1123,22 +1116,16 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 	if err != nil {
 		return nil, err
 	}
-
-	// Auto-initialize server seed if missing
-	if serverSeed == "" {
-		serverSeed, _ = GenerateServerSeed()
-		sHash := HashServerSeed(serverSeed)
-		_, _ = tx.Exec(ctx, `update casino_players set server_seed = $2, server_seed_hash = $3 where user_id = $1`, actor.UserID, serverSeed, sHash)
+	serverSeed, serverSeedHash, err := s.ensurePlayerServerSeedTx(ctx, tx, actor.UserID, serverSeed)
+	if err != nil {
+		return nil, err
 	}
 
 	if balance < req.Bet {
 		return nil, ErrInsufficientBalance
 	}
 
-	// Provide fairness to Plinko
-	s.engine.EnableFairness(serverSeed, clientSeed, int64(nonce))
-	drop, err := s.plinko.Drop(req.Bet, req.Risk)
-	s.engine.DisableFairness() // Cleanup
+	drop, err := s.plinko.Drop(req.Bet, req.Risk, NewFairness(serverSeed, clientSeed, int64(nonce)))
 	if err != nil {
 		return nil, err
 	}
@@ -1167,14 +1154,14 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 
 	gameRef := fmt.Sprintf("%d-%d", actor.UserID, drop.CreatedAt.UnixNano())
 	if err := s.insertActivityTx(ctx, tx, actor.UserID, "plinko", gameRef, req.Bet, drop.Payout, drop.Payout-req.Bet, drop.Status, map[string]any{
-		"risk":        drop.Risk,
-		"path":        drop.Path,
-		"rows":        drop.Rows,
-		"slot_index":  drop.SlotIndex,
-		"multiplier":  drop.Multiplier,
-		"nonce":       nonce,
-		"client_seed": clientSeed,
-		"server_seed": serverSeed, // Reveal server seed in history activity metadata
+		"risk":             drop.Risk,
+		"path":             drop.Path,
+		"rows":             drop.Rows,
+		"slot_index":       drop.SlotIndex,
+		"multiplier":       drop.Multiplier,
+		"nonce":            nonce,
+		"client_seed":      clientSeed,
+		"server_seed_hash": serverSeedHash,
 	}); err != nil {
 		return nil, err
 	}
@@ -1341,6 +1328,29 @@ func (s *Store) getWalletStateForUpdate(ctx context.Context, tx pgx.Tx, userID i
 		for update
 	`, userID).Scan(&balance, &freeSpins, &clientSeed, &serverSeed, &nonce, &bonusClaimed)
 	return balance, freeSpins, clientSeed, serverSeed, nonce, bonusClaimed, err
+}
+
+func (s *Store) ensurePlayerServerSeedTx(ctx context.Context, tx pgx.Tx, userID int64, serverSeed string) (string, string, error) {
+	if strings.TrimSpace(serverSeed) != "" {
+		return serverSeed, HashServerSeed(serverSeed), nil
+	}
+
+	serverSeed, err := GenerateServerSeed()
+	if err != nil {
+		return "", "", err
+	}
+	serverSeedHash := HashServerSeed(serverSeed)
+	_, err = tx.Exec(ctx, `
+		update casino_players
+		set server_seed = $2,
+			server_seed_hash = $3,
+			updated_at = now()
+		where user_id = $1
+	`, userID, serverSeed, serverSeedHash)
+	if err != nil {
+		return "", "", err
+	}
+	return serverSeed, serverSeedHash, nil
 }
 
 func (s *Store) updatePlayerStatsTx(ctx context.Context, tx pgx.Tx, userID, wagered, won, gamesPlayed, rouletteRoundsPlayed int64) error {
@@ -1511,7 +1521,12 @@ func (s *Store) updateRouletteRoundStatus(
 			betting_closes_at,
 			spin_started_at,
 			resolved_at,
-			created_at
+			created_at,
+			server_seed,
+			server_seed_hash,
+			client_seed,
+			nonce,
+			round_hash
 	`, roundID, status, winningNumber, nullableString(winningColor), marshalJSON(displaySequence), marshalJSON(resultSequence), spinStartedAt, resolvedAt))
 }
 
@@ -1666,12 +1681,15 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 		delta.balanceDelta += payout
 
 		if err := s.insertActivityTx(ctx, tx, bet.UserID, "roulette", fmt.Sprintf("%d:%d", round.ID, bet.ID), bet.Stake, payout, payout-bet.Stake, status, map[string]any{
-			"round_id":        round.ID,
-			"winning_number":  round.WinningNumber,
-			"winning_color":   round.WinningColor,
-			"bet_type":        bet.BetType,
-			"bet_value":       bet.BetValue,
-			"result_sequence": round.ResultSequence,
+			"round_id":         round.ID,
+			"winning_number":   round.WinningNumber,
+			"winning_color":    round.WinningColor,
+			"bet_type":         bet.BetType,
+			"bet_value":        bet.BetValue,
+			"result_sequence":  round.ResultSequence,
+			"client_seed":      round.ClientSeed,
+			"nonce":            round.Nonce,
+			"server_seed_hash": round.ServerSeedHash,
 		}); err != nil {
 			return err
 		}
@@ -1865,7 +1883,7 @@ func (s *Store) BlackjackGetState(ctx context.Context, userID int64) (*Blackjack
 		dHandJson []byte
 	)
 	err := s.pool.QueryRow(ctx, `
-		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at
+		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at, server_seed, client_seed, nonce
 		from casino_blackjack_games
 		where user_id = $1 and status != 'resolved'
 		order by created_at desc
@@ -1880,6 +1898,9 @@ func (s *Store) BlackjackGetState(ctx context.Context, userID int64) (*Blackjack
 		&state.Winner,
 		&state.Payout,
 		&state.CreatedAt,
+		&state.ServerSeed,
+		&state.ClientSeed,
+		&state.Nonce,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -1931,26 +1952,23 @@ func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet 
 	if err != nil {
 		return nil, err
 	}
-
-	// Auto-initialize server seed if missing
-	if serverSeed == "" {
-		serverSeed, _ = GenerateServerSeed()
-		sHash := HashServerSeed(serverSeed)
-		_, _ = tx.Exec(ctx, `update casino_players set server_seed = $2, server_seed_hash = $3 where user_id = $1`, actor.UserID, serverSeed, sHash)
+	serverSeed, serverSeedHash, err := s.ensurePlayerServerSeedTx(ctx, tx, actor.UserID, serverSeed)
+	if err != nil {
+		return nil, err
 	}
 
 	if balance < bet {
 		return nil, ErrInsufficientBalance
 	}
 
-	// Deck is drawn via DrawInt, which needs fairness
-	s.engine.EnableFairness(serverSeed, clientSeed, int64(nonce))
-	state, err := s.blackjack.NewGame(bet)
-	s.engine.DisableFairness() // Cleanup
+	state, err := s.blackjack.NewGame(bet, NewFairness(serverSeed, clientSeed, int64(nonce)))
 	if err != nil {
 		return nil, err
 	}
 	state.UserID = actor.UserID
+	state.ServerSeed = serverSeed
+	state.ClientSeed = clientSeed
+	state.Nonce = int64(nonce)
 
 	newBalance := balance - bet
 	if err := s.setBalanceTx(ctx, tx, actor.UserID, newBalance); err != nil {
@@ -1967,10 +1985,13 @@ func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet 
 	}
 
 	err = tx.QueryRow(ctx, `
-		insert into casino_blackjack_games (user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at)
-		values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8)
+		insert into casino_blackjack_games (
+			user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at,
+			server_seed, server_seed_hash, client_seed, nonce
+		)
+		values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12)
 		returning id
-	`, state.UserID, state.Bet, marshalJSON(state.PlayerHand), marshalJSON(state.DealerHand), state.Status, state.Winner, state.Payout, state.CreatedAt).Scan(&state.ID)
+	`, state.UserID, state.Bet, marshalJSON(state.PlayerHand), marshalJSON(state.DealerHand), state.Status, state.Winner, state.Payout, state.CreatedAt, serverSeed, serverSeedHash, clientSeed, nonce).Scan(&state.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -2013,11 +2034,12 @@ func (s *Store) BlackjackAction(ctx context.Context, actor ParticipantInput, act
 	}
 
 	var next *BlackjackState
+	fairness := NewFairness(state.ServerSeed, state.ClientSeed, state.Nonce)
 	switch action {
 	case BlackjackActionHit:
-		next, err = s.blackjack.Hit(state)
+		next, err = s.blackjack.Hit(state, fairness)
 	case BlackjackActionStand:
-		next, err = s.blackjack.Stand(state)
+		next, err = s.blackjack.Stand(state, fairness)
 	default:
 		return nil, errors.New("invalid action")
 	}
@@ -2054,7 +2076,7 @@ func (s *Store) blackjackGetStateTx(ctx context.Context, tx pgx.Tx, userID int64
 		dHandJson []byte
 	)
 	err := tx.QueryRow(ctx, `
-		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at
+		select id, user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at, server_seed, client_seed, nonce
 		from casino_blackjack_games
 		where user_id = $1 and status != 'resolved'
 		for update
@@ -2068,6 +2090,9 @@ func (s *Store) blackjackGetStateTx(ctx context.Context, tx pgx.Tx, userID int64
 		&state.Winner,
 		&state.Payout,
 		&state.CreatedAt,
+		&state.ServerSeed,
+		&state.ClientSeed,
+		&state.Nonce,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -2110,9 +2135,12 @@ func (s *Store) resolveBlackjackTx(ctx context.Context, tx pgx.Tx, state *Blackj
 	}
 
 	if err := s.insertActivityTx(ctx, tx, state.UserID, "blackjack", fmt.Sprintf("%d", state.ID), state.Bet, state.Payout, state.Payout-state.Bet, status, map[string]any{
-		"player_hand": state.PlayerHand,
-		"dealer_hand": state.DealerHand,
-		"winner":      state.Winner,
+		"player_hand":      state.PlayerHand,
+		"dealer_hand":      state.DealerHand,
+		"winner":           state.Winner,
+		"client_seed":      state.ClientSeed,
+		"nonce":            state.Nonce,
+		"server_seed_hash": HashServerSeed(state.ServerSeed),
 	}); err != nil {
 		return err
 	}
