@@ -516,8 +516,11 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 	if err != nil {
 		return nil, err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	cfg, err := s.getConfigTx(ctx, tx)
@@ -616,6 +619,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 
 	return &SpinResult{
 		Balance:          newBalance,
@@ -725,8 +729,11 @@ func (s *Store) PlaceRouletteBets(ctx context.Context, actor ParticipantInput, r
 	if err != nil {
 		return nil, err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	cfg, err := s.getConfigTx(ctx, tx)
@@ -811,6 +818,7 @@ func (s *Store) PlaceRouletteBets(ctx context.Context, actor ParticipantInput, r
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 
 	return &RoulettePlaceBetsResponse{
 		RoundID: roundID,
@@ -839,7 +847,12 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
 
 	cfg, err := s.getConfigTx(ctx, tx)
 	if err != nil {
@@ -935,6 +948,7 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 
 	return &RouletteInstantSpinResponse{
 		WinningNumber:   winningNumber,
@@ -1055,8 +1069,11 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 	if err != nil {
 		return nil, err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	cfg, err := s.getConfigTx(ctx, tx)
@@ -1105,6 +1122,7 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 
 	drop.Balance = newBalance
 	return drop, nil
@@ -1434,8 +1452,11 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 	if err != nil {
 		return err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	currentRound, err := s.getRouletteRoundTx(ctx, tx, round.ID, true)
@@ -1533,6 +1554,7 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
+	committed = true
 
 	history, historyErr := s.GetRouletteHistory(ctx, 12)
 	if historyErr == nil {
@@ -1695,7 +1717,12 @@ func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet 
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
 
 	cfg, err := s.getConfigTx(ctx, tx)
 	if err != nil {
@@ -1753,6 +1780,7 @@ func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 	return state, nil
 }
 
@@ -1761,7 +1789,12 @@ func (s *Store) BlackjackAction(ctx context.Context, actor ParticipantInput, act
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
 
 	state, err := s.blackjackGetStateTx(ctx, tx, actor.UserID)
 	if err != nil {
@@ -1802,6 +1835,7 @@ func (s *Store) BlackjackAction(ctx context.Context, actor ParticipantInput, act
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 	return next, nil
 }
 

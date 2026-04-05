@@ -83,7 +83,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	username := req.principal()
 	email := strings.TrimSpace(req.Email)
-	if username == "" || email == "" || len(req.Password) < 6 {
+	if username == "" || email == "" || len(req.Password) < 8 {
 		http.Error(w, "username, email and password are required", http.StatusBadRequest)
 		return
 	}

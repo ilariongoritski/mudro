@@ -100,7 +100,10 @@ func (r *Runner) findBackupArtifacts() []repoFinding {
 		if err != nil {
 			return nil
 		}
-		rel, _ := filepath.Rel(root, path)
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil
+		}
 		if rel == ".git" || strings.HasPrefix(rel, ".git"+string(filepath.Separator)) {
 			if d.IsDir() {
 				return filepath.SkipDir

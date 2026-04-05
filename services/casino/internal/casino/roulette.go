@@ -13,11 +13,8 @@ var rouletteRed = map[int]struct{}{
 }
 
 func drawRouletteNumber() int {
-	n, err := cryptoDraw(37)
-	if err != nil {
-		return 0
-	}
-	return n
+	// Use Provably Fair draw if global fairness is configured; fallback to crypto draw
+	return DrawIntGlobal(37)
 }
 
 func rouletteColor(number int) string {

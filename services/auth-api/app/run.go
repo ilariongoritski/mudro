@@ -44,11 +44,12 @@ func Run() {
 	handler := authapi.NewHandler(authapi.NewAuthHandlers(authSvc), authapi.NewAdminHandlers(authSvc))
 
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      handler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  30 * time.Second,
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       30 * time.Second,
 	}
 
 	go func() {
@@ -69,5 +70,3 @@ func Run() {
 		log.Printf("shutdown error: %v", err)
 	}
 }
-
-

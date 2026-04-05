@@ -137,8 +137,11 @@ func (s *Store) ClaimSubscriptionBonus(ctx context.Context, actor ParticipantInp
 	if err != nil {
 		return nil, err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	var claimID int64
@@ -215,6 +218,7 @@ func (s *Store) ClaimSubscriptionBonus(ctx context.Context, actor ParticipantInp
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	committed = true
 
 	state, err := s.GetBonusState(ctx, actor, 10)
 	if err != nil {

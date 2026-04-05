@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ type IPLimiter struct {
 	buckets map[string]*TokenBucket
 	rps     int
 	burst   int
+	stopCh  chan struct{}
 }
 
 // NewIPLimiter creates a per-IP rate limiter.
@@ -21,15 +23,24 @@ func NewIPLimiter(rps, burst int) *IPLimiter {
 		buckets: make(map[string]*TokenBucket),
 		rps:     rps,
 		burst:   burst,
+		stopCh:  make(chan struct{}),
 	}
-	// Periodically clean up stale buckets (older than 10 minutes).
 	go func() {
 		for {
-			time.Sleep(5 * time.Minute)
-			l.cleanup(10 * time.Minute)
+			select {
+			case <-time.After(5 * time.Minute):
+				l.cleanup(10 * time.Minute)
+			case <-l.stopCh:
+				return
+			}
 		}
 	}()
 	return l
+}
+
+// Stop stops the background cleanup goroutine.
+func (l *IPLimiter) Stop() {
+	close(l.stopCh)
 }
 
 func (l *IPLimiter) Allow(ip string) bool {
@@ -67,9 +78,11 @@ func (l *IPLimiter) Middleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func clientIP(r *http.Request) string {
-	// Trust X-Real-IP first (set by trusted reverse proxy).
+	// Trust X-Real-IP only if it parses as a valid IP (prevents spoofing).
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
+		if parsed := net.ParseIP(ip); parsed != nil {
+			return ip
+		}
 	}
 	// Fall back to RemoteAddr (strip port).
 	host := r.RemoteAddr

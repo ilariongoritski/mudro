@@ -48,10 +48,7 @@ func (e *PlinkoEngine) Drop(bet int64, risk PlinkoRisk) (*PlinkoDropResult, erro
 	path := make([]int, 0, cfg.Rows)
 	slotIndex := 0
 	for i := 0; i < cfg.Rows; i++ {
-		step, err := e.draw(2)
-		if err != nil {
-			return nil, err
-		}
+		step := DrawIntGlobal(2)
 		path = append(path, step)
 		slotIndex += step
 	}

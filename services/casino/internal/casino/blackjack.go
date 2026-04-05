@@ -1,9 +1,6 @@
 package casino
 
-import (
-	"crypto/rand"
-	"math/big"
-)
+import ()
 
 type BlackjackEngine struct{}
 
@@ -147,8 +144,7 @@ func (e *BlackjackEngine) drawCard(deck *[]BlackjackCard) BlackjackCard {
 	if len(*deck) == 0 {
 		return BlackjackCard{}
 	}
-	n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(*deck))))
-	idx := int(n.Int64())
+	idx := DrawIntGlobal(len(*deck))
 	card := (*deck)[idx]
 	*deck = append((*deck)[:idx], (*deck)[idx+1:]...)
 	return card

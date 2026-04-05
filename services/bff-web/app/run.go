@@ -64,11 +64,12 @@ func Run() {
 	mux.Handle("/api/movie-catalog/", http.StripPrefix("/api/movie-catalog", movieCatalogProxy))
 
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  30 * time.Second,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       30 * time.Second,
 	}
 
 	go func() {
@@ -90,5 +91,3 @@ func Run() {
 		log.Printf("shutdown error: %v", err)
 	}
 }
-
-

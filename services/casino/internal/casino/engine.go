@@ -14,9 +14,10 @@ var ErrInvalidConfig = errors.New("invalid casino config")
 // Provably Fair seed-based configuration (optional)
 // When set, spins are produced deterministically from server/client seeds and a nonce.
 type Fairness struct {
-	ServerSeed string
-	ClientSeed string
-	Nonce      int64
+	ServerSeed  string
+	ClientSeed  string
+	Nonce       int64
+	DrawCounter int64
 }
 
 type randFunc func(max int) (int, error)
@@ -24,6 +25,21 @@ type randFunc func(max int) (int, error)
 type Engine struct {
 	draw     randFunc
 	fairness *Fairness
+}
+
+// NextRoll delegates to the shared fairnessRoll logic using the internal DrawCounter
+func (f *Fairness) NextRoll(max int) (int, error) {
+	if f == nil {
+		// Fallback to normal randomness if fairness is not configured
+		return cryptoDraw(max)
+	}
+	// Use the shared fairnessRoll with current nonce and draw counter
+	v, err := fairnessRoll(f.ServerSeed, f.ClientSeed, f.Nonce, int(f.DrawCounter), max)
+	if err != nil {
+		return 0, err
+	}
+	f.DrawCounter++
+	return v, nil
 }
 
 func NewEngine() *Engine {
@@ -36,7 +52,9 @@ func NewEngineWithDraw(draw randFunc) *Engine {
 
 // EnableFairness activates Provably Fair spins for this engine.
 func (e *Engine) EnableFairness(serverSeed, clientSeed string, nonce int64) {
-	e.fairness = &Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce}
+	e.fairness = &Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0}
+	// Also expose global fairness spec for non-slot engines (Roulette/Plinko/Blackjack)
+	SetGlobalFairnessSpec(&GlobalFairnessSpec{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0})
 }
 
 // DisableFairness disables Provably Fair spins for this engine.
@@ -67,12 +85,16 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 	}
 
 	// Prepare 3 spins: either deterministic rolls (provably fair) or random rolls.
+	if e.fairness != nil {
+		// Reset draw counter for each spin to ensure determinism across identical seed/nonce inputs
+		e.fairness.DrawCounter = 0
+	}
 	symbols := make([]string, 3)
 	var rolls [3]int
 	if e.fairness != nil {
 		// Generate 3 deterministic rolls based on server/client seeds and nonce
 		for i := 0; i < 3; i++ {
-			r, err := fairnessRoll(e.fairness.ServerSeed, e.fairness.ClientSeed, e.fairness.Nonce, i, totalWeight)
+			r, err := e.fairness.NextRoll(totalWeight)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -102,7 +124,23 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 
 	multiplier := int64(0)
 	if symbols[0] == symbols[1] && symbols[1] == symbols[2] {
+		// Triple match: full payout according to paytable
 		multiplier = cfg.Paytable[symbols[0]]
+	} else if symbols[0] == symbols[1] || symbols[0] == symbols[2] || symbols[1] == symbols[2] {
+		// Two-of-a-kind: smaller payout, avoid zero multiplier
+		var sym string
+		if symbols[0] == symbols[1] {
+			sym = symbols[0]
+		} else if symbols[0] == symbols[2] {
+			sym = symbols[0]
+		} else {
+			sym = symbols[1]
+		}
+		base := cfg.Paytable[sym]
+		multiplier = base / 2
+		if multiplier == 0 {
+			multiplier = 1
+		}
 	}
 
 	win := int64(0)

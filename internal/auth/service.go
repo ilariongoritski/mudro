@@ -89,7 +89,7 @@ func (s *Service) IssueToken(user *User) (string, error) {
 		return "", errors.New("user is nil")
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
+		"sub":  user.ID,
 		"exp":  time.Now().Add(s.tokenExpiry).Unix(),
 		"role": user.Role,
 	})
@@ -215,7 +215,12 @@ func (s *Service) fillPremiumStatus(ctx context.Context, user *User) {
 	if user == nil {
 		return
 	}
-	premium, _ := s.repo.HasActiveSubscription(ctx, user.ID)
+	premium, err := s.repo.HasActiveSubscription(ctx, user.ID)
+	if err != nil {
+		slog.Warn("check premium status", "user_id", user.ID, "err", err)
+		user.IsPremium = false
+		return
+	}
 	user.IsPremium = premium
 }
 

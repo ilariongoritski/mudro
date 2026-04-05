@@ -241,8 +241,11 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	var (
@@ -283,7 +286,7 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 			// Push drift to main ledger with audit context
 			if err := s.pushBalanceToMainWallet(ctx, userID, *requestedBalance, reason); err != nil {
 				log.Printf("wallet_sync: push drift failed for user %d: %v", userID, err)
-				// continue to pull what's there if push failed? 
+				// continue to pull what's there if push failed?
 				// No, let it retry via syncErr
 				syncErr = err
 			} else {
@@ -345,6 +348,7 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 	if err := tx.Commit(ctx); err != nil {
 		return false, err
 	}
+	committed = true
 	return true, nil
 }
 
@@ -356,8 +360,11 @@ func (s *Store) pushBalanceToMainWallet(ctx context.Context, userID int64, balan
 	if err != nil {
 		return err
 	}
+	committed := false
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
 	}()
 
 	// Set audit context
@@ -373,7 +380,11 @@ func (s *Store) pushBalanceToMainWallet(ctx context.Context, userID int64, balan
 		return err
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	committed = true
+	return nil
 }
 
 func (s *Store) loadRouletteSession(ctx context.Context) (RouletteState, bool, error) {
