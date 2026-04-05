@@ -205,6 +205,11 @@ type RouletteRound struct {
 	BettingClosesAt time.Time     `json:"betting_closes_at"`
 	SpinStartedAt   *time.Time    `json:"spin_started_at,omitempty"`
 	ResolvedAt      *time.Time    `json:"resolved_at,omitempty"`
+	ServerSeed      string        `json:"server_seed,omitempty"`
+	ServerSeedHash  string        `json:"server_seed_hash,omitempty"`
+	ClientSeed      string        `json:"client_seed,omitempty"`
+	Nonce           int64         `json:"nonce,omitempty"`
+	RoundHash       string        `json:"round_hash,omitempty"`
 	CreatedAt       time.Time     `json:"created_at"`
 }
 

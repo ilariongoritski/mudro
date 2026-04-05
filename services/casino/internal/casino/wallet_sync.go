@@ -368,8 +368,12 @@ func (s *Store) pushBalanceToMainWallet(ctx context.Context, userID int64, balan
 	}()
 
 	// Set audit context
-	_, _ = tx.Exec(ctx, "SELECT set_config('app.casino_reason', $1, true)", reason)
-	_, _ = tx.Exec(ctx, "SELECT set_config('app.casino_changed_by', 'casino_service', true)")
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.casino_reason', $1, true)", reason); err != nil {
+		log.Printf("[wallet-sync] failed to set audit reason for user %d: %v", userID, err)
+	}
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.casino_changed_by', 'casino_service', true)"); err != nil {
+		log.Printf("[wallet-sync] failed to set audit actor for user %d: %v", userID, err)
+	}
 
 	_, err = tx.Exec(ctx, `
 		update casino_accounts

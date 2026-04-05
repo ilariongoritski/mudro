@@ -1,12 +1,13 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import type { RootState } from '@/app/store'
+import { logout, setCredentials } from '@/entities/session/model/sessionSlice'
 import { env } from '@/shared/config/env'
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: env.apiBaseUrl,
   prepareHeaders: (headers, { getState }) => {
-    const token = (getState() as RootState).session?.token;
+    const token = (getState() as RootState).session?.token
     if (token) {
       headers.set('authorization', `Bearer ${token}`)
     }
@@ -41,7 +42,6 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             is_premium?: boolean
           }
         }
-        const { setCredentials } = await import('@/entities/session/model/sessionSlice')
         api.dispatch(setCredentials({
           token: data.token,
           user: {
@@ -55,7 +55,6 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         // Retry the original request
         result = await rawBaseQuery(args, api, extraOptions)
       } else {
-        const { logout } = await import('@/entities/session/model/sessionSlice')
         api.dispatch(logout())
       }
     }

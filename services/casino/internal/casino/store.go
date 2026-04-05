@@ -558,43 +558,15 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 
 	var spinID int64
 	if err := tx.QueryRow(ctx, `
-        insert into casino_spins (user_id, bet, win, symbols)
-        values ($1, $2, $3, $4::jsonb)
+        insert into casino_spins (user_id, bet, win, symbols, game_type)
+        values ($1, $2, $3, $4::jsonb, 'slots')
         returning id
     `, actor.UserID, bet, win, marshalJSON(symbols)).Scan(&spinID); err != nil {
 		return nil, err
 	}
 
-	// Provably Fair / Ledger integration (minimal): record bet as a ledger transfer with debit to user and credit to house
-	// Note: This is a best-effort first step towards a full double-entry ledger.
-	var transferID string
-	metadata := marshalJSON(map[string]interface{}{"spin_id": spinID, "user_id": actor.UserID, "bet": bet})
-	if err := tx.QueryRow(ctx, `
-        insert into casino_transfers (kind, metadata, created_at)
-        values ('bet_stake', $1, now())
-        returning id
-    `, metadata).Scan(&transferID); err != nil {
-		return nil, err
-	}
-	// Resolve user and house accounts within the same transaction for atomicity
-	var userAccountID string
-	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'user'`, fmt.Sprintf("USER_%d", actor.UserID)).Scan(&userAccountID); err != nil {
-		return nil, err
-	}
-	var houseAccountID string
-	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'system'`, "SYSTEM_HOUSE_POOL").Scan(&houseAccountID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, `
-        insert into casino_ledger_entries (transfer_id, account_id, direction, amount, created_at)
-        values ($1, $2, 'debit', $3, now())
-    `, transferID, userAccountID, bet); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, `
-        insert into casino_ledger_entries (transfer_id, account_id, direction, amount, created_at)
-        values ($1, $2, 'credit', $3, now())
-    `, transferID, houseAccountID, bet); err != nil {
+	// Unified Ledger Transfer
+	if err := s.recordTransferTx(ctx, tx, "bet_stake", actor.UserID, bet, map[string]any{"spin_id": spinID}); err != nil {
 		return nil, err
 	}
 
@@ -809,6 +781,10 @@ func (s *Store) PlaceRouletteBets(ctx context.Context, actor ParticipantInput, r
 			return nil, err
 		}
 		placed = append(placed, placedBet)
+
+		if err := s.recordTransferTx(ctx, tx, "bet_stake", actor.UserID, bet.Stake, map[string]any{"bet_id": placedBet.ID, "round_id": roundID}); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "roulette_bet", &newBalance); err != nil {
@@ -1009,10 +985,18 @@ func (s *Store) TransitionRouletteRound(ctx context.Context, round RouletteRound
 	case RoulettePhaseLocking:
 		spinAt := round.BettingClosesAt.Add(RouletteLockDuration())
 		if !now.Before(spinAt) {
+			// Set deterministic fairness for this draw
+			SetGlobalFairness(&Fairness{
+				ServerSeed: round.ServerSeed,
+				ClientSeed: round.ClientSeed, // Should be set by admin or hash of bets in Stage 1
+				Nonce:      round.Nonce,
+			})
+
 			winningNumber := drawRouletteNumber()
 			winningColor := rouletteColor(winningNumber)
 			displaySequence := buildRouletteDisplaySequence(winningNumber)
 			resultSequence := buildRouletteResultSequence(displaySequence, winningNumber)
+			SetGlobalFairness(nil) // Reset after drawing
 			spinStartedAt := now
 			return s.updateRouletteRoundStatus(ctx, round.ID, RoulettePhaseSpinning, &winningNumber, winningColor, &spinStartedAt, nil, displaySequence, resultSequence)
 		}
@@ -1100,6 +1084,15 @@ func (s *Store) DropPlinko(ctx context.Context, actor ParticipantInput, req Plin
 	newBalance := balance - req.Bet + drop.Payout
 	if err := s.setBalanceTx(ctx, tx, actor.UserID, newBalance); err != nil {
 		return nil, err
+	}
+
+	if err := s.recordTransferTx(ctx, tx, "bet_stake", actor.UserID, req.Bet, map[string]any{"game": "plinko"}); err != nil {
+		return nil, err
+	}
+	if drop.Payout > 0 {
+		if err := s.recordTransferTx(ctx, tx, "bet_payout", actor.UserID, drop.Payout, map[string]any{"game": "plinko"}); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.updatePlayerStatsTx(ctx, tx, actor.UserID, req.Bet, drop.Payout, 1, 0); err != nil {
 		return nil, err
@@ -1329,7 +1322,12 @@ func (s *Store) getRouletteRoundQuery(ctx context.Context, q queryable) (Roulett
 			betting_closes_at,
 			spin_started_at,
 			resolved_at,
-			created_at
+			created_at,
+			server_seed,
+			server_seed_hash,
+			client_seed,
+			nonce,
+			round_hash
 		from casino_roulette_rounds
 		order by id desc
 		limit 1
@@ -1349,7 +1347,12 @@ func (s *Store) getRouletteRoundTx(ctx context.Context, tx pgx.Tx, roundID int64
 			betting_closes_at,
 			spin_started_at,
 			resolved_at,
-			created_at
+			created_at,
+			server_seed,
+			server_seed_hash,
+			client_seed,
+			nonce,
+			round_hash
 		from casino_roulette_rounds
 		where id = $1
 	`
@@ -1360,15 +1363,23 @@ func (s *Store) getRouletteRoundTx(ctx context.Context, tx pgx.Tx, roundID int64
 }
 
 func (s *Store) createRouletteRound(ctx context.Context, now time.Time) (RouletteRound, error) {
+	serverSeed, err := GenerateServerSeed()
+	if err != nil {
+		return RouletteRound{}, err
+	}
+	serverSeedHash := HashServerSeed(serverSeed)
+
 	return scanRouletteRound(s.pool.QueryRow(ctx, `
 		insert into casino_roulette_rounds (
 			status,
 			display_sequence,
 			result_sequence,
 			betting_opens_at,
-			betting_closes_at
+			betting_closes_at,
+			server_seed,
+			server_seed_hash
 		)
-		values ('betting', '[]'::jsonb, '[]'::jsonb, $1, $2)
+		values ('betting', '[]'::jsonb, '[]'::jsonb, $1, $2, $3, $4)
 		returning
 			id,
 			status,
@@ -1380,8 +1391,13 @@ func (s *Store) createRouletteRound(ctx context.Context, now time.Time) (Roulett
 			betting_closes_at,
 			spin_started_at,
 			resolved_at,
-			created_at
-	`, now, now.Add(RouletteBettingDuration())))
+			created_at,
+			server_seed,
+			server_seed_hash,
+			client_seed,
+			nonce,
+			round_hash
+	`, now, now.Add(RouletteBettingDuration()), serverSeed, serverSeedHash))
 }
 
 func (s *Store) updateRouletteRoundStatus(
@@ -1418,6 +1434,51 @@ func (s *Store) updateRouletteRoundStatus(
 			resolved_at,
 			created_at
 	`, roundID, status, winningNumber, nullableString(winningColor), marshalJSON(displaySequence), marshalJSON(resultSequence), spinStartedAt, resolvedAt))
+}
+
+func (s *Store) recordTransferTx(ctx context.Context, tx pgx.Tx, kind string, userID int64, amount int64, meta map[string]any) error {
+	if amount == 0 {
+		return nil
+	}
+	var transferID string
+	metadata := marshalJSON(meta)
+	if err := tx.QueryRow(ctx, `
+		insert into casino_transfers (kind, metadata, created_at)
+		values ($1, $2, now())
+		returning id
+	`, kind, metadata).Scan(&transferID); err != nil {
+		return err
+	}
+
+	var userAccountID string
+	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'user'`, fmt.Sprintf("USER_%d", userID)).Scan(&userAccountID); err != nil {
+		return err
+	}
+	var houseAccountID string
+	if err := tx.QueryRow(ctx, `select id from casino_accounts where code = $1 and type = 'system'`, "SYSTEM_HOUSE_POOL").Scan(&houseAccountID); err != nil {
+		return err
+	}
+
+	directionUser := "debit"
+	directionHouse := "credit"
+	if kind == "bet_payout" || kind == "win" {
+		directionUser = "credit"
+		directionHouse = "debit"
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into casino_ledger_entries (transfer_id, account_id, direction, amount, metadata, created_at)
+		values ($1, $2, $3, $4, $5, now())
+	`, transferID, userAccountID, directionUser, amount, metadata); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into casino_ledger_entries (transfer_id, account_id, direction, amount, metadata, created_at)
+		values ($1, $2, $3, $4, $5, now())
+	`, transferID, houseAccountID, directionHouse, amount, metadata); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Store) getRouletteBetsForRound(ctx context.Context, roundID, userID int64) ([]RouletteBet, error) {
@@ -1507,6 +1568,12 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 			return err
 		}
 
+		if payout > 0 {
+			if err := s.recordTransferTx(ctx, tx, "bet_payout", bet.UserID, payout, map[string]any{"bet_id": bet.ID, "round_id": round.ID}); err != nil {
+				return err
+			}
+		}
+
 		delta := playerDeltas[bet.UserID]
 		if delta == nil {
 			delta = &playerDelta{
@@ -1587,6 +1654,11 @@ func scanRouletteRound(row pgx.Row) (RouletteRound, error) {
 		&item.SpinStartedAt,
 		&item.ResolvedAt,
 		&item.CreatedAt,
+		&item.ServerSeed,
+		&item.ServerSeedHash,
+		&item.ClientSeed,
+		&item.Nonce,
+		&item.RoundHash,
 	); err != nil {
 		return RouletteRound{}, err
 	}
@@ -1758,6 +1830,10 @@ func (s *Store) BlackjackStart(ctx context.Context, actor ParticipantInput, bet 
 		return nil, err
 	}
 
+	if err := s.recordTransferTx(ctx, tx, "bet_stake", actor.UserID, bet, map[string]any{"game": "blackjack"}); err != nil {
+		return nil, err
+	}
+
 	err = tx.QueryRow(ctx, `
 		insert into casino_blackjack_games (user_id, bet, player_hand, dealer_hand, status, winner, payout, created_at)
 		values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8)
@@ -1884,6 +1960,12 @@ func (s *Store) resolveBlackjackTx(ctx context.Context, tx pgx.Tx, state *Blackj
 	newBalance := balance + state.Payout
 	if err := s.setBalanceTx(ctx, tx, state.UserID, newBalance); err != nil {
 		return err
+	}
+
+	if state.Payout > 0 {
+		if err := s.recordTransferTx(ctx, tx, "bet_payout", state.UserID, state.Payout, map[string]any{"game": "blackjack", "game_id": state.ID}); err != nil {
+			return err
+		}
 	}
 
 	if err := s.updatePlayerStatsTx(ctx, tx, state.UserID, state.Bet, state.Payout, 1, 0); err != nil {

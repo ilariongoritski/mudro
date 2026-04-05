@@ -11,35 +11,11 @@ import (
 
 var ErrInvalidConfig = errors.New("invalid casino config")
 
-// Provably Fair seed-based configuration (optional)
-// When set, spins are produced deterministically from server/client seeds and a nonce.
-type Fairness struct {
-	ServerSeed  string
-	ClientSeed  string
-	Nonce       int64
-	DrawCounter int64
-}
-
 type randFunc func(max int) (int, error)
 
 type Engine struct {
 	draw     randFunc
 	fairness *Fairness
-}
-
-// NextRoll delegates to the shared fairnessRoll logic using the internal DrawCounter
-func (f *Fairness) NextRoll(max int) (int, error) {
-	if f == nil {
-		// Fallback to normal randomness if fairness is not configured
-		return cryptoDraw(max)
-	}
-	// Use the shared fairnessRoll with current nonce and draw counter
-	v, err := fairnessRoll(f.ServerSeed, f.ClientSeed, f.Nonce, int(f.DrawCounter), max)
-	if err != nil {
-		return 0, err
-	}
-	f.DrawCounter++
-	return v, nil
 }
 
 func NewEngine() *Engine {
@@ -53,8 +29,6 @@ func NewEngineWithDraw(draw randFunc) *Engine {
 // EnableFairness activates Provably Fair spins for this engine.
 func (e *Engine) EnableFairness(serverSeed, clientSeed string, nonce int64) {
 	e.fairness = &Fairness{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0}
-	// Also expose global fairness spec for non-slot engines (Roulette/Plinko/Blackjack)
-	SetGlobalFairnessSpec(&GlobalFairnessSpec{ServerSeed: serverSeed, ClientSeed: clientSeed, Nonce: nonce, DrawCounter: 0})
 }
 
 // DisableFairness disables Provably Fair spins for this engine.

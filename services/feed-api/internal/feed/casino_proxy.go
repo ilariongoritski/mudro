@@ -5,10 +5,16 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	httputil "github.com/goritskimihail/mudro/pkg/httputil"
 )
+
+func casinoInternalSecret() string {
+	return strings.TrimSpace(os.Getenv("CASINO_INTERNAL_SECRET"))
+}
 
 func (s *Server) handleCasinoBalance(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -231,6 +237,9 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 		req.Header.Set("X-User-Email", *user.Email)
 	}
 	req.Header.Set("X-User-Role", user.Role)
+	if internalSecret := casinoInternalSecret(); internalSecret != "" {
+		req.Header.Set("X-Internal-Secret", internalSecret)
+	}
 
 	client := s.httpClient
 	if upstreamPath == "/roulette/stream" {
@@ -261,7 +270,10 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 			for {
 				n, err := resp.Body.Read(buf)
 				if n > 0 {
-					_, _ = w.Write(buf[:n])
+					if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+						log.Printf("[casino-proxy] client disconnected during SSE stream: %v", writeErr)
+						break
+					}
 					flusher.Flush()
 				}
 				if err != nil {

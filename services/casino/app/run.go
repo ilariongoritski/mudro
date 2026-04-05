@@ -13,6 +13,10 @@ import (
 )
 
 func Run() {
+	if err := casino.ValidateConfig(casino.DefaultConfig()); err != nil {
+		log.Fatalf("casino config invalid: %v", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -43,9 +47,10 @@ func Run() {
 	store.StartBalanceReconciler(applicationCtx, 15*time.Second)
 	store.StartRouletteSessionJanitor(applicationCtx, 30*time.Second)
 
+	handler := casino.NewHandler(store)
 	srv := &http.Server{
 		Addr:              casino.Addr(),
-		Handler:           casino.NewHandler(store).Router(),
+		Handler:           handler.Router(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,

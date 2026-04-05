@@ -14,16 +14,16 @@ import (
 
 const (
 	DefaultAddr               = ":8081"
-	DefaultDSN                = "postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable"
+	DefaultDSN                = ""
 	DefaultInitialCoins       = 500
 	DefaultRTPBasisPoint      = 9500
 	DefaultMaxBet             = 1000
 	DefaultRouletteBettingMS  = 15000
 	DefaultRouletteLockMS     = 1500
 	DefaultRouletteSpinMS     = 4500
-	DefaultRouletteResultMS    = 3500
-	DefaultBonusFreeSpins      = 10
-	DefaultTelegramAPIBaseURL  = "https://api.telegram.org"
+	DefaultRouletteResultMS   = 3500
+	DefaultBonusFreeSpins     = 10
+	DefaultTelegramAPIBaseURL = "https://api.telegram.org"
 )
 
 func Addr() string {
@@ -48,6 +48,12 @@ func MainDSN() string {
 		return v
 	}
 	return ""
+}
+
+// InternalSecret returns the shared secret for internal service-to-service auth.
+// When set, all non-health endpoints require X-Internal-Secret header.
+func InternalSecret() string {
+	return strings.TrimSpace(os.Getenv("CASINO_INTERNAL_SECRET"))
 }
 
 func InitialCoins() int64 {

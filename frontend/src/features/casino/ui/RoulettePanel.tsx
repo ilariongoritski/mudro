@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 
 import {
   type RouletteBetType,
@@ -95,15 +95,14 @@ const connectionLabel: Record<'idle' | 'connecting' | 'connected' | 'disconnecte
 
 export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActionChange }: RoulettePanelProps) => {
    const [gameMode, setGameMode] = useState<'live' | 'instant'>('live')
-   const [liveState, setLiveState] = useState<RouletteStateResponse | null>(null)
    const [draftBetType, setDraftBetType] = useState<RouletteBetType>('straight')
    const [draftBetValue, setDraftBetValue] = useState('0')
    const [draftStake, setDraftStake] = useState(String(defaultStake))
    const [basket, setBasket] = useState<DraftBet[]>([])
    const [feedback, setFeedback] = useState('Соберите купон и дождитесь открытия ставок.')
    const [visualNumber, setVisualNumber] = useState<number>(0)
-   const [isSpinningPreview, setIsSpinningPreview] = useState(false)
    const [serverClock, setServerClock] = useState(() => Date.now())
+   const [streamState, setStreamState] = useState<RouletteStateResponse | null>(null)
    const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
    const previousRoundId = useRef<string | null>(null)
 
@@ -124,21 +123,31 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     pollingInterval: shouldQuery ? 10000 : 0,
     refetchOnFocus: true,
   })
-
   const [placeRouletteBets, { isLoading: isSubmitting }] = usePlaceRouletteBetsMutation()
-  const [streamState, setStreamState] = useState<RouletteStateResponse | null>(null)
+
+  const syncSnapshotState = useEffectEvent((snapshot: RouletteStateResponse) => {
+    setStreamState((previous) => mergeRouletteState(previous, snapshot) ?? snapshot)
+    setServerClock(Date.now())
+  })
+
+  const clearStreamState = useEffectEvent(() => {
+    setStreamState(null)
+  })
+
+  const resetRoundDraft = useEffectEvent(() => {
+    setBasket([])
+    setFeedback('Новый раунд открыт. Соберите свежий купон.')
+  })
 
   useEffect(() => {
     if (rouletteSnapshot) {
-      setLiveState(rouletteSnapshot)
-      setServerClock(Date.now())
+      syncSnapshotState(rouletteSnapshot)
     }
   }, [rouletteSnapshot])
 
   useEffect(() => {
     if (!shouldQuery) {
-      setStreamState(null)
-      return
+      clearStreamState()
     }
   }, [shouldQuery])
 
@@ -157,9 +166,10 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     },
   })
 
-  const rouletteState = streamState ?? liveState ?? rouletteSnapshot ?? null
+  const rouletteState = shouldQuery ? (streamState ?? rouletteSnapshot ?? null) : null
   const rouletteHistory = rouletteState?.history ?? historySnapshot?.items ?? []
   const myBets = rouletteState?.my_bets ?? []
+  const isSpinningPreview = rouletteState?.phase === 'spinning'
 
   const selectedStake = Number.parseInt(draftStake, 10)
   const selectedStraightValue = Number.parseInt(draftBetValue, 10)
@@ -188,7 +198,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
 
   useEffect(() => {
     if (rouletteState?.phase === 'spinning') {
-      setIsSpinningPreview(true)
       const timer = window.setInterval(() => {
         setVisualNumber(rouletteWheelOrder[Math.floor(Math.random() * rouletteWheelOrder.length)])
       }, 95)
@@ -197,7 +206,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       }
     }
 
-    setIsSpinningPreview(false)
     if (typeof rouletteState?.winning_number === 'number') {
       const timer = window.setTimeout(() => {
         setVisualNumber(rouletteState.winning_number ?? 0)
@@ -236,8 +244,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     }
 
     previousRoundId.current = currentRoundId
-    setBasket([])
-    setFeedback('Новый раунд открыт. Соберите свежий купон.')
+    resetRoundDraft()
   }, [rouletteState?.round_id])
 
   const addBet = useCallback(() => {
@@ -298,7 +305,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       return
     }
 
-    const currentState = rouletteState ?? liveState ?? rouletteSnapshot ?? null
+    const currentState = rouletteState
     if (!currentState?.round_id) {
       setFeedback('Раунд ещё не готов.')
       return
@@ -337,7 +344,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     } catch {
       setFeedback('Не удалось отправить ставки. Проверьте соединение с casino proxy.')
     }
-  }, [basket, isAuthenticated, liveState, placeRouletteBets, rouletteSnapshot, rouletteState])
+  }, [basket, isAuthenticated, placeRouletteBets, rouletteState])
 
   useEffect(() => {
     if (!isActive) {
@@ -345,7 +352,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       return
     }
 
-    const mergedState = streamState ?? liveState ?? rouletteSnapshot ?? null
+    const mergedState = shouldQuery ? (streamState ?? rouletteSnapshot ?? null) : null
     const canSubmit = isAuthenticated && basket.length > 0 && mergedState?.phase === 'betting' && !isSubmitting
     const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
 
@@ -363,7 +370,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
         }
       },
     })
-  }, [basket, isActive, isAuthenticated, isSubmitting, liveState, onMainActionChange, rouletteSnapshot, streamState, submitBets])
+  }, [basket, isActive, isAuthenticated, isSubmitting, onMainActionChange, rouletteSnapshot, shouldQuery, streamState, submitBets])
 
   const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
   const currentWinningNumber = typeof rouletteState?.winning_number === 'number' ? rouletteState.winning_number : null

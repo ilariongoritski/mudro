@@ -129,7 +129,7 @@ export const CasinoMiniAppShell = () => {
   const balance = balanceData?.balance ?? 0
   const freeSpinsBalance = balanceData?.free_spins_balance ?? bonusData?.free_spins_available ?? 0
   const rtp = balanceData?.rtp
-  const history = historyData?.items ?? []
+  const history = useMemo(() => historyData?.items ?? [], [historyData?.items])
   const activity = useMemo(
     () => buildCasinoActivityFromApi(activityData?.items ?? profileData?.recent_activity ?? []),
     [activityData?.items, profileData?.recent_activity],
@@ -155,17 +155,11 @@ export const CasinoMiniAppShell = () => {
   const displayLabel = displayName || 'Гость'
   const usernameLabel = resolvedUsername || 'guest'
   const playerMonogram = buildInitials(displayName || resolvedUsername || 'M')
-  const profileStatus = useMemo(() => {
-    if (!isAuthenticated) {
-      return 'Войдите, чтобы открыть casino profile.'
-    }
-
-    if (profileData?.last_game_at) {
-      return `Последняя игра ${formatCasinoTimestamp(profileData.last_game_at)}`
-    }
-
-    return 'Profile ready.'
-  }, [isAuthenticated, profileData?.last_game_at])
+  const profileStatus = !isAuthenticated
+    ? 'Войдите, чтобы открыть casino profile.'
+    : profileData?.last_game_at
+      ? `Последняя игра ${formatCasinoTimestamp(profileData.last_game_at)}`
+      : 'Profile ready.'
 
   const canSpin = isAuthenticated && !isSpinning && bet > 0 && (balance >= bet || freeSpinsBalance > 0)
 

@@ -140,7 +140,7 @@ export const CasinoMiniAppPage = () => {
 
   const balance = balanceData?.balance ?? 0
   const rtp = balanceData?.rtp
-  const history = historyData?.items ?? []
+  const history = useMemo(() => historyData?.items ?? [], [historyData?.items])
   const profileActivity = useMemo(() => {
     const remoteActivity = buildCasinoActivityFromApi(activityData?.items ?? profileData?.recent_activity ?? [])
     return remoteActivity.length > 0 ? remoteActivity : buildCasinoActivityFromHistory(history)
@@ -176,21 +176,13 @@ export const CasinoMiniAppPage = () => {
   const resolvedLevel = profileData?.level ?? profileSummary.level
   const resolvedUsername = profileData?.username ?? profileSummary.username
   const resolvedUserId = profileData?.user_id ?? profileSummary.userId
-  const profileStatus = useMemo(() => {
-    if (!isAuthenticated) {
-      return 'Войдите, чтобы открыть casino profile.'
-    }
-
-    if (profileData?.last_game_at) {
-      return `Последняя игра ${formatCasinoTimestamp(profileData.last_game_at)}`
-    }
-
-    if (profileActivity.length > 0) {
-      return 'Profile собирается из live activity.'
-    }
-
-    return 'Profile ready.'
-  }, [isAuthenticated, profileActivity.length, profileData?.last_game_at])
+  const profileStatus = !isAuthenticated
+    ? 'Войдите, чтобы открыть casino profile.'
+    : profileData?.last_game_at
+      ? `Последняя игра ${formatCasinoTimestamp(profileData.last_game_at)}`
+      : profileActivity.length > 0
+        ? 'Profile собирается из live activity.'
+        : 'Profile ready.'
 
   const canSpin = isAuthenticated && !isSpinning && !isResolvingSpin && bet > 0 && balance >= bet
   const spinDelay = useCallback((ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)), [])

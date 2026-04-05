@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   useClaimCasinoBonusSubscriptionMutation,
@@ -48,7 +48,7 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
     return 'Подписаться и забрать +10'
   }, [claimReady, freeSpinsAvailable, isClaiming, subscribed])
 
-  const onClaim = async () => {
+  const onClaim = useCallback(async () => {
     if (!isAuthenticated) {
       setLocalStatus('Нужно открыть bonus внутри Telegram mini app.')
       return
@@ -63,7 +63,7 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
     } catch {
       setLocalStatus('Не удалось подтвердить подписку или получить bonus.')
     }
-  }
+  }, [claimSubscription, isAuthenticated, telegramInitData])
 
   useEffect(() => {
     if (!isActive) {
@@ -78,7 +78,7 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
         void onClaim()
       },
     })
-  }, [claimReady, isActive, isAuthenticated, isClaiming, onMainActionChange])
+  }, [claimReady, isActive, isAuthenticated, isClaiming, onClaim, onMainActionChange])
 
   return (
     <section className="bonus-panel">

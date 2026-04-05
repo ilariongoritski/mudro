@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 
 import { useLazyGetChatMessagesQuery, useSendChatMessageMutation, useGetChatMessagesQuery } from '@/entities/chat/api/chatApi'
 import type { ChatMessage, ChatSocketEvent } from '@/entities/chat/model/types'
@@ -61,16 +61,30 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
 
   const [sendChatMessage, { isLoading: isSending }] = useSendChatMessageMutation()
 
-   // Sync initial data to state
-   useEffect(() => {
-     if (initialData?.items) {
-       // Update messages using functional update to avoid stale state
-       setMessages(prevMessages => mergeMessages(prevMessages, initialData.items))
-       if (initialData.items.length < limit) {
-         setHasMore(false)
-       }
-     }
-   }, [initialData, limit])
+  const resetRoomState = useEffectEvent(() => {
+    setMessages([])
+    setHasMore(true)
+    setConnectionState('idle')
+  })
+
+  const syncInitialMessages = useEffectEvent((items: ChatMessage[]) => {
+    setMessages((current) => mergeMessages(current, items))
+    setHasMore(items.length >= limit)
+  })
+
+  const markSocketConnecting = useEffectEvent(() => {
+    setConnectionState('connecting')
+  })
+
+  useEffect(() => {
+    resetRoomState()
+  }, [room, token])
+
+  useEffect(() => {
+    if (initialData?.items) {
+      syncInitialMessages(initialData.items)
+    }
+  }, [initialData?.items])
 
   const loadMore = useCallback(async () => {
     if (isMoreLoading || !hasMore || messages.length === 0) {
@@ -93,16 +107,13 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
     }
   }, [isMoreLoading, hasMore, messages, room, limit, triggerLoadMore])
 
-   useEffect(() => {
-     if (!token) {
-       // Use functional updates to avoid stale state
-       setConnectionState('idle')
-       setMessages([])
-       return
-     }
+  useEffect(() => {
+    if (!token) {
+      return
+    }
 
     const socket = new WebSocket(buildChatWsUrl(room, token))
-    setConnectionState('connecting')
+    markSocketConnecting()
 
     socket.onopen = () => {
       setConnectionState('open')

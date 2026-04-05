@@ -25,7 +25,7 @@ func (r *Runner) NowSummary() ([]byte, error) {
 	doneItems := readDoneItems(filepath.Join(r.RepoRoot, ".codex", "done.md"), 5)
 	improvements := r.saveSuggestedImprovements()
 
-	dbcheckOut, dbcheckErr := r.runStep([]string{"make", "dbcheck"})
+	_, dbcheckErr := r.runStep([]string{"make", "dbcheck"})
 	stateNow := "ok"
 	if dbcheckErr != nil {
 		stateNow = "degraded"
@@ -61,7 +61,6 @@ func (r *Runner) NowSummary() ([]byte, error) {
 		}
 	}
 
-	_ = dbcheckOut
 	return []byte(strings.TrimSpace(out.String())), nil
 }
 

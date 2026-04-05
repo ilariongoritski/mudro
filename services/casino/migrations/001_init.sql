@@ -25,6 +25,7 @@ create table if not exists casino_spins (
   bet bigint not null,
   win bigint not null,
   symbols jsonb not null,
+  game_type text not null default 'slots',
   created_at timestamptz not null default now()
 );
 

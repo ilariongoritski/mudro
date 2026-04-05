@@ -1,68 +1,92 @@
 package casino
 
 import (
-	cryptorand "crypto/rand"
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 )
 
-// fairnessRoll deterministically maps a seed/index pair into [0, max).
-// It enables Provably Fair spins when seeds are provided.
-func fairnessRoll(serverSeed, clientSeed string, nonce int64, index int, max int) (int, error) {
-	if max <= 0 {
-		return 0, ErrInvalidConfig
-	}
-	input := fmt.Sprintf("%s|%s|%d|%d", serverSeed, clientSeed, nonce, index)
-	sum := sha256.Sum256([]byte(input))
-	v := binary.BigEndian.Uint64(sum[0:8])
-	return int(v % uint64(max)), nil
+// ErrInvalidConfig is defined in engine.go to keep a single source of truth
+
+// FairnessRoll implements Stake-grade provably fair result generation.
+// It uses HMAC-SHA512(serverSeed, clientSeed:nonce:index)
+func FairnessRoll(serverSeed, clientSeed string, nonce int64, index int) ([]byte, error) {
+	mac := hmac.New(sha512.New, []byte(serverSeed))
+	message := fmt.Sprintf("%s:%d:%d", clientSeed, nonce, index)
+	mac.Write([]byte(message))
+	return mac.Sum(nil), nil
 }
 
-// Fairness configuration details are now defined in engine.go
+// DrawIntFromHash maps a 512-bit hash slice to an integer in [0, max)
+func DrawIntFromHash(hash []byte, max int) int {
+	if max <= 0 {
+		return 0
+	}
+	// Use the first 8 bytes for a 64-bit unsigned int
+	v := binary.BigEndian.Uint64(hash[0:8])
+	return int(v % uint64(max))
+}
 
-// cryptoDrawFallback provides a tiny crypto-based fallback RNG (no external deps)
+// GenerateServerSeed generates a secure random 32-byte (64-character hex) string
+func GenerateServerSeed() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// HashServerSeed returns the SHA256 hash of the server seed (used for pre-reveal verification)
+func HashServerSeed(seed string) string {
+	sum := sha256.Sum256([]byte(seed))
+	return hex.EncodeToString(sum[:])
+}
+
+// Fairness is a stateful bridge for game loops (Roulette, Plinko, etc.)
+type Fairness struct {
+	ServerSeed  string
+	ClientSeed  string
+	Nonce       int64
+	DrawCounter int
+}
+
+func (f *Fairness) NextRoll(max int) (int, error) {
+	if f == nil {
+		return cryptoDrawFallback(max)
+	}
+	hash, err := FairnessRoll(f.ServerSeed, f.ClientSeed, f.Nonce, f.DrawCounter)
+	if err != nil {
+		return 0, err
+	}
+	f.DrawCounter++
+	return DrawIntFromHash(hash, max), nil
+}
+
 func cryptoDrawFallback(max int) (int, error) {
 	if max <= 0 {
 		return 0, ErrInvalidConfig
 	}
-	n, err := cryptorand.Int(cryptorand.Reader, big.NewInt(int64(max)))
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
 	if err != nil {
 		return 0, err
 	}
 	return int(n.Int64()), nil
 }
 
-// Global fairness bridge for non-game-core RNG usage (Roulette, Plinko, Blackjack)
-type GlobalFairnessSpec struct {
-	ServerSeed  string
-	ClientSeed  string
-	Nonce       int64
-	DrawCounter int64
-}
+var globalFairness *Fairness
 
-var globalFairnessSpec *GlobalFairnessSpec
-
-func SetGlobalFairnessSpec(ff *GlobalFairnessSpec) {
-	globalFairnessSpec = ff
-}
-
-func (g *GlobalFairnessSpec) NextRoll(max int) (int, error) {
-	if max <= 0 {
-		return 0, ErrInvalidConfig
-	}
-	v, err := fairnessRoll(g.ServerSeed, g.ClientSeed, g.Nonce, int(g.DrawCounter), max)
-	if err != nil {
-		return 0, err
-	}
-	g.DrawCounter++
-	return v, nil
+func SetGlobalFairness(f *Fairness) {
+	globalFairness = f
 }
 
 func DrawIntGlobal(max int) int {
-	if globalFairnessSpec != nil {
-		v, err := globalFairnessSpec.NextRoll(max)
+	if globalFairness != nil {
+		v, err := globalFairness.NextRoll(max)
 		if err == nil {
 			return v
 		}
@@ -72,5 +96,5 @@ func DrawIntGlobal(max int) int {
 	return v
 }
 
-// Backwards-compatible alias for core code expecting DrawInt(max int) int
+// DrawInt is the main entry point for RNG in game logic
 func DrawInt(max int) int { return DrawIntGlobal(max) }

@@ -54,7 +54,7 @@ services:
   casino-api:
     image: golang:1.24
     working_dir: /app
-    command: sh -c "go run ./services/casino/cmd"  # DEV ONLY
+    command: sh -c "go run ./services/casino/cmd/main.go"  # DEV ONLY
     environment:
       CASINO_ADDR: ":8081"
       CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"

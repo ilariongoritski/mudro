@@ -24,7 +24,7 @@ const (
 	DefaultRedisAddr         = "localhost:6379"
 	DefaultKafkaClientID     = "mudro"
 	DefaultKafkaTopic        = "mudro.agent.tasks.v1"
-	DefaultMudroLocalRoot    = "E:\\mudr\\_mudro-local"
+	DefaultMudroLocalRoot    = "" // Set via MUDRO_LOCAL_ROOT env var
 	DefaultSkaroDashboard    = "http://127.0.0.1:4700/dashboard"
 	DefaultClaudeProxyURL    = "http://127.0.0.1:8788"
 )
@@ -165,11 +165,18 @@ func CodexLogsDir() string {
 }
 
 func MudroLocalRoot() string {
-	return envOr("MUDRO_LOCAL_ROOT", DefaultMudroLocalRoot)
+	if v := os.Getenv("MUDRO_LOCAL_ROOT"); v != "" {
+		return v
+	}
+	return "" // Must be set via MUDRO_LOCAL_ROOT env var
 }
 
 func SkaroLocalRoot() string {
-	return filepath.Join(MudroLocalRoot(), "skaro")
+	root := MudroLocalRoot()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, "skaro")
 }
 
 func SkaroDashboardURL() string {
@@ -181,15 +188,24 @@ func ClaudeProxyURL() string {
 }
 
 func ClaudeUsageLogPath() string {
-	return envOr("MUDRO_CLAUDE_USAGE_LOG", filepath.Join(SkaroLocalRoot(), "usage_log.jsonl"))
+	if root := SkaroLocalRoot(); root != "" {
+		return envOr("MUDRO_CLAUDE_USAGE_LOG", filepath.Join(root, "usage_log.jsonl"))
+	}
+	return envOr("MUDRO_CLAUDE_USAGE_LOG", "")
 }
 
 func ClaudeTokenUsagePath() string {
-	return envOr("MUDRO_CLAUDE_TOKEN_USAGE", filepath.Join(SkaroLocalRoot(), "token_usage.yaml"))
+	if root := SkaroLocalRoot(); root != "" {
+		return envOr("MUDRO_CLAUDE_TOKEN_USAGE", filepath.Join(root, "token_usage.yaml"))
+	}
+	return envOr("MUDRO_CLAUDE_TOKEN_USAGE", "")
 }
 
 func SkaroProfilePath() string {
-	return filepath.Join(SkaroLocalRoot(), "profile.json")
+	if root := SkaroLocalRoot(); root != "" {
+		return filepath.Join(root, "profile.json")
+	}
+	return ""
 }
 
 func RedisAddr() string {
@@ -284,7 +300,7 @@ func JWTSecret() string {
 }
 
 // ValidateJWTSecret returns an error if the JWT secret is the insecure default
-// and the environment looks like production.
+// and the environment looks like production, or if it's too short in any environment.
 func ValidateJWTSecret() error {
 	if JWTSecret() == "mudro-dev-secret-change-me" && isProductionLikeEnv(MudroEnv()) {
 		return fmt.Errorf("JWT_SECRET must be explicitly set in production (MUDRO_ENV=%q)", MudroEnv())

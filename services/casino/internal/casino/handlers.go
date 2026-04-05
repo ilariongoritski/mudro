@@ -24,33 +24,36 @@ func NewHandler(store *Store) *Handler {
 func (h *Handler) Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", h.handleHealth)
-	mux.HandleFunc("/balance", h.handleBalance)
-	mux.HandleFunc("/history", h.handleHistory)
-	mux.HandleFunc("/spin", h.handleSpin)
-	mux.HandleFunc("/config", h.handleConfig)
-	mux.HandleFunc("/bonus/state", h.handleBonusState)
-	mux.HandleFunc("/bonus/claim-subscription", h.handleBonusClaimSubscription)
-	mux.HandleFunc("/bonus/history", h.handleBonusHistory)
 
-	mux.HandleFunc("/roulette/state", h.handleRouletteState)
-	mux.HandleFunc("/roulette/bets", h.handleRouletteBets)
-	mux.HandleFunc("/roulette/instant-spin", h.handleRouletteInstantSpin)
-	mux.HandleFunc("/roulette/history", h.handleRouletteHistory)
-	mux.HandleFunc("/roulette/stream", h.handleRouletteStream)
+	internal := internalAuthMiddleware()
 
-	mux.HandleFunc("/profile", h.handleProfile)
-	mux.HandleFunc("/activity", h.handleActivity)
-	mux.HandleFunc("/live-feed", h.handleLiveFeed)
-	mux.HandleFunc("/top-wins", h.handleTopWins)
-	mux.HandleFunc("/reactions", h.handleReactions)
+	mux.Handle("/balance", internal(h.handleBalance))
+	mux.Handle("/history", internal(h.handleHistory))
+	mux.Handle("/spin", internal(h.handleSpin))
+	mux.Handle("/config", internal(h.handleConfig))
+	mux.Handle("/bonus/state", internal(h.handleBonusState))
+	mux.Handle("/bonus/claim-subscription", internal(h.handleBonusClaimSubscription))
+	mux.Handle("/bonus/history", internal(h.handleBonusHistory))
 
-	mux.HandleFunc("/plinko/config", h.handlePlinkoConfig)
-	mux.HandleFunc("/plinko/state", h.handlePlinkoState)
-	mux.HandleFunc("/plinko/drop", h.handlePlinkoDrop)
+	mux.Handle("/roulette/state", internal(h.handleRouletteState))
+	mux.Handle("/roulette/bets", internal(h.handleRouletteBets))
+	mux.Handle("/roulette/instant-spin", internal(h.handleRouletteInstantSpin))
+	mux.Handle("/roulette/history", internal(h.handleRouletteHistory))
+	mux.Handle("/roulette/stream", internal(h.handleRouletteStream))
 
-	mux.HandleFunc("/blackjack/state", h.handleBlackjackState)
-	mux.HandleFunc("/blackjack/start", h.handleBlackjackStart)
-	mux.HandleFunc("/blackjack/action", h.handleBlackjackAction)
+	mux.Handle("/profile", internal(h.handleProfile))
+	mux.Handle("/activity", internal(h.handleActivity))
+	mux.Handle("/live-feed", internal(h.handleLiveFeed))
+	mux.Handle("/top-wins", internal(h.handleTopWins))
+	mux.Handle("/reactions", internal(h.handleReactions))
+
+	mux.Handle("/plinko/config", internal(h.handlePlinkoConfig))
+	mux.Handle("/plinko/state", internal(h.handlePlinkoState))
+	mux.Handle("/plinko/drop", internal(h.handlePlinkoDrop))
+
+	mux.Handle("/blackjack/state", internal(h.handleBlackjackState))
+	mux.Handle("/blackjack/start", internal(h.handleBlackjackStart))
+	mux.Handle("/blackjack/action", internal(h.handleBlackjackAction))
 	return mux
 }
 
@@ -742,4 +745,19 @@ func (h *Handler) rateLimited(actor ParticipantInput) bool {
 		return false
 	}
 	return !h.userLimiter.Allow(actor.UserID)
+}
+
+func internalAuthMiddleware() func(http.HandlerFunc) http.Handler {
+	secret := InternalSecret()
+	return func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if secret != "" {
+				if r.Header.Get("X-Internal-Secret") != secret {
+					http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+					return
+				}
+			}
+			next(w, r)
+		})
+	}
 }

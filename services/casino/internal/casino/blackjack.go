@@ -144,7 +144,7 @@ func (e *BlackjackEngine) drawCard(deck *[]BlackjackCard) BlackjackCard {
 	if len(*deck) == 0 {
 		return BlackjackCard{}
 	}
-	idx := DrawIntGlobal(len(*deck))
+	idx := DrawInt(len(*deck))
 	card := (*deck)[idx]
 	*deck = append((*deck)[:idx], (*deck)[idx+1:]...)
 	return card
