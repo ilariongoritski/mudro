@@ -54,6 +54,9 @@ func (h *Handler) Router() http.Handler {
 	mux.Handle("/blackjack/state", internal(h.handleBlackjackState))
 	mux.Handle("/blackjack/start", internal(h.handleBlackjackStart))
 	mux.Handle("/blackjack/action", internal(h.handleBlackjackAction))
+
+	mux.Handle("/fairness/rotate-server-seed", internal(h.handleRotateServerSeed))
+	mux.Handle("/fairness/client-seed", internal(h.handleUpdateClientSeed))
 	return mux
 }
 
@@ -705,6 +708,7 @@ type UserRateLimiter struct {
 	requests map[int64]*userBucket
 	rate     int
 	window   time.Duration
+	stopCh   chan struct{}
 }
 
 type userBucket struct {
@@ -713,11 +717,44 @@ type userBucket struct {
 }
 
 func NewUserRateLimiter(rate int, window time.Duration) *UserRateLimiter {
-	return &UserRateLimiter{
+	l := &UserRateLimiter{
 		requests: make(map[int64]*userBucket),
 		rate:     rate,
 		window:   window,
+		stopCh:   make(chan struct{}),
 	}
+	go l.cleanupLoop()
+	return l
+}
+
+func (l *UserRateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(l.window)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			l.cleanup()
+		case <-l.stopCh:
+			return
+		}
+	}
+}
+
+func (l *UserRateLimiter) cleanup() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	now := time.Now()
+	staleCutoff := now.Add(-2 * l.window)
+	for userID, bucket := range l.requests {
+		if bucket.windowStart.Before(staleCutoff) {
+			delete(l.requests, userID)
+		}
+	}
+}
+
+func (l *UserRateLimiter) Stop() {
+	close(l.stopCh)
 }
 
 func (l *UserRateLimiter) Allow(userID int64) bool {
@@ -760,4 +797,46 @@ func internalAuthMiddleware() func(http.HandlerFunc) http.Handler {
 			next(w, r)
 		})
 	}
+}
+
+func (h *Handler) handleRotateServerSeed(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	newHash, err := h.store.RotateServerSeed(r.Context(), actor.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"new_server_seed_hash": newHash})
+}
+
+func (h *Handler) handleUpdateClientSeed(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	var req struct {
+		Seed string `json:"seed"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if err := h.store.UpdateClientSeed(r.Context(), actor.UserID, req.Seed); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

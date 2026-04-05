@@ -148,7 +148,10 @@ func OpenPool(ctx context.Context) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.MaxConns = 6
+	cfg.MaxConns = 20
+	cfg.MinConns = 2
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.HealthCheckPeriod = 10 * time.Second
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
@@ -161,7 +164,10 @@ func OpenMainPool(ctx context.Context) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.MaxConns = 4
+	cfg.MaxConns = 10
+	cfg.MinConns = 1
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.HealthCheckPeriod = 10 * time.Second
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
 

@@ -22,17 +22,29 @@ type Server struct {
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
 	httpClient       *http.Client
+	streamingClient  *http.Client
 	casinoServiceURL string
 	tgVisiblePostIDs []string
 }
 
 // NewServer constructs a Server with the provided service dependencies.
 func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth.Service) *Server {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		IdleConnTimeout:     90 * time.Second,
+		MaxIdleConnsPerHost: 20,
+	}
+	streamingTransport := &http.Transport{
+		MaxIdleConns:        20,
+		IdleConnTimeout:     5 * time.Minute,
+		MaxIdleConnsPerHost: 10,
+	}
 	return &Server{
 		postsSvc:         postsSvc,
 		authSvc:          authSvc,
 		chatHandler:      chatHandler,
-		httpClient:       &http.Client{Timeout: 10 * time.Second},
+		httpClient:       &http.Client{Timeout: 10 * time.Second, Transport: transport},
+		streamingClient:  &http.Client{Timeout: 0, Transport: streamingTransport},
 		casinoServiceURL: config.CasinoServiceURL(),
 	}
 }

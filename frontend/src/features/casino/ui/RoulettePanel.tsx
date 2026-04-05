@@ -230,12 +230,12 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
   }, [isSpinningPreview, trackIndex, visualNumber])
 
   useEffect(() => {
+    if (!isActive) return
     const timer = window.setInterval(() => {
       setServerClock(Date.now())
     }, 1000)
-
     return () => window.clearInterval(timer)
-  }, [])
+  }, [isActive])
 
   useEffect(() => {
     const currentRoundId = rouletteState?.round_id ?? null

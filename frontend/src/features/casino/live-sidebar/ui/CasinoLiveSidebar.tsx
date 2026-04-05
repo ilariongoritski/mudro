@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import {
   useAddCasinoReactionMutation,
   useGetCasinoLiveFeedQuery,
@@ -31,7 +32,7 @@ const buildInitials = (label: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
 
-export const CasinoLiveSidebar = ({ isAuthenticated, activeGame, bonusAvailable }: CasinoLiveSidebarProps) => {
+export const CasinoLiveSidebar = memo(({ isAuthenticated, activeGame, bonusAvailable }: CasinoLiveSidebarProps) => {
   const { data: liveFeedData } = useGetCasinoLiveFeedQuery(8, {
     skip: !isAuthenticated,
     pollingInterval: isAuthenticated ? 5000 : 0,

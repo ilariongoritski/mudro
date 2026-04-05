@@ -33,7 +33,7 @@ const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
   return normalizeReactions(reactions);
 };
 
-export const PostCard = ({ post, onOpen }: PostCardProps) => {
+export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
   const reactions = normalizeReactions(post.reactions);
   const mediaItems = post.media ?? [];
   const visibleMedia = mediaItems.slice(0, 3);

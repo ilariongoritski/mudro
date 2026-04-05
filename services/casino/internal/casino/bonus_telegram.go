@@ -8,10 +8,30 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goritskimihail/mudro/pkg/tgauth"
 )
+
+var telegramHTTPClient struct {
+	once sync.Once
+	c    *http.Client
+}
+
+func getTelegramHTTPClient() *http.Client {
+	telegramHTTPClient.once.Do(func() {
+		telegramHTTPClient.c = &http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				IdleConnTimeout:     60 * time.Second,
+				MaxIdleConnsPerHost: 5,
+			},
+		}
+	})
+	return telegramHTTPClient.c
+}
 
 type bonusVerificationResult struct {
 	Status           string
@@ -27,7 +47,6 @@ type telegramInitDataUser struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 }
-
 
 func verifyBonusSubscription(ctx context.Context, initData string) (bonusVerificationResult, error) {
 	botToken := BonusTelegramBotToken()
@@ -101,7 +120,7 @@ func verifyTelegramChannelMembership(ctx context.Context, botToken, channel stri
 	q.Set("user_id", strconv.FormatInt(telegramUserID, 10))
 	req.URL.RawQuery = q.Encode()
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := getTelegramHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
