@@ -1,6 +1,6 @@
 # BIBLE.proposed.md
 
-Статус: draft.
+Статус: draft. Канонизирован в BIBLE.md 2026-04-11 (approve: Goritski Mihail).
 
 ## Процесс цикла
 1. Малый инкремент (до 25 файлов / 800 строк diff).
