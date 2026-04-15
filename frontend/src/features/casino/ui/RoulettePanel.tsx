@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 import {
   type RouletteBetType,
@@ -53,13 +54,12 @@ const mergeRouletteState = (previous: RouletteStateResponse | null, incoming: Pa
     return previous
   }
 
-  // If we don't have a previous state and incoming is missing required fields, we can't form a full state
   if (!previous && (!incoming.round_id || !incoming.phase)) {
     return null
   }
 
   return {
-    round_id: incoming.round_id ?? previous?.round_id ?? '',
+    round_id: (incoming.round_id ?? previous?.round_id ?? '').toString(),
     phase: incoming.phase ?? previous?.phase ?? 'idle',
     server_time: incoming.server_time ?? previous?.server_time ?? null,
     betting_opens_at: incoming.betting_opens_at ?? previous?.betting_opens_at ?? null,
@@ -153,7 +153,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
 
   const stream = useRouletteStream({
     enabled: shouldQuery,
-    onMessage: (message) => {
+    onMessage: (message: any) => {
       const nextState = (message.state ?? message.round ?? message) as Partial<RouletteStateResponse>
       if (!nextState || typeof nextState !== 'object') {
         return
@@ -200,17 +200,14 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     if (rouletteState?.phase === 'spinning') {
       const timer = window.setInterval(() => {
         setVisualNumber(rouletteWheelOrder[Math.floor(Math.random() * rouletteWheelOrder.length)])
-      }, 95)
+      }, 150) // Slow down for lower CPU
       return () => {
         window.clearInterval(timer)
       }
     }
 
     if (typeof rouletteState?.winning_number === 'number') {
-      const timer = window.setTimeout(() => {
-        setVisualNumber(rouletteState.winning_number ?? 0)
-      }, 180)
-      return () => window.clearTimeout(timer)
+      setVisualNumber(rouletteState.winning_number)
     }
 
     return undefined
@@ -338,11 +335,11 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
       setBasket([])
       setFeedback(
         response.status === 'accepted'
-          ? `Ставки приняты. Раунд ${response.round_id ?? currentState.round_id.slice(-6)}.`
+          ? `Ставки приняты. Раунд ${response.round_id ?? currentState.round_id.slice(-6).toUpperCase()}.`
           : 'Купон отправлен.',
       )
     } catch {
-      setFeedback('Не удалось отправить ставки. Проверьте соединение с casino proxy.')
+      setFeedback('Не удалось отправить ставки. Проверьте соединение.')
     }
   }, [basket, isAuthenticated, placeRouletteBets, rouletteState])
 
@@ -354,13 +351,13 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
 
     const mergedState = shouldQuery ? (streamState ?? rouletteSnapshot ?? null) : null
     const canSubmit = isAuthenticated && basket.length > 0 && mergedState?.phase === 'betting' && !isSubmitting
-    const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
+    const totalStakeCount = basket.reduce((sum, item) => sum + item.stake, 0)
 
     onMainActionChange?.({
       label: isSubmitting
         ? 'Отправляем купон...'
         : basket.length > 0
-          ? `Поставить ${formatCompactNumber(totalStake)}`
+          ? `Поставить ${formatCompactNumber(totalStakeCount)}`
           : 'Соберите ставку',
       busy: isSubmitting,
       disabled: !canSubmit,
@@ -372,9 +369,9 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
     })
   }, [basket, isActive, isAuthenticated, isSubmitting, onMainActionChange, rouletteSnapshot, shouldQuery, streamState, submitBets])
 
-  const totalStake = basket.reduce((sum, item) => sum + item.stake, 0)
+  const totalStakeCountFinal = basket.reduce((sum, item) => sum + item.stake, 0)
   const currentWinningNumber = typeof rouletteState?.winning_number === 'number' ? rouletteState.winning_number : null
-  const currentWinningColor = currentWinningNumber != null ? getRouletteColor(currentWinningNumber) : rouletteState?.winning_color
+  const currentWinningColor = currentWinningNumber != null ? getRouletteColor(currentWinningNumber) : (rouletteState?.winning_color as any)
   const phase = rouletteState?.phase ?? 'idle'
 
   const activeBetSummary = myBets.length
@@ -386,267 +383,282 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
   return (
     <section className={`roulette-panel ${isActive ? 'roulette-panel_active' : ''}`}>
       <div 
-        className="flex mb-4 p-1 bg-white/5 rounded-2xl w-fit border border-white/10"
-        style={{ margin: '0 1rem 1rem' }}
+        className="flex mb-6 p-1.5 bg-white/5 rounded-2xl w-fit border border-white/10 shadow-lg backdrop-blur-md"
+        style={{ margin: '0 1rem 1.5rem' }}
       >
         <button
           onClick={() => setGameMode('live')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            gameMode === 'live' ? 'bg-[#f5c842] text-[#0d0d1a]' : 'text-white/40'
+          className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all duration-300 tracking-widest ${
+            gameMode === 'live' 
+              ? 'bg-gradient-to-r from-[#f5c842] to-[#ffcf58] text-[#0d0d1a] shadow-[0_4px_20px_rgba(245,200,66,0.25)]' 
+              : 'text-white/40 hover:text-white/60'
           }`}
         >
-          LIVE (SSE)
+          LIVE
         </button>
         <button
           onClick={() => setGameMode('instant')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            gameMode === 'instant' ? 'bg-[#f5c842] text-[#0d0d1a]' : 'text-white/40'
+          className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all duration-300 tracking-widest ${
+            gameMode === 'instant' 
+              ? 'bg-gradient-to-r from-[#f5c842] to-[#ffcf58] text-[#0d0d1a] shadow-[0_4px_20px_rgba(245,200,66,0.25)]' 
+              : 'text-white/40 hover:text-white/60'
           }`}
         >
-          МГНОВЕННАЯ
+          INSTANT
         </button>
       </div>
 
-      {gameMode === 'instant' ? (
-        <InstantRoulette
-          isAuthenticated={isAuthenticated}
-          userName={userName}
-          onMainActionChange={onMainActionChange}
-        />
-      ) : (
-        <>
-          <header className="roulette-panel__header">
-            <div>
-              <span className="roulette-panel__eyebrow">Roulette 0-36</span>
-              <h2>Live round</h2>
-              <p>
-                {phaseLabel[phase]} · {userName ? `@${userName}` : 'guest'}
-              </p>
-            </div>
-
-            <div className="roulette-panel__status">
-              <span className={`roulette-panel__live roulette-panel__live_${stream.status}`}>{liveBadge}</span>
-              <strong>{formatRouletteClock(timeLeft)}</strong>
-              <small>#{roundLabel}</small>
-            </div>
-          </header>
-
-          <div className="roulette-panel__wheel">
-            <div className="roulette-panel__pointer" aria-hidden="true" />
-            <div className="roulette-panel__track" aria-label="Roulette number strip">
-              {trackNumbers.map((value, index) => {
-                const active = trackIndex === index
-                const color = getRouletteColor(value)
-
-                return (
-                  <button
-                    key={`${index}-${value}`}
-                    ref={(element) => {
-                      trackRefs.current[index] = element
-                    }}
-                    type="button"
-                    className={`roulette-panel__tile roulette-panel__tile_${color} ${active ? 'roulette-panel__tile_active' : ''}`}
-                  >
-                    {formatRouletteNumber(value)}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="roulette-panel__summary">
-            <article>
-              <span>Последний результат</span>
-              <strong>
-                {currentWinningNumber != null ? formatRouletteNumber(currentWinningNumber) : '—'}
-                {currentWinningColor ? <em>{currentWinningColor}</em> : null}
-              </strong>
-            </article>
-            <article>
-              <span>Истекает через</span>
-              <strong>{formatRouletteClock(timeLeft)}</strong>
-            </article>
-            <article>
-              <span>Мои ставки</span>
-              <strong>{myBets.length}</strong>
-            </article>
-          </div>
-
-          <div className="roulette-panel__grid">
-            <section className="roulette-panel__surface roulette-panel__surface_main">
-              <div className="roulette-panel__surface-head">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={gameMode}
+          initial={{ opacity: 0, scale: 0.98, y: 5 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 1.02, y: -5 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="w-full"
+        >
+          {gameMode === 'instant' ? (
+            <InstantRoulette
+              isAuthenticated={isAuthenticated}
+              userName={userName}
+              onMainActionChange={onMainActionChange}
+            />
+          ) : (
+            <>
+              <header className="roulette-panel__header">
                 <div>
-                  <span className="roulette-panel__kicker">Ставки</span>
-                  <h3>Соберите купон на текущий раунд.</h3>
-                </div>
-              </div>
-
-              <div className="roulette-panel__type-row" role="tablist" aria-label="Roulette bet types">
-                {rouletteStakeTypeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`roulette-panel__type ${draftBetType === option.value ? 'roulette-panel__type_active' : ''}`}
-                    onClick={() => setDraftBetType(option.value)}
-                  >
-                    <strong>{option.label}</strong>
-                    <small>{option.description}</small>
-                  </button>
-                ))}
-              </div>
-
-              <div className="roulette-panel__form-grid">
-                {draftBetType === 'straight' ? (
-                  <label className="roulette-panel__field">
-                    <span>Number</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="36"
-                      value={draftBetValue}
-                      onChange={(event) => setDraftBetValue(event.target.value)}
-                      disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
-                    />
-                  </label>
-                ) : (
-                  <div className="roulette-panel__field roulette-panel__field_readonly">
-                    <span>Number</span>
-                    <strong>{rouletteStakeTypeOptions.find((item) => item.value === draftBetType)?.label ?? '—'}</strong>
-                  </div>
-                )}
-
-                <label className="roulette-panel__field">
-                  <span>Stake</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={draftStake}
-                    onChange={(event) => setDraftStake(event.target.value)}
-                    disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
-                  />
-                </label>
-              </div>
-
-              <div className="roulette-panel__quick-stakes" aria-label="Quick stake values">
-                {rouletteQuickStakeValues.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={draftStake === String(value) ? 'roulette-panel__quick-stake roulette-panel__quick-stake_active' : 'roulette-panel__quick-stake'}
-                    onClick={() => setDraftStake(String(value))}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-
-              <div className="roulette-panel__actions">
-                <button
-                  type="button"
-                  className="roulette-panel__primary"
-                  onClick={addBet}
-                  disabled={!canDraftBet}
-                >
-                  Добавить ставку
-                </button>
-                <button
-                  type="button"
-                  className="roulette-panel__secondary"
-                  onClick={resetBasket}
-                  disabled={basket.length === 0 && draftBetType === 'straight' && draftStake === String(defaultStake) && draftBetValue === '0'}
-                >
-                  Сброс
-                </button>
-              </div>
-
-              <div className="roulette-panel__basket">
-                <div className="roulette-panel__basket-head">
-                  <strong>Купон</strong>
-                  <span>{formatCompactNumber(totalStake)} credits</span>
+                  <span className="roulette-panel__eyebrow">Roulette 0-36</span>
+                  <h2>Live round</h2>
+                  <p>
+                    {phaseLabel[phase]} · {userName ? `@${userName}` : 'guest'}
+                  </p>
                 </div>
 
-                {basket.length === 0 ? (
-                  <p className="roulette-panel__empty">Ставок в купоне пока нет.</p>
-                ) : (
-                  <div className="roulette-panel__basket-list">
-                    {basket.map((item) => (
+                <div className="roulette-panel__status">
+                  <span className={`roulette-panel__live roulette-panel__live_${stream.status}`}>{liveBadge}</span>
+                  <strong>{formatRouletteClock(timeLeft)}</strong>
+                  <small>#{roundLabel}</small>
+                </div>
+              </header>
+
+              <div className="roulette-panel__wheel">
+                <div className="roulette-panel__pointer" aria-hidden="true" />
+                <div className="roulette-panel__track" aria-label="Roulette number strip">
+                  {trackNumbers.map((value, index) => {
+                    const active = trackIndex === index
+                    const color = getRouletteColor(value)
+
+                    return (
                       <button
-                        key={item.id}
+                        key={`${index}-${value}`}
+                        ref={(element) => {
+                          trackRefs.current[index] = element
+                        }}
                         type="button"
-                        className="roulette-panel__basket-item"
-                        onClick={() => setBasket((current) => current.filter((entry) => entry.id !== item.id))}
+                        className={`roulette-panel__tile roulette-panel__tile_${color} ${active ? 'roulette-panel__tile_active' : ''}`}
                       >
-                        <span>
-                          {rouletteBetTypeLabels[item.bet_type]}
-                          {item.bet_type === 'straight' && typeof item.bet_value === 'number' ? ` ${item.bet_value}` : ''}
-                        </span>
-                        <strong>{formatCompactNumber(item.stake)}</strong>
+                        {formatRouletteNumber(value)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="roulette-panel__summary">
+                <article>
+                  <span>Последний результат</span>
+                  <strong>
+                    {currentWinningNumber != null ? formatRouletteNumber(currentWinningNumber) : '—'}
+                    {currentWinningColor ? <em>{currentWinningColor}</em> : null}
+                  </strong>
+                </article>
+                <article>
+                  <span>Истекает через</span>
+                  <strong>{formatRouletteClock(timeLeft)}</strong>
+                </article>
+                <article>
+                  <span>Мои ставки</span>
+                  <strong>{myBets.length}</strong>
+                </article>
+              </div>
+
+              <div className="roulette-panel__grid">
+                <section className="roulette-panel__surface roulette-panel__surface_main">
+                  <div className="roulette-panel__surface-head">
+                    <div>
+                      <span className="roulette-panel__kicker">Ставки</span>
+                      <h3>Соберите купон на текущий раунд.</h3>
+                    </div>
+                  </div>
+
+                  <div className="roulette-panel__type-row" role="tablist" aria-label="Roulette bet types">
+                    {rouletteStakeTypeOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`roulette-panel__type ${draftBetType === option.value ? 'roulette-panel__type_active' : ''}`}
+                        onClick={() => setDraftBetType(option.value)}
+                      >
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
 
-              <div className="roulette-panel__bets-note" role="status" aria-live="polite">
-                {feedback}
-              </div>
-            </section>
-
-            <aside className="roulette-panel__surface roulette-panel__surface_side">
-              <div className="roulette-panel__surface-head">
-                <div>
-                  <span className="roulette-panel__kicker">Раунд</span>
-                  <h3>История и состояние</h3>
-                </div>
-                <span className="roulette-panel__surface-badge">{historyLabel}</span>
-              </div>
-
-              <div className="roulette-panel__history">
-                {rouletteHistory.length === 0 && !isStateFetching && !isStateError ? (
-                  <p className="roulette-panel__empty">
-                    История появится после первых результатов.
-                  </p>
-                ) : null}
-
-                {rouletteHistory.map((item) => {
-                  const color = item.winning_color
-                  const tone = color === 'green' ? 'roulette-panel__history-item_green' : color === 'red' ? 'roulette-panel__history-item_red' : 'roulette-panel__history-item_black'
-
-                  return (
-                    <article key={item.round_id} className={`roulette-panel__history-item ${tone}`}>
-                      <div className="roulette-panel__history-copy">
-                        <strong>{formatRouletteNumber(item.winning_number)}</strong>
-                        <span>{phaseLabel[item.phase] ?? item.phase}</span>
-                        <small>{item.round_id.slice(-8).toUpperCase()}</small>
+                  <div className="roulette-panel__form-grid">
+                    {draftBetType === 'straight' ? (
+                      <label className="roulette-panel__field">
+                        <span>Number</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="36"
+                          value={draftBetValue}
+                          onChange={(event) => setDraftBetValue(event.target.value)}
+                          disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
+                        />
+                      </label>
+                    ) : (
+                      <div className="roulette-panel__field roulette-panel__field_readonly">
+                        <span>Number</span>
+                        <strong>{rouletteStakeTypeOptions.find((item) => item.value === draftBetType)?.label ?? '—'}</strong>
                       </div>
-                      <span className={`roulette-panel__history-color roulette-panel__history-color_${color}`}>
-                        {color}
-                      </span>
-                    </article>
-                  )
-                })}
-              </div>
+                    )}
 
-              <div className="roulette-panel__side-block">
-                <span className="roulette-panel__kicker">Active bets</span>
-                <p className="roulette-panel__active-bets">{activeBetSummary}</p>
-              </div>
+                    <label className="roulette-panel__field">
+                      <span>Stake</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={draftStake}
+                        onChange={(event) => setDraftStake(event.target.value)}
+                        disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
+                      />
+                    </label>
+                  </div>
 
-              <div className="roulette-panel__side-block roulette-panel__side-block_subtle">
-                <span className="roulette-panel__kicker">State</span>
-                <p className="roulette-panel__active-bets">
-                  {stream.status === 'connected'
-                    ? 'SSE connected'
-                    : stream.status === 'error'
-                      ? `SSE error${stream.error ? `: ${stream.error}` : ''}`
-                      : 'Polling fallback'}
-                </p>
+                  <div className="roulette-panel__quick-stakes" aria-label="Quick stake values">
+                    {rouletteQuickStakeValues.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={draftStake === String(value) ? 'roulette-panel__quick-stake roulette-panel__quick-stake_active' : 'roulette-panel__quick-stake'}
+                        onClick={() => setDraftStake(String(value))}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="roulette-panel__actions">
+                    <button
+                      type="button"
+                      className="roulette-panel__primary"
+                      onClick={addBet}
+                      disabled={!canDraftBet}
+                    >
+                      Добавить ставку
+                    </button>
+                    <button
+                      type="button"
+                      className="roulette-panel__secondary"
+                      onClick={resetBasket}
+                      disabled={basket.length === 0 && draftBetType === 'straight' && draftStake === String(defaultStake) && draftBetValue === '0'}
+                    >
+                      Сброс
+                    </button>
+                  </div>
+
+                  <div className="roulette-panel__basket">
+                    <div className="roulette-panel__basket-head">
+                      <strong>Купон</strong>
+                      <span>{formatCompactNumber(totalStakeCountFinal)} credits</span>
+                    </div>
+
+                    {basket.length === 0 ? (
+                      <p className="roulette-panel__empty">Ставок в купоне пока нет.</p>
+                    ) : (
+                      <div className="roulette-panel__basket-list">
+                        {basket.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="roulette-panel__basket-item"
+                            onClick={() => setBasket((current) => current.filter((entry) => entry.id !== item.id))}
+                          >
+                            <span>
+                              {rouletteBetTypeLabels[item.bet_type]}
+                              {item.bet_type === 'straight' && typeof item.bet_value === 'number' ? ` ${item.bet_value}` : ''}
+                            </span>
+                            <strong>{formatCompactNumber(item.stake)}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="roulette-panel__bets-note" role="status" aria-live="polite">
+                    {feedback}
+                  </div>
+                </section>
+
+                <aside className="roulette-panel__surface roulette-panel__surface_side">
+                  <div className="roulette-panel__surface-head">
+                    <div>
+                      <span className="roulette-panel__kicker">Раунд</span>
+                      <h3>История и состояние</h3>
+                    </div>
+                    <span className="roulette-panel__surface-badge">{historyLabel}</span>
+                  </div>
+
+                  <div className="roulette-panel__history">
+                    {rouletteHistory.length === 0 && !isStateFetching && !isStateError ? (
+                      <p className="roulette-panel__empty">
+                        История появится после первых результатов.
+                      </p>
+                    ) : null}
+
+                    {rouletteHistory.map((item) => {
+                      const color = item.winning_color
+                      const tone = color === 'green' ? 'roulette-panel__history-item_green' : color === 'red' ? 'roulette-panel__history-item_red' : 'roulette-panel__history-item_black'
+
+                      return (
+                        <article key={item.round_id} className={`roulette-panel__history-item ${tone}`}>
+                          <div className="roulette-panel__history-copy">
+                            <strong>{formatRouletteNumber(item.winning_number)}</strong>
+                            <span>{phaseLabel[item.phase] ?? item.phase}</span>
+                            <small>{item.round_id.slice(-8).toUpperCase()}</small>
+                          </div>
+                          <span className={`roulette-panel__history-color roulette-panel__history-color_${color}`}>
+                            {color}
+                          </span>
+                        </article>
+                      )
+                    })}
+                  </div>
+
+                  <div className="roulette-panel__side-block">
+                    <span className="roulette-panel__kicker">Active bets</span>
+                    <p className="roulette-panel__active-bets">{activeBetSummary}</p>
+                  </div>
+
+                  <div className="roulette-panel__side-block roulette-panel__side-block_subtle">
+                    <span className="roulette-panel__kicker">State</span>
+                    <p className="roulette-panel__active-bets">
+                      {stream.status === 'connected'
+                        ? 'SSE connected'
+                        : stream.status === 'error'
+                          ? `SSE error${stream.error ? `: ${stream.error}` : ''}`
+                          : 'Polling fallback'}
+                    </p>
+                  </div>
+                </aside>
               </div>
-            </aside>
-          </div>
-        </>
-      )}
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </section>
   )
 }

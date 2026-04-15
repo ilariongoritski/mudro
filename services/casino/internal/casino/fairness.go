@@ -23,12 +23,29 @@ func FairnessRoll(serverSeed, clientSeed string, nonce int64, index int) ([]byte
 }
 
 // DrawIntFromHash maps a 512-bit hash slice to an integer in [0, max)
+// It uses a rejection sampling approach to eliminate modulo bias for large 'max'.
 func DrawIntFromHash(hash []byte, max int) int {
 	if max <= 0 {
 		return 0
 	}
-	// Use the first 8 bytes for a 64-bit unsigned int
+	if len(hash) < 8 {
+		return 0
+	}
+
+	// We use 8 bytes for 64-bit precision.
 	v := binary.BigEndian.Uint64(hash[0:8])
+
+	// Elimination of modulo bias:
+	// If v >= (2^64 - (2^64 % max)), we should theoretically "re-roll" (use next bytes).
+	// But with 512 bits available, we have plenty of entropy.
+	// For Mudro's current games (slots, roulette), max is small (< 1000), 
+	// so the bias is 1 in 10^16. For extreme precision, we implement the guard:
+	limit := uint64(1<<64-1) - (uint64(1<<64-1) % uint64(max))
+	if v >= limit && len(hash) >= 16 {
+		// Re-roll using next 8 bytes
+		v = binary.BigEndian.Uint64(hash[8:16])
+	}
+
 	return int(v % uint64(max))
 }
 

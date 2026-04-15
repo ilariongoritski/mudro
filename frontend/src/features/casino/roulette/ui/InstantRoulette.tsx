@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGetCasinoBalanceQuery } from '../../api/casinoApi';
 import { RouletteWheelSVG } from '../../ui/RouletteWheelSVG';
 import { RouletteBettingBoard } from '../../ui/RouletteBettingBoard';
@@ -24,8 +25,6 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
 }) => {
   const { data: balanceData, refetch: refetchBalance } = useGetCasinoBalanceQuery();
 
-  // For this instant version, we'll manage a local balance that syncs with the server
-  // In a real integration, we might want to use a Redux action to update the balance
   const [localBalance, setLocalBalance] = React.useState<number>(0);
 
   React.useEffect(() => {
@@ -52,8 +51,6 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
   const handleSpin = async () => {
     const res = await doSpin();
     if (res) {
-      // After spin, we could call an API to persist the result if not already done in doSpin
-      // For now, we rely on local state and manual refetch if needed
       setTimeout(() => refetchBalance(), 5000); 
     }
   };
@@ -100,34 +97,52 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
           <RouletteWheelSVG rotation={rotation} />
 
         {/* Result & Win Display */}
-        <div className="h-16 flex flex-col items-center justify-center">
-          {result !== null && !spinning && (
-            <div className="text-center animate-in fade-in zoom-in duration-300">
-              <div 
-                className="text-4xl font-heading font-black"
-                style={{
-                  color: resColor === 'green' ? '#22c55e' : resColor === 'red' ? '#ef4444' : '#60a5fa',
-                  textShadow: `0 0 20px ${resColor === 'green' ? 'rgba(34,197,94,0.6)' : resColor === 'red' ? 'rgba(239,68,68,0.6)' : 'rgba(96,165,250,0.6)'}`
-                }}
+        <div className="h-20 flex flex-col items-center justify-center">
+          <AnimatePresence mode="wait">
+            {spinning ? (
+              <motion.div 
+                key="spinning"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-sm opacity-50 tracking-[0.2em] uppercase font-black"
               >
-                {formatRouletteNumber(result)}
-              </div>
-            </div>
-          )}
-          {spinning && (
-            <div className="text-sm opacity-50 animate-pulse tracking-widest uppercase">крутим...</div>
-          )}
-          {lastWin !== null && !spinning && (
-            <div className="text-center mt-1 animate-in slide-in-from-bottom-2 duration-300">
-              {lastWin > 0 ? (
-                <div className="text-lg font-heading font-black text-[#00ff88]" style={{ textShadow: '0 0 16px rgba(0,255,136,0.6)' }}>
-                  +{lastWin.toLocaleString()} 🪙
+                КРУТИМ...
+              </motion.div>
+            ) : result !== null ? (
+              <motion.div 
+                key="result"
+                initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="text-center"
+              >
+                <div 
+                  className="text-5xl font-heading font-black"
+                  style={{
+                    color: resColor === 'green' ? '#22c55e' : resColor === 'red' ? '#ef4444' : '#60a5fa',
+                    textShadow: `0 0 30px ${resColor === 'green' ? 'rgba(34,197,94,0.6)' : resColor === 'red' ? 'rgba(239,68,68,0.6)' : 'rgba(96,165,250,0.8)'}`
+                  }}
+                >
+                  {formatRouletteNumber(result)}
                 </div>
-              ) : (
-                <div className="text-xs opacity-50 text-[#ff4466]">Ставки не сыграли</div>
-              )}
-            </div>
-          )}
+                {lastWin !== null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    {lastWin > 0 ? (
+                      <div className="text-xl font-heading font-black text-[#00ff88] mt-1" style={{ textShadow: '0 0 16px rgba(0,255,136,0.6)' }}>
+                        +{lastWin.toLocaleString()} 🪙
+                      </div>
+                    ) : (
+                      <div className="text-xs opacity-50 text-[#ff4466] mt-1">Не сыграло</div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -151,7 +166,7 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
             <button
               onClick={clearBets}
               disabled={spinning}
-              className="flex-1 h-14 rounded-2xl text-xs font-bold transition-all active:scale-95 bg-white/5 border border-white/10 hover:bg-white/10"
+              className="flex-1 h-14 rounded-2xl text-xs font-black transition-all active:scale-95 bg-white/5 border border-white/10 hover:bg-white/10 uppercase tracking-widest"
             >
               Сброс ({totalBet})
             </button>
@@ -159,8 +174,8 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
           <button
             onClick={handleSpin}
             disabled={!canSpin}
-            className={`flex-[2] h-14 rounded-2xl font-heading font-black text-lg tracking-wide transition-all active:scale-95 flex items-center justify-center gap-2 ${
-              canSpin ? 'bg-[#f5c842] text-[#0d0d1a] shadow-[0_0_20px_rgba(245,200,66,0.3)]' : 'bg-white/5 text-white/20 border border-white/10'
+            className={`flex-[2] h-14 rounded-2xl font-heading font-black text-lg tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              canSpin ? 'bg-gradient-to-r from-[#f5c842] to-[#ffcf58] text-[#0d0d1a] shadow-[0_4px_20px_rgba(245,200,66,0.3)]' : 'bg-white/5 text-white/20 border border-white/10'
             }`}
           >
             {spinning ? '🎡 КРУТИМ...' : '🎡 СПИН'}

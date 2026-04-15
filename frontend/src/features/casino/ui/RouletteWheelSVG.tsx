@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { rouletteWheelOrder, getRouletteColor } from '../lib/roulette';
 import './RouletteWheelSVG.css';
 
@@ -11,36 +11,41 @@ export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation }) 
   const anglePerSector = 360 / count;
   const cx = 120, cy = 120, r = 110, innerR = 42;
 
-  const sectorPath = (index: number) => {
-    const startAngle = (index * anglePerSector - 90) * (Math.PI / 180);
-    const endAngle = ((index + 1) * anglePerSector - 90) * (Math.PI / 180);
-    const x1 = cx + r * Math.cos(startAngle);
-    const y1 = cy + r * Math.sin(startAngle);
-    const x2 = cx + r * Math.cos(endAngle);
-    const y2 = cy + r * Math.sin(endAngle);
-    const ix1 = cx + innerR * Math.cos(startAngle);
-    const iy1 = cy + innerR * Math.sin(startAngle);
-    const ix2 = cx + innerR * Math.cos(endAngle);
-    const iy2 = cy + innerR * Math.sin(endAngle);
-    return `M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} L${ix2},${iy2} A${innerR},${innerR} 0 0,0 ${ix1},${iy1} Z`;
-  };
+  const sectors = useMemo(() => {
+    return rouletteWheelOrder.map((val, index) => {
+      const startAngle = (index * anglePerSector - 90) * (Math.PI / 180);
+      const endAngle = ((index + 1) * anglePerSector - 90) * (Math.PI / 180);
+      
+      const x1 = cx + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      
+      const ix1 = cx + innerR * Math.cos(startAngle);
+      const iy1 = cy + innerR * Math.sin(startAngle);
+      const ix2 = cx + innerR * Math.cos(endAngle);
+      const iy2 = cy + innerR * Math.sin(endAngle);
 
-  const labelPos = (index: number) => {
-    const mid = (index + 0.5) * anglePerSector - 90;
-    const lr = (r + innerR) / 2;
-    return {
-      x: cx + lr * Math.cos(mid * Math.PI / 180),
-      y: cy + lr * Math.sin(mid * Math.PI / 180),
-      angle: mid + 90,
-    };
-  };
+      const mid = (index + 0.5) * anglePerSector - 90;
+      const lr = (r + innerR) / 2;
+      
+      const color = getRouletteColor(val);
+      let fill = '#1d4ed8'; // Blue 700 (Black equivalent for Mudro)
+      if (color === 'green') fill = '#16a34a'; // Green 600
+      if (color === 'red') fill = '#ef4444';   // Red 500
 
-  const getColorHex = (val: number) => {
-    const color = getRouletteColor(val);
-    if (color === 'green') return '#16a34a'; // Green 600
-    if (color === 'red') return '#ef4444';   // Red 500
-    return '#1d4ed8'; // Blue 700 (Black equivalent for Mudro)
-  };
+      return {
+        val,
+        path: `M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} L${ix2},${iy2} A${innerR},${innerR} 0 0,0 ${ix1},${iy1} Z`,
+        fill,
+        labelPos: {
+          x: cx + lr * Math.cos(mid * Math.PI / 180),
+          y: cy + lr * Math.sin(mid * Math.PI / 180),
+          angle: mid + 90,
+        }
+      };
+    });
+  }, [count, anglePerSector, cx, cy, r, innerR]);
 
   return (
     <div className="roulette-wheel-svg">
@@ -58,35 +63,32 @@ export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation }) 
         <circle cx={cx} cy={cy} r={r + 6} fill="#2a1a00" stroke="#f5c842" strokeWidth="2" />
 
         {/* Sectors */}
-        {rouletteWheelOrder.map((val, i) => (
+        {sectors.map((s, i) => (
           <path 
-            key={`${i}-${val}`} 
-            d={sectorPath(i)} 
-            fill={getColorHex(val)} 
+            key={`${i}-${s.val}`} 
+            d={s.path} 
+            fill={s.fill} 
             stroke="#111" 
             strokeWidth="0.5" 
           />
         ))}
 
         {/* Labels */}
-        {rouletteWheelOrder.map((val, i) => {
-          const pos = labelPos(i);
-          return (
-            <text
-              key={`label-${i}-${val}`}
-              x={pos.x}
-              y={pos.y}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize={count > 20 ? 5.5 : 8}
-              fontWeight="700"
-              fill="white"
-              transform={`rotate(${pos.angle}, ${pos.x}, ${pos.y})`}
-            >
-              {val}
-            </text>
-          );
-        })}
+        {sectors.map((s, i) => (
+          <text
+            key={`label-${i}-${s.val}`}
+            x={s.labelPos.x}
+            y={s.labelPos.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={count > 20 ? 5.5 : 8}
+            fontWeight="700"
+            fill="white"
+            transform={`rotate(${s.labelPos.angle}, ${s.labelPos.x}, ${s.labelPos.y})`}
+          >
+            {s.val}
+          </text>
+        ))}
 
         {/* Inner hub */}
         <circle cx={cx} cy={cy} r={innerR} fill="#1a0f00" stroke="#f5c842" strokeWidth="2" />
