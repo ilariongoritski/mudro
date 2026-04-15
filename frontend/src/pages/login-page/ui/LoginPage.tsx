@@ -18,10 +18,11 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     try {
       const result = await loginMutation({ login, password }).unwrap()
       dispatch(setCredentials(result))
-      navigate('/')
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('Login failed', err)
     }
@@ -64,7 +65,7 @@ export const LoginPage = () => {
           />
           {error && (
             <div className="auth-error" role="alert" aria-live="assertive">
-              {getErrorMessage(error, 'Неверный логин или пароль.')}
+              {getErrorMessage(error, 'Неверный логин, email или пароль.')}
             </div>
           )}
           <button type="submit" disabled={isLoading} className="auth-button">

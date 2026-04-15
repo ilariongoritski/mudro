@@ -97,7 +97,7 @@ export const InstantRoulette: React.FC<InstantRouletteProps> = ({
             : '2px solid rgba(245,200,66,0.15)'
         }}
       >
-        <RouletteWheelSVG rotation={rotation} spinning={spinning} />
+          <RouletteWheelSVG rotation={rotation} />
 
         {/* Result & Win Display */}
         <div className="h-16 flex flex-col items-center justify-center">

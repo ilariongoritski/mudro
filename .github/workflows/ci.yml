@@ -18,8 +18,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  backend:
-    name: Backend Lint & Test
+  backend-lint:
+    name: Backend Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,11 +34,50 @@ jobs:
         with:
           version: latest
 
-      - name: Run Go Tests
-        run: go test -v ./...
+  backend-build:
+    name: Backend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build backend targets
+        run: go build ./services/... ./tools/... ./cmd/...
+
+  backend-unit:
+    name: Backend Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run backend unit tests
+        run: go test -short ./internal/... ./services/... ./tools/... ./cmd/...
+
+  backend-integration:
+    name: Backend Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run feed integration tests
+        run: go test -run Integration -v ./services/feed-api/internal/feed
 
   frontend:
-    name: Frontend Build & Lint
+    name: Frontend Build, Lint & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,10 +90,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: cd frontend && npm install
+        run: cd frontend && npm ci
 
       - name: Lint Frontend
         run: cd frontend && npm run lint
+
+      - name: Test Frontend
+        run: cd frontend && npm run test
 
       - name: Build Frontend
         run: cd frontend && npm run build

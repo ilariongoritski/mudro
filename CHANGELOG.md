@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## [Unreleased]
+
+### Added
+
+- Release/showcase path documented around `make health`, `make demo-up`, and `make demo-check`.
+- `scripts/release-demo.sh` added as a thin helper for the showcase flow.
+- Casino smoke and wallet-sync checks are now called out explicitly in the release docs.
+
+### Changed
+
+- README now presents a single canonical release/showcase entry path instead of mixed canonical/transitioning wording.
+- Casino roulette payout/normalization updates are aligned with the current dozen bets and green payout rules.
+- Local Windows build artifacts are no longer left in the working tree.
+
+### Fixed
+
+- Removed stale release/showcase ambiguity from the top-level documentation.
+- Clarified that casino integration smoke should run against an isolated migrated casino database.
+
 ## [0.1.0-mvp] - 2026-04-04
 
 ### Added

@@ -68,7 +68,7 @@ func roulettePayout(bet RouletteBet, winningNumber int, winningColor string) (in
 		}
 	case "green":
 		if winningColor == "green" {
-			return bet.Stake * 14, true
+			return bet.Stake * 36, true
 		}
 	case "odd":
 		if winningNumber != 0 && winningNumber%2 == 1 {

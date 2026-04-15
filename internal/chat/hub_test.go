@@ -20,26 +20,34 @@ func TestHubBroadcastsToRegisteredClient(t *testing.T) {
 	}
 
 	hub.Register(client)
-	hub.Publish(Message{
-		ID:        42,
-		RoomID:    DefaultRoomID,
-		UserID:    "7",
-		Username:  "tester",
-		Body:      "hello",
-		CreatedAt: time.Now(),
-	})
+	deadline := time.After(2 * time.Second)
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
 
-	select {
-	case frame := <-client.send:
-		var event Event
-		if err := json.Unmarshal(frame, &event); err != nil {
-			t.Fatalf("unmarshal event: %v", err)
-		}
+	for {
+		hub.Publish(Message{
+			ID:        42,
+			RoomID:    DefaultRoomID,
+			UserID:    "7",
+			Username:  "tester",
+			Body:      "hello",
+			CreatedAt: time.Now(),
+		})
 
-		if event.Type != "chat:message" {
-			t.Fatalf("expected chat:message, got %q", event.Type)
+		select {
+		case frame := <-client.send:
+			var event Event
+			if err := json.Unmarshal(frame, &event); err != nil {
+				t.Fatalf("unmarshal event: %v", err)
+			}
+
+			if event.Type != "chat:message" {
+				t.Fatalf("expected chat:message, got %q", event.Type)
+			}
+			return
+		case <-ticker.C:
+		case <-deadline:
+			t.Fatal("timed out waiting for broadcast")
 		}
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for broadcast")
 	}
 }

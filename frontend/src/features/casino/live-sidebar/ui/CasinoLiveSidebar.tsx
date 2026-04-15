@@ -11,7 +11,7 @@ import './CasinoLiveSidebar.css'
 
 interface CasinoLiveSidebarProps {
   isAuthenticated: boolean
-  activeGame: 'slots' | 'roulette' | 'bonus' | 'plinko' | 'crash' | 'coinflip'
+  activeGame: 'slots' | 'roulette' | 'bonus' | 'plinko'
   bonusAvailable: number
 }
 
@@ -215,4 +215,4 @@ export const CasinoLiveSidebar = memo(({ isAuthenticated, activeGame, bonusAvail
       </section>
     </aside>
   )
-}
+})

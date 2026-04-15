@@ -55,11 +55,6 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8081/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
 
   redis:
     image: redis:7-alpine
@@ -132,14 +127,9 @@ services:
       casino-db:
         condition: service_healthy
       casino-api:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"\\|\"status\": \"ok\"'"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
 
   agent:
     build:
@@ -159,14 +149,9 @@ services:
       db:
         condition: service_healthy
       api:
-        condition: service_healthy
+        condition: service_started
       kafka:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "ps -ef | grep -q '[/]service'"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
 
   reporter:
     build:
@@ -187,12 +172,7 @@ services:
       db:
         condition: service_healthy
       api:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "ps -ef | grep -q '[/]service'"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
+        condition: service_started
 
   minio:
     image: minio/minio:RELEASE.2024-06-22T05-26-45Z

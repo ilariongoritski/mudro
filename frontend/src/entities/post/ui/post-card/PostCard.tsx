@@ -218,4 +218,4 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
 
     </article>
   );
-};
+});

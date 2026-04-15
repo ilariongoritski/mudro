@@ -1785,7 +1785,7 @@ func normalizeRouletteBet(bet RouletteBetInput) (RouletteBetInput, error) {
 			return RouletteBetInput{}, err
 		}
 		bet.BetValue = fmt.Sprintf("%d", number)
-	case "red", "black", "green", "odd", "even", "low", "high":
+	case "red", "black", "green", "odd", "even", "low", "high", "dozen1", "dozen2", "dozen3":
 		if bet.BetValue == "" {
 			bet.BetValue = bet.BetType
 		}

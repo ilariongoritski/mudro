@@ -1,5 +1,6 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
 MIGRATIONS_DIR ?= migrations
+UP_MIGRATIONS ?= $(filter-out %.down.sql,$(sort $(wildcard $(MIGRATIONS_DIR)/*.sql)))
 MIGRATION ?= $(MIGRATIONS_DIR)/001_init.sql
 ACCOUNT_LIKES_MIGRATION ?= $(MIGRATIONS_DIR)/002_account_post_likes.sql
 AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002b_agent_queue.sql
@@ -16,7 +17,9 @@ CASINO_EMOJI_MIGRATION ?= $(MIGRATIONS_DIR)/017_casino_emoji_v2.sql
 CASINO_MIGRATION ?= services/casino/migrations/001_init.sql
 USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
+PROD_COMPOSE_FILE ?= docker-compose.prod.yml
 CORE_COMPOSE_FILE ?= ops/compose/docker-compose.core.yml
+PROD_COMPOSE = docker compose -f $(PROD_COMPOSE_FILE)
 CORE_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE)
 SERVICES_COMPOSE_FILE ?= ops/compose/docker-compose.services.yml
 MICRO_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE) -f $(SERVICES_COMPOSE_FILE)
@@ -27,7 +30,8 @@ ENV_BOT ?= env/bot.env
 ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
 MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
-RUNTIME_MIGRATIONS ?= $(MIGRATION) $(ACCOUNT_LIKES_MIGRATION) $(AGENT_MIGRATION) $(COMMENTS_MIGRATION) $(AGENT_REVIEW_MIGRATION) $(AGENT_EVENTS_MIGRATION) $(MEDIA_MIGRATION) $(MEDIA_FIX_MIGRATION) $(USERS_AUTH_MIGRATION) $(COMMENT_MODEL_MIGRATION) $(USERS_TELEGRAM_MIGRATION) $(CHAT_MIGRATION) $(MOVIE_CATALOG_MIGRATION)
+TEST_UNIT_PACKAGES ?= ./internal/... ./services/... ./tools/... ./cmd/...
+RUNTIME_MIGRATIONS ?= $(UP_MIGRATIONS) $(MOVIE_CATALOG_MIGRATION)
 
 ifeq ($(wildcard $(GO)),)
 GO := go
@@ -48,21 +52,21 @@ PSQL_CORE_CMD = psql "$(DSN)"
 endif
 
 up:
-	docker compose up -d
+	$(PROD_COMPOSE) up -d
 
 down:
-	docker compose down
+	$(PROD_COMPOSE) down
 
 ps:
-	docker compose ps
+	$(PROD_COMPOSE) ps
 
 logs:
-	docker compose logs --no-color --tail=200
+	$(PROD_COMPOSE) logs --no-color --tail=200
 
 casino-up:
-	docker compose up -d casino-db
+	$(PROD_COMPOSE) up -d casino-db
 	$(MAKE) migrate-casino
-	docker compose up -d casino-api
+	$(PROD_COMPOSE) up -d casino-api
 
 core-up:
 	$(CORE_COMPOSE) up -d
@@ -193,6 +197,15 @@ test:
 test-active:
 	$(GO) test ./...
 
+test-unit:
+	$(GO) test -short $(TEST_UNIT_PACKAGES)
+
+test-integration:
+	$(GO) test -run Integration -v ./services/feed-api/internal/feed
+
+test-casino-integration:
+	$(GO) test -run Integration -v ./services/casino/internal/casino
+
 cover:
 	$(GO) test -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out
@@ -263,7 +276,7 @@ guard-main-clean:
 	$(GUARD_MAIN_CLEAN_SCRIPT)
 
 selftest:
-	$(GO) test ./tools/importers/vkimport/app ./tools/importers/tgimport/app
+	$(MAKE) test-unit
 
 media-backfill:
 	$(GO) run ./tools/backfill/mediabackfill/cmd
@@ -291,7 +304,7 @@ count-posts-core:
 
 casino-dbcheck:
 	@if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
-		docker compose exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+		$(PROD_COMPOSE) exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	else \
 		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	fi
@@ -334,8 +347,9 @@ demo-seed:
 	fi
 
 demo-check:
-	@curl -fsS http://127.0.0.1:8080/healthz >/dev/null && echo "api healthz: ok"
-	@curl -fsS "http://127.0.0.1:8080/api/front?limit=1" | grep -q '"total_posts":[[:space:]]*[1-9]' && echo "api feed: non-empty" || (echo "api feed: empty"; exit 1)
+	@curl -fsS "http://127.0.0.1:$${API_PORT:-8080}/healthz" >/dev/null && echo "api healthz: ok"
+	@curl -fsS "http://127.0.0.1:$${CASINO_API_PORT:-8082}/healthz" >/dev/null && echo "casino healthz: ok"
+	@curl -fsS "http://127.0.0.1:$${API_PORT:-8080}/api/front?limit=1" | grep -q '"total_posts":[[:space:]]*[1-9]' && echo "api feed: non-empty" || (echo "api feed: empty"; exit 1)
 	@if curl -fsS http://127.0.0.1:5173 >/dev/null 2>&1; then \
 		echo "frontend: reachable at http://127.0.0.1:5173"; \
 	else \

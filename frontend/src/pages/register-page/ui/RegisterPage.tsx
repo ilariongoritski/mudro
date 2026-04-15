@@ -1,9 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
-
-import { useRegisterMutation } from '@/entities/session/api/authApi'
-import { setCredentials } from '@/entities/session/model/sessionSlice'
+import { supabase } from '@/shared/api/supabase'
 import { getErrorMessage } from '@/shared/lib/apiError'
 import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
@@ -13,18 +10,38 @@ export const RegisterPage = () => {
   const [login, setLogin] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [register, { isLoading, error }] = useRegisterMutation()
-  const dispatch = useDispatch()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
     try {
-      const result = await register({ login, email, password }).unwrap()
-      dispatch(setCredentials(result))
-      navigate('/', { replace: true })
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: login,
+          },
+        },
+      })
+
+      if (signUpError) {
+        setError(signUpError.message)
+      } else {
+        // Typically, without email confirmation, they are logged in automatically.
+        // If email confirmation is required, you'd show a success message instead.
+        navigate('/', { replace: true })
+      }
     } catch (err) {
       console.error('Register failed', err)
+      setError('Произошла непредвиденная ошибка.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -77,7 +94,7 @@ export const RegisterPage = () => {
           />
           {error && (
             <div className="auth-error" role="alert" aria-live="assertive">
-              {getErrorMessage(error, 'Ошибка регистрации. Возможно, логин или email уже заняты.')}
+              {error}
             </div>
           )}
           <button type="submit" disabled={isLoading} className="auth-button">

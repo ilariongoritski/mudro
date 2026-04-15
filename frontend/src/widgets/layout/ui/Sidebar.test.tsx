@@ -31,8 +31,8 @@ describe('Sidebar', () => {
     renderSidebar()
     expect(screen.getByRole('link', { name: /Лента/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Мессенджер/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Кинотоп/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Казино/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Контур/ })).toBeInTheDocument()
   })
 
   it('ссылка Лента ведёт на /', () => {

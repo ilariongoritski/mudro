@@ -28,7 +28,7 @@ describe('PostCard', () => {
 
   it('показывает источник поста', () => {
     render(<PostCard post={mockPost} />)
-    expect(screen.getByText('Telegram')).toBeInTheDocument()
+    expect(screen.getByText('Мудро (тг)')).toBeInTheDocument()
   })
 
   it('показывает метрики с aria-label', () => {
@@ -78,7 +78,7 @@ describe('PostCard', () => {
 
   it('показывает VK как источник', () => {
     render(<PostCard post={{ ...mockPost, source: 'vk' }} />)
-    expect(screen.getByText('ВКонтакте')).toBeInTheDocument()
+    expect(screen.getByText('Мудро (вк)')).toBeInTheDocument()
   })
 
   it('показывает фолбэк текст при отсутствии text', () => {
@@ -104,7 +104,7 @@ describe('PostCard', () => {
       ],
     }
     render(<PostCard post={postWithMedia} />)
-    const overlay = screen.getByLabelText(/Ещё 1 фото/)
+    const overlay = screen.getByLabelText(/Ещё 1 медиа/)
     expect(overlay).toBeInTheDocument()
   })
 })

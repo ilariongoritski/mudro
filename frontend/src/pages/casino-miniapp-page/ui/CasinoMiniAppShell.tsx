@@ -28,7 +28,7 @@ import './CasinoMiniAppPage.css'
 const reelFallback = ['🎰', '🍒', '🍋']
 const betOptions = [10, 25, 50, 100]
 
-type GameTab = 'slots' | 'roulette' | 'bonus' | 'plinko' | 'crash' | 'coinflip'
+type GameTab = 'slots' | 'roulette' | 'bonus' | 'plinko'
 type CasinoTheme = 'midnight' | 'aurora' | 'ember'
 
 const themeOptions: Array<{ value: CasinoTheme; label: string }> = [
@@ -312,18 +312,6 @@ export const CasinoMiniAppShell = () => {
       }
     }
 
-    if (activeTab === 'crash' || activeTab === 'coinflip') {
-      const onMainButton = () => setStatus('Эта игра готовится. Каркас shell уже подключён.')
-      webApp.MainButton.setText('Coming soon')
-      webApp.MainButton.show()
-      webApp.MainButton.onClick(onMainButton)
-
-      return () => {
-        webApp.MainButton.offClick(onMainButton)
-        webApp.MainButton.hide()
-      }
-    }
-
     const onMainButton = () => void onSpin()
     const buttonText = canSpin ? `Spin ${bet}` : `Нужно ${bet} credits`
 
@@ -359,9 +347,6 @@ export const CasinoMiniAppShell = () => {
     if (activeTab === 'bonus') {
       return 'Bonus screen завязан на подписку, free spins и отдельный bonus state.'
     }
-    if (activeTab === 'crash' || activeTab === 'coinflip') {
-      return 'Shell уже готов под будущую игру.'
-    }
     return 'Игровой контур подключён к отдельному casino сервису.'
   }, [activeTab, isAuthenticated, isBalanceError, isBootstrapping, isTelegram])
 
@@ -373,19 +358,17 @@ export const CasinoMiniAppShell = () => {
     activeTab === 'roulette'
       ? 'Рулетка: live'
       : activeTab === 'bonus'
-        ? 'Bonus: subscription'
+        ? 'Бонус: подписка'
         : activeTab === 'plinko'
           ? 'Plinko: ready'
-          : activeTab === 'slots'
-            ? 'Slots: primary'
-            : 'Coming soon'
+          : 'Слоты: ready'
 
   return (
     <main className={`casino-miniapp casino-miniapp_theme_${theme} ${winPulse ? 'casino-miniapp_win' : ''}`}>
       <header className="casino-miniapp__top casino-miniapp__top_shell">
         <div className="casino-miniapp__brand">
-          <span className="casino-miniapp__eyebrow">MUDRO Telegram Mini App</span>
-          <h1>Telegram Web App MVP</h1>
+          <span className="casino-miniapp__eyebrow">MUDRO Casino Mini App</span>
+          <h1>Быстрый игровой режим</h1>
           <p>{topMessage}</p>
         </div>
 
@@ -448,7 +431,7 @@ export const CasinoMiniAppShell = () => {
             className={activeTab === 'bonus' ? 'casino-miniapp__menu-item casino-miniapp__menu-item_active' : 'casino-miniapp__menu-item'}
             onClick={() => setActiveTab('bonus')}
           >
-            <span>🎁</span> Bonus
+            <span>🎁</span> Бонусы
           </button>
           <button
             type="button"
@@ -456,34 +439,6 @@ export const CasinoMiniAppShell = () => {
             onClick={() => setActiveTab('plinko')}
           >
             <span>🔻</span> Plinko
-          </button>
-          <button
-            type="button"
-            className={
-              activeTab === 'crash'
-                ? 'casino-miniapp__menu-item casino-miniapp__menu-item_active casino-miniapp__menu-item_coming'
-                : 'casino-miniapp__menu-item casino-miniapp__menu-item_coming'
-            }
-            onClick={() => {
-              setActiveTab('crash')
-              setStatus('Crash is coming soon. Shell is ready.')
-            }}
-          >
-            <span>📈</span> Crash
-          </button>
-          <button
-            type="button"
-            className={
-              activeTab === 'coinflip'
-                ? 'casino-miniapp__menu-item casino-miniapp__menu-item_active casino-miniapp__menu-item_coming'
-                : 'casino-miniapp__menu-item casino-miniapp__menu-item_coming'
-            }
-            onClick={() => {
-              setActiveTab('coinflip')
-              setStatus('Coin Flip is coming soon. Shell is ready.')
-            }}
-          >
-            <span>🪙</span> Coinflip
           </button>
 
           <div className="casino-miniapp__menu-tools">
@@ -529,9 +484,9 @@ export const CasinoMiniAppShell = () => {
             <section className="casino-miniapp__fairness">
               <div>
                 <span>Fairness</span>
-                <strong>Provably fair surfaces ready</strong>
+              <strong>Provably fair контур готов</strong>
               </div>
-              <p>Seed review, nonce strip и round audit уже предусмотрены в layout и activity metadata.</p>
+              <p>Seed review, nonce и round audit уже встроены в layout и activity metadata.</p>
             </section>
           ) : null}
 
@@ -584,31 +539,7 @@ export const CasinoMiniAppShell = () => {
                 userName={usernameLabel}
                 onMainActionChange={setPlinkoMainAction}
               />
-            ) : (
-              <section className="casino-miniapp__coming-soon">
-                <span className="casino-miniapp__kicker">Coming soon</span>
-                <h2>{activeTab === 'crash' ? 'Crash' : 'Coin Flip'}</h2>
-                <p>
-                  {activeTab === 'crash'
-                    ? 'Optimized crash screen will land here with its own multiplier curve and cashout loop.'
-                    : 'Coin flip will reuse the same shell primitives, utilities, and balance state.'}
-                </p>
-                <div className="casino-miniapp__coming-grid">
-                  <article>
-                    <span>Navigation</span>
-                    <strong>Prepared</strong>
-                  </article>
-                  <article>
-                    <span>State</span>
-                    <strong>Ready</strong>
-                  </article>
-                  <article>
-                    <span>Styles</span>
-                    <strong>Hooked</strong>
-                  </article>
-                </div>
-              </section>
-            )}
+            ) : null}
           </ErrorBoundary>
         </section>
 

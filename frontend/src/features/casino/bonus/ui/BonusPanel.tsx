@@ -108,11 +108,11 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
           </div>
 
           <div className="bonus-panel__claim">
-            <div className="bonus-panel__status-chip">{claimReady ? 'Claim ready' : subscribed ? 'Subscribed' : 'Subscription required'}</div>
+            <div className="bonus-panel__status-chip">{claimReady ? 'Можно забрать' : subscribed ? 'Подписка активна' : 'Нужна подписка'}</div>
             <button type="button" className="bonus-panel__primary" onClick={() => void onClaim()} disabled={!isAuthenticated || isClaiming || !telegramInitData}>
               {claimLabel}
             </button>
-            <p>{localStatus ?? bonusState?.verification_message ?? 'Bonus route ждёт подтверждение подписки и начисляет бесплатные spins через casinoApi.'}</p>
+            <p>{localStatus ?? bonusState?.verification_message ?? 'Бонусный сценарий ждёт подтверждение подписки и начисляет бесплатные spins через casino API.'}</p>
           </div>
         </section>
 
@@ -120,7 +120,7 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
           {demoRewards.map((reward, index) => (
             <article key={`${reward}-${index}`} className="bonus-panel__grid-item">
               <strong>{reward}</strong>
-              <span>reward</span>
+              <span>награда</span>
             </article>
           ))}
         </section>
@@ -145,7 +145,7 @@ export const BonusPanel = ({ isAuthenticated, isActive, userName, telegramInitDa
                 </div>
                 <div>
                   <strong>{item.amount ?? '+10'}</strong>
-                  <small>{item.created_at ?? 'just now'}</small>
+                  <small>{item.created_at ?? 'только что'}</small>
                 </div>
               </article>
             ))

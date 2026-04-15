@@ -4,10 +4,9 @@ import './RouletteWheelSVG.css';
 
 interface RouletteWheelSVGProps {
   rotation: number;
-  spinning: boolean;
 }
 
-export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation, spinning }) => {
+export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation }) => {
   const count = rouletteWheelOrder.length;
   const anglePerSector = 360 / count;
   const cx = 120, cy = 120, r = 110, innerR = 42;
@@ -52,9 +51,7 @@ export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation, sp
         className="roulette-wheel-svg__svg"
         style={{
           transform: `rotate(${rotation}deg)`,
-          transition: spinning
-            ? 'none'
-            : 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 1)',
+          transition: 'transform 4s cubic-bezier(0.12, 0.8, 0.33, 1)',
         }}
       >
         {/* Outer ring */}

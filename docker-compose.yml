@@ -1,3 +1,6 @@
+# Deprecated local file.
+# Canonical dev stacks live in ops/compose/.
+# Canonical release stack lives in docker-compose.prod.yml.
 version: '3.8'
 services:
   postgres_main:

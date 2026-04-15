@@ -1,15 +1,15 @@
-import { Film, Home, LogIn, LogOut, MessageCircle, Shield, Sparkles, User, UserPlus } from 'lucide-react'
+import { Home, LogIn, LogOut, MessageCircle, Settings2, Shield, Sparkles, User, UserPlus } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
-import { logout } from '@/entities/session/model/sessionSlice'
+import { supabase } from '@/shared/api/supabase'
 import { cn } from '@/shared/lib/utils'
 import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Лента', description: 'Посты и обновления' },
   { to: '/chat', icon: MessageCircle, label: 'Мессенджер', description: 'Общий чат' },
-  { to: '/movies', icon: Film, label: 'Кинотоп', description: 'Фильмы и сериалы' },
   { to: '/casino', icon: Sparkles, label: 'Казино', description: 'Игровой зал' },
+  { to: '/orchestration', icon: Settings2, label: 'Контур', description: 'Статус и оркестрация' },
 ]
 
 export const Sidebar = () => {
@@ -80,9 +80,16 @@ export const Sidebar = () => {
               </span>
             </NavLink>
             <button
-              onClick={() => dispatch(logout())}
-              className="mudro-sidebar__logout"
-              aria-label="Выйти из аккаунта"
+              type="button"
+              className="mudro-sidebar__menu-item mudro-sidebar__logout"
+              onClick={async () => {
+                try {
+                  await supabase.auth.signOut()
+                  // AuthProvider should handle dispatch(logout()) via onAuthStateChange
+                } catch (err) {
+                  console.error('Logout failed:', err)
+                }
+              }}
             >
               <LogOut size={16} aria-hidden="true" />
             </button>
