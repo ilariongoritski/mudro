@@ -348,6 +348,16 @@ type BlackjackGameRequest struct {
 	Bet int64 `json:"bet"`
 }
 
-type BlackjackActionRequest struct {
-	Action BlackjackAction `json:"action"`
+type RouletteInstantSpinRequest struct {
+	Bets []RouletteBetInput `json:"bets"`
+}
+
+type RouletteInstantSpinResponse struct {
+	WinningNumber   int           `json:"winning_number"`
+	WinningColor    string        `json:"winning_color"`
+	DisplaySequence []int         `json:"display_sequence"`
+	ResultSequence  []int         `json:"result_sequence"`
+	PayoutAmount    int64         `json:"payout_amount"`
+	Balance         int64         `json:"balance"`
+	Bets            []RouletteBet `json:"bets"`
 }
