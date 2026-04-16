@@ -288,9 +288,32 @@ func (h *Handler) handleRouletteBets(w http.ResponseWriter, r *http.Request) {
 		writeDomainError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, resp)
-}
+func (h *Handler) handleRouletteInstantSpin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+		return
+	}
 
+	var req RouletteInstantSpinRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	resp, err := h.store.InstantRouletteSpin(r.Context(), actor, req.Bets)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 

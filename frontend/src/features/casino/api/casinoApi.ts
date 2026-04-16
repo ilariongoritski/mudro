@@ -857,6 +857,16 @@ export const casinoApi = mudroApi.injectEndpoints({
   }),
 })
 
+export interface RouletteInstantSpinResponse {
+  winning_number: number
+  winning_color: RouletteColor
+  display_sequence: number[]
+  result_sequence: number[]
+  payout_amount: number
+  balance: number
+  bets: RouletteBetItem[]
+}
+
 export const {
   useGetCasinoBalanceQuery,
   useGetCasinoHistoryQuery,
@@ -870,6 +880,7 @@ export const {
   useGetRouletteStateQuery,
   useGetRouletteHistoryQuery,
   usePlaceRouletteBetsMutation,
+  useInstantRouletteSpinMutation,
   useGetPlinkoConfigQuery,
   useGetPlinkoStateQuery,
   useDropPlinkoMutation,
