@@ -1,7 +1,7 @@
 import { Home, LogIn, LogOut, MessageCircle, Settings2, Shield, Sparkles, User, UserPlus } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
-import { supabase } from '@/shared/api/supabase'
+import { logout } from '@/entities/session/model/sessionSlice'
 import { cn } from '@/shared/lib/utils'
 import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
@@ -82,13 +82,8 @@ export const Sidebar = () => {
             <button
               type="button"
               className="mudro-sidebar__menu-item mudro-sidebar__logout"
-              onClick={async () => {
-                try {
-                  await supabase.auth.signOut()
-                  // AuthProvider should handle dispatch(logout()) via onAuthStateChange
-                } catch (err) {
-                  console.error('Logout failed:', err)
-                }
+              onClick={() => {
+                dispatch(logout())
               }}
             >
               <LogOut size={16} aria-hidden="true" />

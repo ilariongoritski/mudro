@@ -361,3 +361,7 @@ type RouletteInstantSpinResponse struct {
 	Balance         int64         `json:"balance"`
 	Bets            []RouletteBet `json:"bets"`
 }
+
+type BlackjackActionRequest struct {
+	Action BlackjackAction `json:"action"`
+}

@@ -19,6 +19,7 @@ import {
   rouletteWheelOrder,
 } from '@/features/casino/lib/roulette'
 import { useRouletteStream } from '@/features/casino/lib/useRouletteStream'
+import { InstantRoulette } from '@/features/casino/roulette/ui/InstantRoulette'
 
 import './RoulettePanel.css'
 
@@ -93,31 +94,17 @@ const connectionLabel: Record<'idle' | 'connecting' | 'connected' | 'disconnecte
 }
 
 export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActionChange }: RoulettePanelProps) => {
-<<<<<<< HEAD
-   const [gameMode, setGameMode] = useState<'live' | 'instant'>('live')
-   const [draftBetType, setDraftBetType] = useState<RouletteBetType>('straight')
-   const [draftBetValue, setDraftBetValue] = useState('0')
-   const [draftStake, setDraftStake] = useState(String(defaultStake))
-   const [basket, setBasket] = useState<DraftBet[]>([])
-   const [feedback, setFeedback] = useState('Соберите купон и дождитесь открытия ставок.')
-   const [visualNumber, setVisualNumber] = useState<number>(0)
-   const [serverClock, setServerClock] = useState(() => Date.now())
-   const [streamState, setStreamState] = useState<RouletteStateResponse | null>(null)
-   const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
-   const previousRoundId = useRef<string | null>(null)
-=======
-  const [liveState, setLiveState] = useState<RouletteStateResponse | null>(null)
+  const [gameMode, setGameMode] = useState<'live' | 'instant'>('live')
   const [draftBetType, setDraftBetType] = useState<RouletteBetType>('straight')
   const [draftBetValue, setDraftBetValue] = useState('0')
   const [draftStake, setDraftStake] = useState(String(defaultStake))
   const [basket, setBasket] = useState<DraftBet[]>([])
   const [feedback, setFeedback] = useState('Соберите купон и дождитесь открытия ставок.')
   const [visualNumber, setVisualNumber] = useState<number>(0)
-  const [isSpinningPreview, setIsSpinningPreview] = useState(false)
   const [serverClock, setServerClock] = useState(() => Date.now())
+  const [streamState, setStreamState] = useState<RouletteStateResponse | null>(null)
   const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
   const previousRoundId = useRef<string | null>(null)
->>>>>>> origin/main
 
    const shouldQuery = isAuthenticated && isActive
 
@@ -394,7 +381,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
   const historyLabel = isHistoryFetching ? 'Обновляем историю...' : `${rouletteHistory.length} rounds`
 
   return (
-<<<<<<< HEAD
     <section className={`roulette-panel ${isActive ? 'roulette-panel_active' : ''}`}>
       <div 
         className="flex mb-6 p-1.5 bg-white/5 rounded-2xl w-fit border border-white/10 shadow-lg backdrop-blur-md"
@@ -673,239 +659,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
           )}
         </motion.div>
       </AnimatePresence>
-=======
-    <section className="roulette-panel">
-      <header className="roulette-panel__header">
-        <div>
-          <span className="roulette-panel__eyebrow">Roulette 0-36</span>
-          <h2>Live round</h2>
-          <p>
-            {phaseLabel[phase]} · {userName ? `@${userName}` : 'guest'}
-          </p>
-        </div>
-
-        <div className="roulette-panel__status">
-          <span className={`roulette-panel__live roulette-panel__live_${stream.status}`}>{liveBadge}</span>
-          <strong>{formatRouletteClock(timeLeft)}</strong>
-          <small>#{roundLabel}</small>
-        </div>
-      </header>
-
-      <div className="roulette-panel__wheel">
-        <div className="roulette-panel__pointer" aria-hidden="true" />
-        <div className="roulette-panel__track" aria-label="Roulette number strip">
-          {trackNumbers.map((value, index) => {
-            const active = trackIndex === index
-            const color = getRouletteColor(value)
-
-            return (
-              <button
-                key={`${index}-${value}`}
-                ref={(element) => {
-                  trackRefs.current[index] = element
-                }}
-                type="button"
-                className={`roulette-panel__tile roulette-panel__tile_${color} ${active ? 'roulette-panel__tile_active' : ''}`}
-              >
-                {formatRouletteNumber(value)}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="roulette-panel__summary">
-        <article>
-          <span>Последний результат</span>
-          <strong>
-            {currentWinningNumber != null ? formatRouletteNumber(currentWinningNumber) : '—'}
-            {currentWinningColor ? <em>{currentWinningColor}</em> : null}
-          </strong>
-        </article>
-        <article>
-          <span>Истекает через</span>
-          <strong>{formatRouletteClock(timeLeft)}</strong>
-        </article>
-        <article>
-          <span>Мои ставки</span>
-          <strong>{myBets.length}</strong>
-        </article>
-      </div>
-
-      <div className="roulette-panel__grid">
-        <section className="roulette-panel__surface roulette-panel__surface_main">
-          <div className="roulette-panel__surface-head">
-            <div>
-              <span className="roulette-panel__kicker">Ставки</span>
-              <h3>Соберите купон на текущий раунд.</h3>
-            </div>
-          </div>
-
-          <div className="roulette-panel__type-row" role="tablist" aria-label="Roulette bet types">
-            {rouletteStakeTypeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`roulette-panel__type ${draftBetType === option.value ? 'roulette-panel__type_active' : ''}`}
-                onClick={() => setDraftBetType(option.value)}
-              >
-                <strong>{option.label}</strong>
-                <small>{option.description}</small>
-              </button>
-            ))}
-          </div>
-
-          <div className="roulette-panel__form-grid">
-            {draftBetType === 'straight' ? (
-              <label className="roulette-panel__field">
-                <span>Number</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="36"
-                  value={draftBetValue}
-                  onChange={(event) => setDraftBetValue(event.target.value)}
-                  disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
-                />
-              </label>
-            ) : (
-              <div className="roulette-panel__field roulette-panel__field_readonly">
-                <span>Number</span>
-                <strong>{rouletteStakeTypeOptions.find((item) => item.value === draftBetType)?.label ?? '—'}</strong>
-              </div>
-            )}
-
-            <label className="roulette-panel__field">
-              <span>Stake</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={draftStake}
-                onChange={(event) => setDraftStake(event.target.value)}
-                disabled={!isAuthenticated || rouletteState?.phase !== 'betting'}
-              />
-            </label>
-          </div>
-
-          <div className="roulette-panel__quick-stakes" aria-label="Quick stake values">
-            {rouletteQuickStakeValues.map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={draftStake === String(value) ? 'roulette-panel__quick-stake roulette-panel__quick-stake_active' : 'roulette-panel__quick-stake'}
-                onClick={() => setDraftStake(String(value))}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-
-          <div className="roulette-panel__actions">
-            <button
-              type="button"
-              className="roulette-panel__primary"
-              onClick={addBet}
-              disabled={!canDraftBet}
-            >
-              Добавить ставку
-            </button>
-            <button
-              type="button"
-              className="roulette-panel__secondary"
-              onClick={resetBasket}
-              disabled={basket.length === 0 && draftBetType === 'straight' && draftStake === String(defaultStake) && draftBetValue === '0'}
-            >
-              Сброс
-            </button>
-          </div>
-
-          <div className="roulette-panel__basket">
-            <div className="roulette-panel__basket-head">
-              <strong>Купон</strong>
-              <span>{formatCompactNumber(totalStake)} credits</span>
-            </div>
-
-            {basket.length === 0 ? (
-              <p className="roulette-panel__empty">Ставок в купоне пока нет.</p>
-            ) : (
-              <div className="roulette-panel__basket-list">
-                {basket.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="roulette-panel__basket-item"
-                    onClick={() => setBasket((current) => current.filter((entry) => entry.id !== item.id))}
-                  >
-                    <span>
-                      {rouletteBetTypeLabels[item.bet_type]}
-                      {item.bet_type === 'straight' && typeof item.bet_value === 'number' ? ` ${item.bet_value}` : ''}
-                    </span>
-                    <strong>{formatCompactNumber(item.stake)}</strong>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="roulette-panel__bets-note" role="status" aria-live="polite">
-            {feedback}
-          </div>
-        </section>
-
-        <aside className="roulette-panel__surface roulette-panel__surface_side">
-          <div className="roulette-panel__surface-head">
-            <div>
-              <span className="roulette-panel__kicker">Раунд</span>
-              <h3>История и состояние</h3>
-            </div>
-            <span className="roulette-panel__surface-badge">{historyLabel}</span>
-          </div>
-
-          <div className="roulette-panel__history">
-            {rouletteHistory.length === 0 && !isStateFetching && !isStateError ? (
-              <p className="roulette-panel__empty">
-                История появится после первых результатов.
-              </p>
-            ) : null}
-
-            {rouletteHistory.map((item) => {
-              const color = item.winning_color
-              const tone = color === 'green' ? 'roulette-panel__history-item_green' : color === 'red' ? 'roulette-panel__history-item_red' : 'roulette-panel__history-item_black'
-
-              return (
-                <article key={item.round_id} className={`roulette-panel__history-item ${tone}`}>
-                  <div className="roulette-panel__history-copy">
-                    <strong>{formatRouletteNumber(item.winning_number)}</strong>
-                    <span>{phaseLabel[item.phase] ?? item.phase}</span>
-                    <small>{item.round_id.slice(-8).toUpperCase()}</small>
-                  </div>
-                  <span className={`roulette-panel__history-color roulette-panel__history-color_${color}`}>
-                    {color}
-                  </span>
-                </article>
-              )
-            })}
-          </div>
-
-          <div className="roulette-panel__side-block">
-            <span className="roulette-panel__kicker">Active bets</span>
-            <p className="roulette-panel__active-bets">{activeBetSummary}</p>
-          </div>
-
-          <div className="roulette-panel__side-block roulette-panel__side-block_subtle">
-            <span className="roulette-panel__kicker">State</span>
-            <p className="roulette-panel__active-bets">
-              {stream.status === 'connected'
-                ? 'SSE connected'
-                : stream.status === 'error'
-                  ? `SSE error${stream.error ? `: ${stream.error}` : ''}`
-                  : 'Polling fallback'}
-            </p>
-          </div>
-        </aside>
-      </div>
->>>>>>> origin/main
     </section>
   )
 }

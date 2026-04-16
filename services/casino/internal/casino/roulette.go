@@ -86,6 +86,30 @@ func roulettePayout(bet RouletteBet, winningNumber int, winningColor string) (in
 		if winningNumber >= 19 && winningNumber <= 36 {
 			return bet.Stake * 2, true
 		}
+	case "dozen1":
+		if winningNumber >= 1 && winningNumber <= 12 {
+			return bet.Stake * 3, true
+		}
+	case "dozen2":
+		if winningNumber >= 13 && winningNumber <= 24 {
+			return bet.Stake * 3, true
+		}
+	case "dozen3":
+		if winningNumber >= 25 && winningNumber <= 36 {
+			return bet.Stake * 3, true
+		}
+	case "column1":
+		if winningNumber != 0 && winningNumber%3 == 1 {
+			return bet.Stake * 3, true
+		}
+	case "column2":
+		if winningNumber != 0 && winningNumber%3 == 2 {
+			return bet.Stake * 3, true
+		}
+	case "column3":
+		if winningNumber != 0 && winningNumber%3 == 0 {
+			return bet.Stake * 3, true
+		}
 	}
 	return 0, false
 }

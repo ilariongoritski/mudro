@@ -155,9 +155,9 @@ export const RouletteBettingBoard: React.FC<RouletteBettingBoardProps> = ({
             0
           </button>
 
-          {rouletteNumberGrid.map((row, ri) => (
+          {rouletteNumberGrid.map((row: number[], ri: number) => (
             <div key={ri} className="grid grid-cols-12 gap-0.5">
-              {row.map((n) => {
+              {row.map((n: number) => {
                 const active = !!getBetForType('straight', String(n));
                 const color = numColor(n);
                 return (

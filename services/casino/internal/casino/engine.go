@@ -97,15 +97,14 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 	}
 
 	multiplier := int64(0)
-	if symbols[0] == symbols[1] && symbols[1] == symbols[2] {
+	switch {
+	case symbols[0] == symbols[1] && symbols[1] == symbols[2]:
 		// Triple match: full payout according to paytable
 		multiplier = cfg.Paytable[symbols[0]]
-	} else if symbols[0] == symbols[1] || symbols[0] == symbols[2] || symbols[1] == symbols[2] {
+	case symbols[0] == symbols[1] || symbols[0] == symbols[2] || symbols[1] == symbols[2]:
 		// Two-of-a-kind: smaller payout, avoid zero multiplier
 		var sym string
-		if symbols[0] == symbols[1] {
-			sym = symbols[0]
-		} else if symbols[0] == symbols[2] {
+		if symbols[0] == symbols[1] || symbols[0] == symbols[2] {
 			sym = symbols[0]
 		} else {
 			sym = symbols[1]

@@ -17,6 +17,8 @@ type Message struct {
 	SenderID       int64        `json:"sender_id"`
 	Room           string       `json:"room"` // Mapping for frontend backward compatibility
 	Body           string       `json:"body"`
+	EncryptedBody  *string      `json:"encrypted_body,omitempty"`
+	Nonce          *string      `json:"nonce,omitempty"`
 	CreatedAt      time.Time    `json:"created_at"`
 	User           UserIdentity `json:"user"`
 }

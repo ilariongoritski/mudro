@@ -51,10 +51,6 @@ type telegramInitDataUser struct {
 	LastName  string `json:"last_name"`
 }
 
-type telegramInitDataPayload struct {
-	User telegramInitDataUser
-}
-
 type TelegramAuth struct {
 	UserID     string
 	TelegramID int64

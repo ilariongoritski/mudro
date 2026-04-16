@@ -15,24 +15,6 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-type Message struct {
-	ID             int64        `json:"id"`
-	ConversationID int64        `json:"conversation_id"`
-	SenderID       int64        `json:"sender_id"`
-	Body           string       `json:"body"`
-	EncryptedBody  *string      `json:"encrypted_body,omitempty"`
-	Nonce          *string      `json:"nonce,omitempty"`
-	CreatedAt      time.Time    `json:"created_at"`
-	User           UserIdentity `json:"user"`
-	Room           string       `json:"room,omitempty"`
-}
-
-type UserIdentity struct {
-	ID        int64  `json:"id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	AvatarURL string `json:"avatar_url"`
-}
 
 func (r *Repository) ListMessages(ctx context.Context, room string, limit int, beforeID *int64) ([]Message, error) {
 	room = normalizeRoom(room)

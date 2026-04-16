@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '@/shared/api/supabase'
+import { useRegisterMutation } from '@/entities/session/api/authApi'
+import { useAppDispatch } from '@/shared/lib/hooks/storeHooks'
+import { setCredentials } from '@/entities/session/model/sessionSlice'
 import { getErrorMessage } from '@/shared/lib/apiError'
 import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
@@ -10,38 +12,27 @@ export const RegisterPage = () => {
   const [login, setLogin] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [registerMutation, { isLoading }] = useRegisterMutation()
+  const dispatch = useAppDispatch()
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError(null)
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
+      const result = await registerMutation({
+        username: login,
+        email: email || undefined,
         password,
-        options: {
-          data: {
-            username: login,
-          },
-        },
-      })
+      }).unwrap()
 
-      if (signUpError) {
-        setError(signUpError.message)
-      } else {
-        // Typically, without email confirmation, they are logged in automatically.
-        // If email confirmation is required, you'd show a success message instead.
-        navigate('/', { replace: true })
-      }
+      dispatch(setCredentials(result))
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('Register failed', err)
-      setError('Произошла непредвиденная ошибка.')
-    } finally {
-      setIsLoading(false)
+      setError(getErrorMessage(err as any, 'Произошла ошибка при регистрации.'))
     }
   }
 
