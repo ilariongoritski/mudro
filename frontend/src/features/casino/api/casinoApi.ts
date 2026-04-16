@@ -104,7 +104,7 @@ export interface CasinoConfigResponse {
 }
 
 export type RoulettePhase = 'betting' | 'locking' | 'spinning' | 'result' | 'idle'
-export type RouletteBetType = 'straight' | 'red' | 'black' | 'green' | 'odd' | 'even' | 'low' | 'high' | 'dozen1' | 'dozen2' | 'dozen3'
+export type RouletteBetType = 'straight' | 'red' | 'black' | 'green' | 'odd' | 'even' | 'low' | 'high'
 export type RouletteColor = 'red' | 'black' | 'green' | 'unknown'
 
 export interface RouletteRoundHistoryItem {
@@ -168,16 +168,6 @@ export interface RouletteBetResponse {
   status?: string
   accepted_bets?: number
   state?: RouletteStateResponse
-}
-
-export interface RouletteInstantSpinResponse {
-  winning_number: number
-  winning_color: RouletteColor
-  display_sequence: number[]
-  result_sequence: number[]
-  payout_amount: number
-  balance: number
-  bets: RouletteBetItem[]
 }
 
 export interface CasinoSpinRequest {
@@ -880,7 +870,6 @@ export const {
   useGetRouletteStateQuery,
   useGetRouletteHistoryQuery,
   usePlaceRouletteBetsMutation,
-  useInstantRouletteSpinMutation,
   useGetPlinkoConfigQuery,
   useGetPlinkoStateQuery,
   useDropPlinkoMutation,

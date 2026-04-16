@@ -5,12 +5,6 @@ export const rouletteWheelOrder = [
   5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
 ]
 
-export const rouletteNumberGrid = [
-  [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36],
-  [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35],
-  [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34],
-]
-
 export const rouletteBetTypeLabels: Record<RouletteBetType, string> = {
   straight: 'Straight',
   red: 'Red',
@@ -20,9 +14,6 @@ export const rouletteBetTypeLabels: Record<RouletteBetType, string> = {
   even: 'Even',
   low: 'Low',
   high: 'High',
-  dozen1: '1–12',
-  dozen2: '13–24',
-  dozen3: '25–36',
 }
 
 export const rouletteColorLabels: Record<RouletteColor, string> = {
@@ -40,14 +31,11 @@ export const rouletteStakeTypeOptions: Array<{ value: RouletteBetType; label: st
   { value: 'straight', label: 'Straight', description: 'Number 0-36' },
   { value: 'red', label: 'Red', description: 'Pays 2x' },
   { value: 'black', label: 'Black', description: 'Pays 2x' },
-  { value: 'green', label: 'Green', description: 'Pays 35x' }, // Correcting multi from original code
+  { value: 'green', label: 'Green', description: 'Pays 14x' },
   { value: 'odd', label: 'Odd', description: 'Pays 2x' },
   { value: 'even', label: 'Even', description: 'Pays 2x' },
   { value: 'low', label: 'Low', description: '1-18' },
   { value: 'high', label: 'High', description: '19-36' },
-  { value: 'dozen1', label: '1–12', description: 'Pays 3x' },
-  { value: 'dozen2', label: '13–24', description: 'Pays 3x' },
-  { value: 'dozen3', label: '25–36', description: 'Pays 3x' },
 ]
 
 export const formatRouletteClock = (milliseconds: number) => {

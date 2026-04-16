@@ -987,7 +987,6 @@ func (s *Store) InstantRouletteSpin(ctx context.Context, actor ParticipantInput,
 		Bets:            placedBets,
 	}, nil
 }
-
 func (s *Store) GetRouletteHistory(ctx context.Context, limit int) ([]RouletteHistoryItem, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20

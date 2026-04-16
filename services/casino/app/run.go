@@ -17,7 +17,10 @@ func Run() {
 		log.Fatalf("casino config invalid: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	applicationCtx, applicationCancel := context.WithCancel(context.Background())
+	defer applicationCancel()
+
+	ctx, cancel := context.WithTimeout(applicationCtx, 10*time.Second)
 	defer cancel()
 
 	pool, err := casino.OpenPool(ctx)
@@ -28,7 +31,7 @@ func Run() {
 
 	mainPool, err := casino.OpenMainPool(ctx)
 	if err != nil {
-		log.Printf("casino: main pool not available, using local-only mode: %v", err)
+		log.Fatalf("casino open main pool: %v", err)
 	}
 	if mainPool != nil {
 		defer mainPool.Close()
@@ -38,14 +41,11 @@ func Run() {
 	if err := store.EnsureSeedConfig(ctx); err != nil {
 		log.Fatalf("casino seed config: %v", err)
 	}
-
-	applicationCtx, applicationCancel := context.WithCancel(context.Background())
-	defer applicationCancel()
-
-	// Start background services
-	casino.NewRouletteLoop(store).Start(applicationCtx)
-	store.StartBalanceReconciler(applicationCtx, 15*time.Second)
-	store.StartRouletteSessionJanitor(applicationCtx, 30*time.Second)
+	rouletteCtx, rouletteCancel := context.WithCancel(context.Background())
+	defer rouletteCancel()
+	casino.NewRouletteLoop(store).Start(rouletteCtx)
+	store.StartBalanceReconciler(rouletteCtx, 15*time.Second)
+	store.StartRouletteSessionJanitor(rouletteCtx, 30*time.Second)
 
 	handler := casino.NewHandler(applicationCtx, store)
 	srv := &http.Server{
@@ -70,7 +70,7 @@ func Run() {
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
-	applicationCancel()
+	rouletteCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("casino shutdown: %v", err)

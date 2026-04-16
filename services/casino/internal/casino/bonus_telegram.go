@@ -2,16 +2,19 @@ package casino
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/goritskimihail/mudro/pkg/tgauth"
 )
 
 var telegramHTTPClient struct {
@@ -48,6 +51,19 @@ type telegramInitDataUser struct {
 	LastName  string `json:"last_name"`
 }
 
+type telegramInitDataPayload struct {
+	User telegramInitDataUser
+}
+
+type TelegramAuth struct {
+	UserID     string
+	TelegramID int64
+	Username   string
+	FirstName  string
+	LastName   string
+	AuthDate   int64
+	InitData   string
+}
 func verifyBonusSubscription(ctx context.Context, initData string) (bonusVerificationResult, error) {
 	botToken := BonusTelegramBotToken()
 	channel := BonusTelegramChannel()
@@ -66,7 +82,7 @@ func verifyBonusSubscription(ctx context.Context, initData string) (bonusVerific
 		}, ErrBonusVerificationRequired
 	}
 
-	payload, err := tgauth.ValidateInitData(botToken, initData)
+	payload, err := ValidateInitData(botToken, initData)
 	if err != nil {
 		return bonusVerificationResult{
 			Status:  "denied",
@@ -157,4 +173,70 @@ func verifyTelegramChannelMembership(ctx context.Context, botToken, channel stri
 	default:
 		return false, nil
 	}
+}
+
+func ValidateInitData(botToken, rawInitData string) (*TelegramAuth, error) {
+	if rawInitData == "" {
+		return nil, errors.New("empty initData")
+	}
+
+	values, err := url.ParseQuery(rawInitData)
+	if err != nil {
+		return nil, fmt.Errorf("parse initData: %w", err)
+	}
+
+	receivedHash := values.Get("hash")
+	if receivedHash == "" {
+		return nil, errors.New("missing hash")
+	}
+
+	// Build data-check-string
+	pairs := make([]string, 0)
+	for key := range values {
+		if key == "hash" {
+			continue
+		}
+		pairs = append(pairs, key+"="+values.Get(key))
+	}
+	sort.Strings(pairs)
+	dataCheckString := strings.Join(pairs, "\n")
+
+	// HMAC-SHA256
+	secret := hmacSHA256([]byte("WebAppData"), []byte(botToken))
+	expectedHash := hex.EncodeToString(hmacSHA256(secret, []byte(dataCheckString)))
+
+	if !hmac.Equal([]byte(expectedHash), []byte(receivedHash)) {
+		return nil, errors.New("invalid hash")
+	}
+
+	// Parse auth_date
+	authDateStr := values.Get("auth_date")
+	authDate, _ := strconv.ParseInt(authDateStr, 10, 64)
+
+	// Parse user
+	userJSON := values.Get("user")
+	if userJSON == "" {
+		return nil, errors.New("missing user field")
+	}
+
+	var user telegramInitDataUser
+	if err := json.Unmarshal([]byte(userJSON), &user); err != nil {
+		return nil, fmt.Errorf("parse user: %w", err)
+	}
+
+	return &TelegramAuth{
+		UserID:     fmt.Sprintf("tg_%d", user.ID),
+		TelegramID: user.ID,
+		Username:   user.Username,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		AuthDate:   authDate,
+		InitData:   rawInitData,
+	}, nil
+}
+
+func hmacSHA256(key, data []byte) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write(data)
+	return h.Sum(nil)
 }
