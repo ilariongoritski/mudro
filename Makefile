@@ -195,7 +195,9 @@ test:
 	$(GO) test ./...
 
 test-active:
-	$(GO) test ./...
+	$(MAKE) test-unit
+	$(MAKE) validate-contracts
+	$(MAKE) validate-openapi
 
 test-unit:
 	$(GO) test -short $(TEST_UNIT_PACKAGES)

@@ -1,30 +1,18 @@
 # Frontend Agent Memory
 
-Updated: 2026-03-05  
-Branch: `codex/frontend-mudro11-fsd`
+Updated: 2026-04-17
 
-## Delivered
-- New frontend app in `frontend/` with stack:
-  - React + TypeScript
-  - Redux Toolkit
-  - RTK Query
-  - Vite
-  - FSD structure (`app/pages/widgets/features/entities/shared`)
-- Draft visual concept page: `docs/frontend-preview.html`
-- Hotpink-centered UI theme with responsive cards.
-- Feed features:
-  - source filter (`all`, `vk`, `tg`)
-  - sort (`desc`, `asc`)
-  - limit selector
-  - load from `/api/front`
-  - pagination via `/api/posts?page=...`
+## Design System
+- **Aesthetic**: Premium Dark Glassmorphism.
+- **Tech**: React + TS + Vite + Tailwind (managed via `@tailwindcss/vite`).
+- **State**: RTK Query for all API interactions.
 
-## Runtime Notes
-- This shell lacks `make`, `go`, `psql` on PATH.
-- `npm` must be invoked as `npm.cmd` (PowerShell policy).
-- API currently runs via Docker container (`mudro-api-local`) when needed.
+## Key Changes (April 2026)
+- **Plinko**: Added wallet synchronization logic to prevent balance drift during drops.
+- **Orchestration**: Created `OrchestrationPage` as a control plane for Skaro/Opus/Codex. Dashboard URL is now configurable via `VITE_SKARO_URL`.
+- **Proxy**: Vite configuration updated with `changeOrigin: true` for reliable local development connectivity.
 
-## Next Frontend Steps
-- Add router + dedicated post/details views.
-- Add tests (unit + integration).
-- Optionally wire `frontend/dist` into backend static serving.
+## Pending UI Work
+1. **Blackjack Integration**: Finalize the mobile-responsive UI for Blackjack TMA.
+2. **Feed Socials**: Add threaded comments and reactions UI to the main feed.
+3. **Error Handling**: Standardize RTK Query error boundaries across the app.

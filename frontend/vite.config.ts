@@ -40,10 +40,22 @@ export default defineConfig({
         target: bffProxyTarget,
         changeOrigin: true,
       },
-      '/api': apiProxyTarget,
-      '/healthz': apiProxyTarget,
-      '/feed': apiProxyTarget,
-      '/media': apiProxyTarget,
+      '/api': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      '/healthz': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      '/feed': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      '/media': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
 })

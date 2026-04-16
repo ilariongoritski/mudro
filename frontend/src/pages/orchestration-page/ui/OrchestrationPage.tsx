@@ -10,7 +10,7 @@ import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
 import './OrchestrationPage.css'
 
-const SKARO_DASHBOARD_URL = 'http://127.0.0.1:4700/dashboard'
+const SKARO_DASHBOARD_URL = import.meta.env.VITE_SKARO_URL || 'http://127.0.0.1:4700/dashboard'
 
 const formatMoscowDateTime = (value: string) => {
   const parsed = new Date(value)
