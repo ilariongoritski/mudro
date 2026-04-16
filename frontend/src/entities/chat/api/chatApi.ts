@@ -26,7 +26,27 @@ export const chatApi = mudroApi.injectEndpoints({
         body,
       }),
     }),
+    uploadKeys: build.mutation<void, any>({
+      query: (body) => ({
+        url: '/chat/keys',
+        method: 'POST',
+        body,
+      }),
+    }),
+    getKeysBundle: build.query<any, number>({
+      query: (userId) => ({
+        url: '/chat/keys',
+        params: { user_id: userId },
+      }),
+    }),
   }),
 })
 
-export const { useGetChatMessagesQuery, useLazyGetChatMessagesQuery, useSendChatMessageMutation } = chatApi
+export const { 
+  useGetChatMessagesQuery, 
+  useLazyGetChatMessagesQuery, 
+  useSendChatMessageMutation,
+  useUploadKeysMutation,
+  useGetKeysBundleQuery,
+  useLazyGetKeysBundleQuery
+} = chatApi

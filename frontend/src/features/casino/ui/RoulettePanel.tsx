@@ -465,21 +465,21 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
               </div>
 
               <div className="roulette-panel__summary">
-                <article>
+                <motion.article whileHover={{ scale: 1.02, y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
                   <span>Последний результат</span>
                   <strong>
                     {currentWinningNumber != null ? formatRouletteNumber(currentWinningNumber) : '—'}
                     {currentWinningColor ? <em>{currentWinningColor}</em> : null}
                   </strong>
-                </article>
-                <article>
+                </motion.article>
+                <motion.article whileHover={{ scale: 1.02, y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
                   <span>Истекает через</span>
                   <strong>{formatRouletteClock(timeLeft)}</strong>
-                </article>
-                <article>
+                </motion.article>
+                <motion.article whileHover={{ scale: 1.02, y: -2 }} transition={{ type: 'spring', stiffness: 300 }}>
                   <span>Мои ставки</span>
                   <strong>{myBets.length}</strong>
-                </article>
+                </motion.article>
               </div>
 
               <div className="roulette-panel__grid">

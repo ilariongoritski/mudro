@@ -143,11 +143,12 @@
   font-size: 0.82rem;
 }
 
-.chat-page__message p,
-.chat-page__empty,
-.chat-page__error {
-  margin: 0;
-  white-space: pre-wrap;
+.chat-page__message-e2ee {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 10px;
+  opacity: 0.6;
 }
 
 .chat-page__textarea {

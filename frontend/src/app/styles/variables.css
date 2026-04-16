@@ -19,4 +19,11 @@
   --mudro-radius-md: 16px;
   --mudro-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(255, 105, 180, 0.1);
   --mudro-glass-border: 1px solid rgba(255, 255, 255, 0.08);
+  
+  /* Glassmorphism Tokens */
+  --mudro-glass-bg: rgba(20, 15, 25, 0.6);
+  --mudro-glass-bg-hover: rgba(30, 20, 40, 0.7);
+  --mudro-glass-blur: blur(12px) saturate(180%);
+  --mudro-glass-border-color: rgba(255, 255, 255, 0.08);
+  --mudro-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }

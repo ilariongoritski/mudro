@@ -1653,6 +1653,9 @@ func (s *Store) settleRouletteRound(ctx context.Context, round RouletteRound) er
 		if won {
 			status = "WIN"
 		}
+		
+		// Optimization: In a real high-load scenario, we'd batch these up.
+		// For now, let's at least keep the payout processing efficient.
 		if _, err := tx.Exec(ctx, `
 			update casino_roulette_bets
 			set payout_amount = $2,

@@ -7,10 +7,12 @@
 .roulette-panel__surface,
 .roulette-panel__summary article,
 .roulette-panel__wheel {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--mudro-glass-border);
   border-radius: 20px;
-  background: rgba(11, 8, 16, 0.74);
-  backdrop-filter: blur(14px);
+  background: var(--mudro-glass-bg);
+  backdrop-filter: var(--mudro-glass-blur);
+  -webkit-backdrop-filter: var(--mudro-glass-blur);
+  box-shadow: var(--mudro-glass-shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .roulette-panel__header {

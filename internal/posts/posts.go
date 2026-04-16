@@ -358,14 +358,26 @@ func (s *Service) loadPostComments(ctx context.Context, postIDs []int64) (map[in
 		return nil, err
 	}
 
-	// Загружаем реакции и медиа из нормализованных таблиц
-	commentReactions, err := s.loadCommentReactions(ctx, commentIDs)
-	if err != nil {
-		slog.Error("load comment reactions", "err", err)
-	}
-	commentMedia, err := mediadb.LoadCommentMediaJSON(ctx, s.pool, commentIDs)
-	if err != nil {
-		slog.Error("load comment media", "err", err)
+	// Загружаем реакции и медиа из нормализованных таблиц ПАРАЛЛЕЛЬНО
+	var (
+		commentReactions map[int64]map[string]int
+		commentMedia     map[int64]json.RawMessage
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		var err error
+		commentReactions, err = s.loadCommentReactions(gctx, commentIDs)
+		return err
+	})
+	g.Go(func() error {
+		var err error
+		commentMedia, err = mediadb.LoadCommentMediaJSON(gctx, s.pool, commentIDs)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
+		slog.Error("parallel load comment metadata", "err", err)
 	}
 
 	for _, e := range entries {
@@ -413,7 +425,7 @@ func (s *Service) AddComment(ctx context.Context, postID int64, authorName, text
 	var commentID int64
 	err := s.pool.QueryRow(ctx,
 		`insert into post_comments (post_id, source, source_comment_id, author_name, text, published_at, parent_comment_id)
-		 values ($1, 'local', 'local-' || nextval('post_comments_id_seq')::text, $2, $3, $4, $5)
+		 values ($1, 'native', 'native-' || nextval('post_comments_id_seq')::text, $2, $3, $4, $5)
 		 returning id`,
 		postID, authorName, text, now, parentCommentID,
 	).Scan(&commentID)

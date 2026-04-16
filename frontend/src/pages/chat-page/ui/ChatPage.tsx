@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -93,12 +94,15 @@ export const ChatPage = () => {
             <p className="chat-page__empty">Войдите в аккаунт, чтобы видеть историю и отправлять сообщения.</p>
           ) : null}
 
-          {messages.map((message) => {
+          {messages.map((message, index) => {
             const ownMessage = currentUser?.id === message.user.id
 
             return (
-              <article
+              <motion.article
                 key={message.id}
+                initial={{ opacity: 0, x: ownMessage ? 20 : -20, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ duration: 0.2, delay: Math.min(index * 0.05, 0.3) }}
                 className={`chat-page__message${ownMessage ? ' chat-page__message_own' : ''}`}
               >
                 <header className="chat-page__message-meta">
@@ -106,7 +110,10 @@ export const ChatPage = () => {
                   <span>{new Date(message.created_at).toLocaleString('ru-RU')}</span>
                 </header>
                 <p>{message.body}</p>
-              </article>
+                {message.encrypted_body && (
+                  <span className="chat-page__message-e2ee" title="Зашифровано E2EE">🔒</span>
+                )}
+              </motion.article>
             )
           })}
         </div>

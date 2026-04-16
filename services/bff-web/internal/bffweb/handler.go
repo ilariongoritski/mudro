@@ -65,7 +65,15 @@ func NewHandler(timeline TimelineLoader, apiBaseURL string) http.Handler {
 	mux.HandleFunc("/api/bff/web/v1/timeline", h.handleTimeline)
 	mux.HandleFunc("/api/bff/web/v1/orchestration/status", h.handleOrchestrationStatus)
 	mux.HandleFunc("/api/bff/web/v1/casino/widget", h.handleCasinoWidget)
-	return mux
+
+	var handler http.Handler = mux
+	handler = httputil.Gzip(handler)
+	handler = httputil.CORS(httputil.CORSConfig{
+		SecurityHeaders:  true,
+		AllowCredentials: true,
+	})(handler)
+
+	return handler
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, _ *http.Request) {

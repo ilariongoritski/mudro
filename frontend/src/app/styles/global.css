@@ -11,6 +11,33 @@
   border: 0;
 }
 
+/* Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--mudro-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mudro-glass-border);
+  border: 4px solid var(--mudro-bg);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mudro-accent);
+}
+
+.glass-blur {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--mudro-glass);
+  border: var(--mudro-glass-border);
+}
+
 body {
   color: var(--mudro-text);
   font-family: 'Space Grotesk', 'Segoe UI', sans-serif;

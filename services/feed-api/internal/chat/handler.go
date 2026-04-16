@@ -57,6 +57,7 @@ func NewModule(pool *pgxpool.Pool) (*Module, error) {
 
 	module.mux.HandleFunc("/api/chat/messages", module.handleMessages)
 	module.mux.HandleFunc("/api/chat/ws", module.handleWS)
+	module.mux.HandleFunc("/api/chat/keys", module.handleKeys)
 
 	return module, nil
 }
@@ -114,7 +115,12 @@ func (m *Module) handleListMessages(w http.ResponseWriter, r *http.Request, _ *a
 }
 
 func (m *Module) handleCreateMessage(w http.ResponseWriter, r *http.Request, user *auth.User) {
-	var req createMessageRequest
+	var req struct {
+		Room          string  `json:"room"`
+		Body          string  `json:"body"`
+		EncryptedBody *string `json:"encrypted_body,omitempty"`
+		Nonce         *string `json:"nonce,omitempty"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
@@ -135,7 +141,7 @@ func (m *Module) handleCreateMessage(w http.ResponseWriter, r *http.Request, use
 		Username:  user.Username,
 		Role:      user.Role,
 		AvatarURL: user.AvatarURL,
-	}, req.Room, body)
+	}, req.Room, body, req.EncryptedBody, req.Nonce)
 	if err != nil {
 		http.Error(w, "failed to store chat message", http.StatusInternalServerError)
 		return
@@ -143,6 +149,77 @@ func (m *Module) handleCreateMessage(w http.ResponseWriter, r *http.Request, use
 
 	m.hub.Publish(msg)
 	writeJSON(w, http.StatusCreated, msg)
+}
+
+func (m *Module) handleKeys(w http.ResponseWriter, r *http.Request) {
+	m.writeCORSHeaders(w, r)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	user, err := m.authenticateFromHeader(r)
+	if err != nil {
+		http.Error(w, errUnauthorized.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		m.handleGetKeysBundle(w, r)
+	case http.MethodPost:
+		m.handleUploadKeys(w, r, user)
+	default:
+		w.Header().Set("Allow", "GET, POST, OPTIONS")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (m *Module) handleUploadKeys(w http.ResponseWriter, r *http.Request, user *auth.User) {
+	var req struct {
+		IdentityKey    string           `json:"identity_key"`
+		SignedPrekey   string           `json:"signed_prekey"`
+		Signature      string           `json:"signature"`
+		OneTimePrekeys []map[string]any `json:"one_time_prekeys"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := m.repo.SaveUserKeys(r.Context(), user.ID, req.IdentityKey, req.SignedPrekey, req.Signature, req.OneTimePrekeys)
+	if err != nil {
+		slog.Error("failed to save user keys", "user_id", user.ID, "err", err)
+		http.Error(w, "failed to store keys", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (m *Module) handleGetKeysBundle(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("user_id")
+	if userIDStr == "" {
+		http.Error(w, "user_id is required", http.StatusBadRequest)
+		return
+	}
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid user_id", http.StatusBadRequest)
+		return
+	}
+
+	bundle, err := m.repo.GetUserKeysBundle(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return
+		}
+		slog.Warn("failed to get user keys bundle", "user_id", userID, "err", err)
+		http.Error(w, "keys bundle not found", http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, bundle)
 }
 
 func (m *Module) handleWS(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,8 @@ export interface ChatMessage {
   id: number
   room: string
   body: string
+  encrypted_body?: string | null
+  nonce?: string | null
   created_at: string
   user: ChatUser
 }
@@ -30,4 +32,21 @@ export interface SendChatMessageRequest {
 export interface ChatSocketEvent {
   type: 'ready' | 'message'
   message?: ChatMessage
+}
+
+export interface E2EEKeyBundle {
+  identity_key: string
+  signed_prekey: string
+  signature: string
+  one_time_prekey?: {
+    id: number
+    key: string
+  }
+}
+
+export interface UserKeys {
+  identityKey: CryptoKeyPair
+  signedPrekey: CryptoKeyPair
+  signature: ArrayBuffer
+  oneTimePrekeys: CryptoKeyPair[]
 }

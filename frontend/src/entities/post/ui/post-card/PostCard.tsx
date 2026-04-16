@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import type { Post, PostComment } from "@/entities/post/model/types";
 import {
   mediaKindLabel,
@@ -45,8 +46,13 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
   const sourceName = post.source === "tg" ? "Мудро (тг)" : "Мудро (вк)";
 
   return (
-    <article
-      className={`post-card mudro-fade-up ${onOpen ? "post-card_interactive" : ""}`}
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      whileHover={onOpen ? { scale: 1.01, y: -4 } : {}}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`post-card ${onOpen ? "post-card_interactive" : ""}`}
       onClick={() => onOpen?.(post)}
       {...(onOpen && {
         tabIndex: 0,
@@ -216,6 +222,6 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
         </section>
       )}
 
-    </article>
+    </motion.article>
   );
 });
