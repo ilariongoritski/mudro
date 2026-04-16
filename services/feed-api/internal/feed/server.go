@@ -22,6 +22,7 @@ type Server struct {
 	authSvc          *auth.Service
 	chatHandler      *chat.Handler
 	httpClient       *http.Client
+	sseClient        *http.Client // reused for long-lived SSE proxy connections
 	casinoServiceURL string
 	tgVisiblePostIDs []string
 }
@@ -33,6 +34,7 @@ func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth
 		authSvc:          authSvc,
 		chatHandler:      chatHandler,
 		httpClient:       &http.Client{Timeout: 10 * time.Second},
+		sseClient:        &http.Client{}, // no timeout: SSE streams are long-lived
 		casinoServiceURL: config.CasinoServiceURL(),
 	}
 }

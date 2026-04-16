@@ -6,12 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const configCacheTTL = 30 * time.Second
+
+type cachedConfig struct {
+	cfg       Config
+	expiresAt time.Time
+}
 
 var (
 	ErrInsufficientBalance = errors.New("insufficient balance")
@@ -28,6 +36,9 @@ type Store struct {
 	engine    *Engine
 	plinko    *PlinkoEngine
 	blackjack *BlackjackEngine
+
+	cfgMu    sync.RWMutex
+	cfgCache *cachedConfig
 }
 
 func NewStore(pool *pgxpool.Pool, engine *Engine) *Store {
@@ -66,6 +77,27 @@ func (s *Store) Health(ctx context.Context) error {
 }
 
 func (s *Store) GetConfig(ctx context.Context) (Config, error) {
+	s.cfgMu.RLock()
+	if s.cfgCache != nil && time.Now().Before(s.cfgCache.expiresAt) {
+		cfg := s.cfgCache.cfg
+		s.cfgMu.RUnlock()
+		return cfg, nil
+	}
+	s.cfgMu.RUnlock()
+
+	cfg, err := s.fetchConfig(ctx)
+	if err != nil {
+		return Config{}, err
+	}
+
+	s.cfgMu.Lock()
+	s.cfgCache = &cachedConfig{cfg: cfg, expiresAt: time.Now().Add(configCacheTTL)}
+	s.cfgMu.Unlock()
+
+	return cfg, nil
+}
+
+func (s *Store) fetchConfig(ctx context.Context) (Config, error) {
 	var cfg Config
 	var symbolWeights []byte
 	var paytable []byte
@@ -80,7 +112,7 @@ func (s *Store) GetConfig(ctx context.Context) (Config, error) {
 			if err := s.UpdateConfig(ctx, cfg); err != nil {
 				return Config{}, err
 			}
-			return s.GetConfig(ctx)
+			return s.fetchConfig(ctx)
 		}
 		return Config{}, err
 	}
@@ -107,7 +139,13 @@ func (s *Store) UpdateConfig(ctx context.Context, cfg Config) error {
 			paytable = excluded.paytable,
 			updated_at = now()
 	`, cfg.RTPPercent, cfg.InitialBalance, marshalJSON(cfg.SymbolWeights), marshalJSON(cfg.Paytable))
-	return err
+	if err != nil {
+		return err
+	}
+	s.cfgMu.Lock()
+	s.cfgCache = nil
+	s.cfgMu.Unlock()
+	return nil
 }
 
 func (s *Store) GetBalance(ctx context.Context, actor ParticipantInput) (int64, error) {
@@ -428,16 +466,50 @@ func (s *Store) AddReaction(ctx context.Context, actor ParticipantInput, req Rea
 		return ReactionFeedItem{}, err
 	}
 
-	rows, err := s.GetReactions(ctx, 100)
+	// Targeted aggregate for the just-upserted (activity_id, emoji) pair —
+	// avoids loading all 100 reactions and scanning in Go.
+	var item ReactionFeedItem
+	err = s.pool.QueryRow(ctx, `
+		select
+			r.activity_id,
+			r.emoji,
+			count(*)::bigint  as reaction_count,
+			max(r.updated_at) as latest_at,
+			a.game_type,
+			a.net_result,
+			a.created_at,
+			p.user_id,
+			p.username,
+			p.display_name,
+			p.avatar_url
+		from casino_activity_reactions r
+		join casino_game_activity a on a.id = r.activity_id
+		join casino_players        p on p.user_id = a.user_id
+		where r.activity_id = $1 and r.emoji = $2
+		group by
+			r.activity_id, r.emoji,
+			a.game_type, a.net_result, a.created_at,
+			p.user_id, p.username, p.display_name, p.avatar_url
+	`, req.ActivityID, req.Emoji).Scan(
+		&item.ActivityID,
+		&item.Emoji,
+		&item.Count,
+		&item.LatestAt,
+		&item.GameType,
+		&item.NetResult,
+		&item.CreatedAt,
+		&item.Player.UserID,
+		&item.Player.Username,
+		&item.Player.DisplayName,
+		&item.Player.AvatarURL,
+	)
 	if err != nil {
 		return ReactionFeedItem{}, err
 	}
-	for _, item := range rows {
-		if item.ActivityID == req.ActivityID && item.Emoji == req.Emoji {
-			return item, nil
-		}
+	if strings.TrimSpace(item.Player.DisplayName) == "" {
+		item.Player.DisplayName = item.Player.Username
 	}
-	return ReactionFeedItem{}, pgx.ErrNoRows
+	return item, nil
 }
 
 func (s *Store) GetProfile(ctx context.Context, actor ParticipantInput, limit int) (PlayerProfile, error) {
@@ -1093,29 +1165,22 @@ func (s *Store) getWalletStateForUpdate(ctx context.Context, tx pgx.Tx, userID i
 }
 
 func (s *Store) updatePlayerStatsTx(ctx context.Context, tx pgx.Tx, userID, wagered, won, gamesPlayed, rouletteRoundsPlayed int64) error {
-	var totalWagered int64
-	if err := tx.QueryRow(ctx, `
-		update casino_players
-		set
-			total_wagered = total_wagered + $2,
-			total_won = total_won + $3,
-			games_played = games_played + $4,
-			roulette_rounds_played = roulette_rounds_played + $5,
-			last_game_at = now(),
-			updated_at = now()
-		where user_id = $1
-		returning total_wagered
-	`, userID, wagered, won, gamesPlayed, rouletteRoundsPlayed).Scan(&totalWagered); err != nil {
-		return err
-	}
-	level, progress := computeLevel(totalWagered)
+	// Single UPDATE: level and xp_progress are derived in-place from the new
+	// total_wagered value (in PostgreSQL SET, RHS column refs use pre-update values,
+	// so `total_wagered + $2` is the new total without a second round-trip).
 	_, err := tx.Exec(ctx, `
 		update casino_players
-		set level = $2,
-			xp_progress = $3,
-			updated_at = now()
+		set
+			total_wagered          = total_wagered + $2,
+			total_won              = total_won + $3,
+			games_played           = games_played + $4,
+			roulette_rounds_played = roulette_rounds_played + $5,
+			last_game_at           = now(),
+			level                  = (total_wagered + $2) / $6 + 1,
+			xp_progress            = (total_wagered + $2) % $6,
+			updated_at             = now()
 		where user_id = $1
-	`, userID, level, progress)
+	`, userID, wagered, won, gamesPlayed, rouletteRoundsPlayed, levelStepWagered)
 	return err
 }
 
@@ -1239,6 +1304,12 @@ func (s *Store) updateRouletteRoundStatus(
 			resolved_at,
 			created_at
 	`, roundID, status, winningNumber, nullableString(winningColor), marshalJSON(displaySequence), marshalJSON(resultSequence), spinStartedAt, resolvedAt))
+}
+
+// GetRouletteBetsForRound returns all bets placed by a user in the given round.
+// Used by the SSE handler to attach per-user bet data to the shared hub state.
+func (s *Store) GetRouletteBetsForRound(ctx context.Context, roundID, userID int64) ([]RouletteBet, error) {
+	return s.getRouletteBetsForRound(ctx, roundID, userID)
 }
 
 func (s *Store) getRouletteBetsForRound(ctx context.Context, roundID, userID int64) ([]RouletteBet, error) {
