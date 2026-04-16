@@ -67,17 +67,17 @@ export const PlinkoPanel = ({ isAuthenticated, isActive, balance, userName, onMa
    })
    const [dropPlinko, { isLoading: isSubmitting }] = useDropPlinkoMutation()
 
-   // Update wallet when external balance changes or plinko state updates
+   // Sync wallet with prop balance when it changes externally
    useEffect(() => {
      setWallet(balance)
    }, [balance])
 
-   // Sync wallet with plinko state when it updates
+   // Sync wallet with plinko state when it updates from the server (e.g. polling or other games)
    useEffect(() => {
-     if (plinkoState?.balance !== undefined) {
+     if (plinkoState?.balance !== undefined && !isDropping) {
        setWallet(plinkoState.balance)
      }
-   }, [plinkoState?.balance])
+   }, [plinkoState?.balance, isDropping])
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {

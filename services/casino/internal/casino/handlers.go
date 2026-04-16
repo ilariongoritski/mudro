@@ -17,8 +17,8 @@ type Handler struct {
 	userLimiter *UserRateLimiter
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{store: store, userLimiter: NewUserRateLimiter(10, time.Minute)}
+func NewHandler(ctx context.Context, store *Store) *Handler {
+	return &Handler{store: store, userLimiter: NewUserRateLimiter(ctx, 10, time.Minute)}
 }
 
 func (h *Handler) Router() http.Handler {
@@ -716,18 +716,18 @@ type userBucket struct {
 	windowStart time.Time
 }
 
-func NewUserRateLimiter(rate int, window time.Duration) *UserRateLimiter {
+func NewUserRateLimiter(ctx context.Context, rate int, window time.Duration) *UserRateLimiter {
 	l := &UserRateLimiter{
 		requests: make(map[int64]*userBucket),
 		rate:     rate,
 		window:   window,
 		stopCh:   make(chan struct{}),
 	}
-	go l.cleanupLoop()
+	go l.cleanupLoop(ctx)
 	return l
 }
 
-func (l *UserRateLimiter) cleanupLoop() {
+func (l *UserRateLimiter) cleanupLoop(ctx context.Context) {
 	ticker := time.NewTicker(l.window)
 	defer ticker.Stop()
 	for {
@@ -735,6 +735,8 @@ func (l *UserRateLimiter) cleanupLoop() {
 		case <-ticker.C:
 			l.cleanup()
 		case <-l.stopCh:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}
