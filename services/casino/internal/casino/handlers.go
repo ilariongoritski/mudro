@@ -288,6 +288,9 @@ func (h *Handler) handleRouletteBets(w http.ResponseWriter, r *http.Request) {
 		writeDomainError(w, err)
 		return
 	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (h *Handler) handleRouletteInstantSpin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
