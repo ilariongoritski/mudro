@@ -26,7 +26,9 @@ func TestAuthContextFromHeaders(t *testing.T) {
 }
 
 func TestHandleConfigRejectsNonAdmin(t *testing.T) {
-	handler := NewHandler(context.Background(), NewStore(nil, NewEngine()))
+	store := NewStore(nil, NewEngine())
+	hub := NewRouletteHub(store)
+	handler := NewHandler(context.Background(), store, hub)
 	req := httptest.NewRequest(http.MethodGet, "/config", strings.NewReader(""))
 	req.Header.Set("X-User-ID", "7")
 	rec := httptest.NewRecorder()

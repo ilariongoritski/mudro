@@ -15,11 +15,16 @@ import (
 
 type Handler struct {
 	store       *Store
+	hub         *RouletteHub
 	userLimiter *UserRateLimiter
 }
 
-func NewHandler(ctx context.Context, store *Store) *Handler {
-	return &Handler{store: store, userLimiter: NewUserRateLimiter(ctx, 10, time.Minute)}
+func NewHandler(ctx context.Context, store *Store, hub *RouletteHub) *Handler {
+	return &Handler{
+		store:       store,
+		hub:         hub,
+		userLimiter: NewUserRateLimiter(ctx, 10, time.Minute),
+	}
 }
 
 func (h *Handler) Router() http.Handler {
@@ -349,39 +354,50 @@ func (h *Handler) handleRouletteStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Disable the server-level write deadline so long-lived SSE connections
+	// are not killed by http.Server.WriteTimeout.
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 
-	sendState := func() bool {
-		state, err := h.store.GetCurrentRouletteState(r.Context(), actor.UserID)
-		if err != nil {
-			_ = writeSSE(w, "error", map[string]string{"error": err.Error()})
-			flusher.Flush()
-			return false
-		}
-		if err := writeSSE(w, "state", state); err != nil {
-			return false
-		}
+	// Send the initial state immediately so the client isn't stalled waiting
+	// for the hub's first broadcast tick.
+	initialState, err := h.store.GetCurrentRouletteState(r.Context(), actor.UserID)
+	if err != nil {
+		_ = writeSSE(w, "error", map[string]string{"error": err.Error()})
 		flusher.Flush()
-		return true
-	}
-
-	if !sendState() {
 		return
 	}
+	if err := writeSSE(w, "state", initialState); err != nil {
+		return
+	}
+	flusher.Flush()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	// Subscribe to the shared hub instead of polling DB per-client.
+	ch := h.hub.Subscribe()
+	defer h.hub.Unsubscribe(ch)
+
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case <-ticker.C:
-			if !sendState() {
+		case state, ok := <-ch:
+			if !ok {
 				return
 			}
+			// Attach user-specific bets to the shared state snapshot.
+			if actor.UserID > 0 {
+				bets, _ := h.store.GetRouletteBetsForRound(r.Context(), state.Round.ID, actor.UserID)
+				state.MyBets = bets
+			}
+			if err := writeSSE(w, "state", state); err != nil {
+				return
+			}
+			flusher.Flush()
 		}
 	}
 }

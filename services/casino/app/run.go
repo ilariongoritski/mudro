@@ -47,7 +47,10 @@ func Run() {
 	store.StartBalanceReconciler(rouletteCtx, 15*time.Second)
 	store.StartRouletteSessionJanitor(rouletteCtx, 30*time.Second)
 
-	handler := casino.NewHandler(applicationCtx, store)
+	hub := casino.NewRouletteHub(store)
+	hub.Start(rouletteCtx)
+
+	handler := casino.NewHandler(applicationCtx, store, hub)
 	srv := &http.Server{
 		Addr:              casino.Addr(),
 		Handler:           handler.Router(),

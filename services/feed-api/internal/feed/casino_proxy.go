@@ -212,7 +212,8 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	var body io.Reader
 	if r.Body != nil && (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) {
-		payload, err := io.ReadAll(r.Body)
+		limited := http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB
+		payload, err := io.ReadAll(limited)
 		if err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
@@ -243,7 +244,7 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	client := s.httpClient
 	if upstreamPath == "/roulette/stream" {
-		client = s.streamingClient
+		client = s.sseClient
 	}
 	if client == nil {
 		client = http.DefaultClient
