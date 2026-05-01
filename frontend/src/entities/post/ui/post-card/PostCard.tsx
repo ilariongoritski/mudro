@@ -50,8 +50,8 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      whileHover={onOpen ? { scale: 1.01, y: -4 } : {}}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={onOpen ? { y: -4 } : {}}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       className={`post-card ${onOpen ? "post-card_interactive" : ""}`}
       onClick={() => onOpen?.(post)}
       {...(onOpen && {

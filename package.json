@@ -6,6 +6,6 @@
     "opus-gateway": "npm --prefix tools/opus-gateway run start",
     "opus-gateway:test": "npm --prefix tools/opus-gateway run test",
     "opus-gateway:check": "npm --prefix tools/opus-gateway run check",
-    "build": "cd frontend && npm install && npm run build"
+    "build": "cd frontend && npm ci && npm run build"
   }
 }

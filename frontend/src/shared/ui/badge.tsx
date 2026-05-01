@@ -7,11 +7,15 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border border-slate-200 bg-white text-slate-700',
-        vk: 'bg-vk/10 text-vk border border-vk/20',
-        tg: 'bg-tg/10 text-tg border border-tg/20',
-        pink: 'bg-mudro-pink/10 text-mudro-pink border border-mudro-pink/20',
-        success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+        // Нейтральный тёмный
+        default: 'border border-mudro-line bg-white/8 text-mudro-muted',
+        // Платформы
+        vk:      'bg-vk/15 text-vk border border-vk/25',
+        tg:      'bg-tg/15 text-tg border border-tg/25',
+        // Акцент
+        accent:  'bg-mudro-accent/15 text-mudro-accent border border-mudro-accent/25',
+        // Успех
+        success: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
       },
     },
     defaultVariants: {

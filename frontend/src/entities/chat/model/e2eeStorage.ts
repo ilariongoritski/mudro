@@ -15,7 +15,7 @@ export class E2EEStorage {
     })
   }
 
-  async saveKey(id: string, key: any) {
+  async saveKey<T>(id: string, key: T): Promise<IDBValidKey> {
     const db = await this.dbPromise
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite')
@@ -25,12 +25,12 @@ export class E2EEStorage {
     })
   }
 
-  async getKey(id: string): Promise<any> {
+  async getKey<T>(id: string): Promise<T | undefined> {
     const db = await this.dbPromise
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly')
       const request = tx.objectStore(STORE_NAME).get(id)
-      request.onsuccess = () => resolve(request.result)
+      request.onsuccess = () => resolve(request.result as T | undefined)
       request.onerror = () => reject(request.error)
     })
   }

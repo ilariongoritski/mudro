@@ -8,11 +8,11 @@
   text-decoration: none;
   color: #fff7fb;
   background:
-    linear-gradient(135deg, rgba(255, 20, 147, 0.95), rgba(255, 94, 198, 0.88)),
+    linear-gradient(135deg, color-mix(in srgb, var(--mudro-accent) 95%, transparent), color-mix(in srgb, var(--mudro-casino-magenta) 88%, transparent)),
     linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
   border: 1px solid rgba(255, 182, 214, 0.5);
   box-shadow:
-    0 14px 30px rgba(255, 20, 147, 0.28),
+    0 14px 30px color-mix(in srgb, var(--mudro-accent) 28%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
   transition:
     transform 0.18s ease,
@@ -24,8 +24,8 @@
   transform: translateY(-1px);
   filter: saturate(1.08);
   box-shadow:
-    0 20px 38px rgba(255, 20, 147, 0.34),
-    0 0 18px rgba(255, 20, 147, 0.24);
+    0 20px 38px color-mix(in srgb, var(--mudro-accent) 34%, transparent),
+    0 0 18px color-mix(in srgb, var(--mudro-accent) 24%, transparent);
 }
 
 .casino-nav-button__chip {

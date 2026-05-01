@@ -25,7 +25,7 @@
 
 ## Миграционный слой совместимости
 
-- Runtime-энтрипойнты `cmd/api|agent|bot|reporter` выведены в `legacy/old/cmd-runtime/*`.
+- Legacy runtime entrypoints are kept in `legacy/old/cmd-runtime/*`.
 - Активный runtime-контур живет только в `services/*`.
 - `cmd/*` используется как временный forwarding-слой для CLI в `tools/*`.
 - Legacy `reporter` вынесен в `legacy/old/services/reporter-old` и не участвует в default runtime.

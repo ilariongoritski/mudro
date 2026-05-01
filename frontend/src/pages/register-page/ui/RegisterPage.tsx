@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import type { SerializedError } from '@reduxjs/toolkit'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useRegisterMutation } from '@/entities/session/api/authApi'
 import { useAppDispatch } from '@/shared/lib/hooks/storeHooks'
 import { setCredentials } from '@/entities/session/model/sessionSlice'
@@ -32,7 +34,7 @@ export const RegisterPage = () => {
       navigate('/', { replace: true })
     } catch (err) {
       console.error('Register failed', err)
-      setError(getErrorMessage(err as any, 'Произошла ошибка при регистрации.'))
+      setError(getErrorMessage(err as FetchBaseQueryError | SerializedError | undefined, 'Произошла ошибка при регистрации.'))
     }
   }
 

@@ -345,7 +345,7 @@ linters:
 ```bash
 # .air.toml
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/api"
+  cmd = "go build -o ./tmp/main ./services/feed-api/cmd"
   bin = "./tmp/main"
   include_ext = ["go", "tpl", "tmpl", "html"]
 ```

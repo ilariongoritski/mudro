@@ -16,7 +16,7 @@
 
 ### Применить к MUDRO
 ```go
-// cmd/api/main.go — embed frontend
+// services/feed-api/cmd/main.go — embed frontend
 //go:embed frontend/dist
 var frontendFS embed.FS
 

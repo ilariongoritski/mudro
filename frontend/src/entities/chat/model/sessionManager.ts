@@ -1,5 +1,5 @@
 import nacl from 'tweetnacl'
-import { E2EEService } from './e2eeService'
+import { E2EEService, type LocalE2EEKeyBundle, type RemoteE2EEKeyBundle } from './e2eeService'
 import { e2eeStorage } from './e2eeStorage'
 
 interface E2EESession {
@@ -14,10 +14,10 @@ interface E2EESession {
 
 export class SessionManager {
   static async getSession(userId: string): Promise<E2EESession | null> {
-    return await e2eeStorage.getKey(`session_${userId}`)
+    return (await e2eeStorage.getKey<E2EESession>(`session_${userId}`)) ?? null
   }
 
-  static async createSession(userId: string, aliceKeys: any, bobBundle: any) {
+  static async createSession(userId: string, aliceKeys: LocalE2EEKeyBundle, bobBundle: RemoteE2EEKeyBundle) {
     const { sharedSecret, ephemeralPublicKey } = E2EEService.establishSession(aliceKeys, bobBundle)
     
     // Initial ratchet step

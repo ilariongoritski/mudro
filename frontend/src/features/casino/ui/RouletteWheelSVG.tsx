@@ -45,7 +45,7 @@ export const RouletteWheelSVG: React.FC<RouletteWheelSVGProps> = ({ rotation }) 
         }
       };
     });
-  }, [count, anglePerSector, cx, cy, r, innerR]);
+  }, [anglePerSector, cx, cy, r, innerR]);
 
   return (
     <div className="roulette-wheel-svg">

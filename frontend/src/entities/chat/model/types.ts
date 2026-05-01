@@ -50,3 +50,10 @@ export interface UserKeys {
   signature: ArrayBuffer
   oneTimePrekeys: CryptoKeyPair[]
 }
+
+export interface UploadKeysRequest extends E2EEKeyBundle {
+  one_time_prekeys?: Array<{
+    id: number
+    key: string
+  }>
+}

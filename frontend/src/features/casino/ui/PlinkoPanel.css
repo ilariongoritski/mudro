@@ -98,7 +98,7 @@
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #fff, #ffcf58 48%, #ff4fb0 100%);
+  background: radial-gradient(circle at 30% 30%, #fff, var(--mudro-casino-gold) 48%, var(--mudro-casino-magenta) 100%);
   box-shadow: 0 0 24px rgba(255, 207, 88, 0.45);
   animation: plinkoBallPulse 0.8s ease-in-out infinite;
 }
@@ -237,7 +237,7 @@
 }
 
 .plinko-panel__primary {
-  background: linear-gradient(120deg, #4ee7b5, #ffcf58);
+  background: linear-gradient(120deg, #4ee7b5, var(--mudro-casino-gold));
   color: #110b14;
   font-weight: 800;
 }

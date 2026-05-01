@@ -18,7 +18,7 @@ import {
   rouletteStakeTypeOptions,
   rouletteWheelOrder,
 } from '@/features/casino/lib/roulette'
-import { useRouletteStream } from '@/features/casino/lib/useRouletteStream'
+import { useRouletteStream, type RouletteStreamMessage } from '@/features/casino/lib/useRouletteStream'
 import { InstantRoulette } from '@/features/casino/roulette/ui/InstantRoulette'
 
 import './RoulettePanel.css'
@@ -106,7 +106,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
   const trackRefs = useRef<Array<HTMLButtonElement | null>>([])
   const previousRoundId = useRef<string | null>(null)
 
-   const shouldQuery = isAuthenticated && isActive
+  const shouldQuery = isAuthenticated && isActive
 
   const {
     data: rouletteSnapshot,
@@ -153,7 +153,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
 
   const stream = useRouletteStream({
     enabled: shouldQuery,
-    onMessage: (message: any) => {
+    onMessage: (message: RouletteStreamMessage) => {
       const nextState = (message.state ?? message.round ?? message) as Partial<RouletteStateResponse>
       if (!nextState || typeof nextState !== 'object') {
         return
@@ -205,11 +205,6 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
         window.clearInterval(timer)
       }
     }
-
-    if (typeof rouletteState?.winning_number === 'number') {
-      setVisualNumber(rouletteState.winning_number)
-    }
-
     return undefined
   }, [rouletteState?.phase, rouletteState?.winning_number])
 
@@ -371,7 +366,7 @@ export const RoulettePanel = ({ isAuthenticated, isActive, userName, onMainActio
 
   const totalStakeCountFinal = basket.reduce((sum, item) => sum + item.stake, 0)
   const currentWinningNumber = typeof rouletteState?.winning_number === 'number' ? rouletteState.winning_number : null
-  const currentWinningColor = currentWinningNumber != null ? getRouletteColor(currentWinningNumber) : (rouletteState?.winning_color as any)
+  const currentWinningColor = currentWinningNumber != null ? getRouletteColor(currentWinningNumber) : (rouletteState?.winning_color ?? 'unknown')
   const phase = rouletteState?.phase ?? 'idle'
 
   const activeBetSummary = myBets.length

@@ -19,7 +19,7 @@
 .post-card_interactive:hover {
   box-shadow: 0 12px 40px rgba(255, 20, 147, 0.15), 0 6px 16px rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 105, 180, 0.35);
-  transform: translateY(-4px);
+  /* transform убран — framer-motion whileHover делает translateY(-4px) сам */
 }
 
 .post-card__head {
@@ -27,7 +27,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  border-left: 3px solid transparent;
 }
+
+/* Цветная полоска по источнику */
+.post-card__source_vk  { border-left-color: var(--mudro-vk); }
+.post-card__source_tg  { border-left-color: var(--mudro-tg); }
 
 .post-card__source-avatar {
   width: 54px;
@@ -63,22 +68,55 @@
   line-height: 1.5;
   white-space: pre-wrap;
   color: var(--mudro-text);
+  /* Обрезка длинных постов */
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Полный текст в детальном drawer (если .post-card--expanded) */
+.post-card--expanded .post-card__text {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .post-card__media-grid {
   display: grid;
   gap: 2px;
   background: #000;
-  border-radius: 0;
   overflow: hidden;
 }
 
-.post-media-card img {
+/* 1 медиа — полная ширина */
+.post-card__media-grid:has(.post-media-card:only-child) {
+  grid-template-columns: 1fr;
+}
+
+/* 2 медиа — 50/50 */
+.post-card__media-grid:has(.post-media-card:nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 3 медиа — 33/33/33 */
+.post-card__media-grid:has(.post-media-card:nth-child(3):last-child) {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.post-media-card img,
+.post-media-card video {
   width: 100%;
-  height: auto;
-  max-height: 500px;
+  height: 220px;
   object-fit: cover;
   display: block;
+}
+
+/* Одиночное фото — выше */
+.post-card__media-grid:has(.post-media-card:only-child) .post-media-card img,
+.post-card__media-grid:has(.post-media-card:only-child) .post-media-card video {
+  height: auto;
+  max-height: 500px;
 }
 
 .post-card__actions {

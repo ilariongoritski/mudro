@@ -67,6 +67,7 @@ mudro.exe
 pixel-agents/
 
 # npm cache
+.npm-cache/
 frontend/npm-cache/
 frontend/.npm-cache/
 

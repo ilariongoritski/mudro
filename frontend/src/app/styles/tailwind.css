@@ -1,20 +1,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Exo+2:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 @import "tailwindcss";
 
-@theme {
+/*
+ * Единый источник токенов — variables.css (CSS custom properties).
+ * Tailwind @theme только ссылается на них через inline(), не дублирует значения.
+ * Это позволяет писать bg-mudro-card, text-mudro-accent и т.д.
+ */
+@theme inline {
   --font-sans: 'Space Grotesk', 'Segoe UI', -apple-system, 'Helvetica Neue', sans-serif;
 
-  --color-mudro-pink: #ff69b4;
-  --color-mudro-pink-soft: #ffe4f4;
-  --color-mudro-text: #2a0f2d;
-  --color-mudro-muted: #735977;
-  --color-mudro-accent: #130a17;
+  /* Фон */
+  --color-mudro-bg:        var(--mudro-bg-base);
+  --color-mudro-bg-soft:   var(--mudro-bg-soft);
 
-  --color-vk: #3a78ff;
-  --color-tg: #2aabee;
+  /* Карточки */
+  --color-mudro-card:       var(--mudro-card);
+  --color-mudro-card-strong: var(--mudro-card-strong);
 
-  --radius-lg: 1.5rem;
-  --radius-md: 1rem;
+  /* Типографика */
+  --color-mudro-text:   var(--mudro-text);
+  --color-mudro-muted:  var(--mudro-muted);
+
+  /* Акцент */
+  --color-mudro-accent: var(--mudro-accent);
+  --color-mudro-glow:   var(--mudro-accent-glow);
+
+  /* Разделители / рамки */
+  --color-mudro-line:         var(--mudro-line);
+  --color-mudro-glass-border: var(--mudro-glass-border-color);
+
+  /* Стекло */
+  --color-mudro-glass: var(--mudro-glass-bg);
+
+  /* Казино */
+  --color-mudro-casino-pink:    var(--mudro-casino-pink);
+  --color-mudro-casino-magenta: var(--mudro-casino-magenta);
+  --color-mudro-casino-soft:    var(--mudro-casino-soft);
+  --color-mudro-casino-gold:    var(--mudro-casino-gold);
+  --color-mudro-casino-night:   var(--mudro-casino-night);
+
+  /* Платформы */
+  --color-vk: var(--mudro-vk);
+  --color-tg: var(--mudro-tg);
+
+  /* Радиусы */
+  --radius-lg: var(--mudro-radius-lg);
+  --radius-md: var(--mudro-radius-md);
   --radius-sm: 0.625rem;
 }
 

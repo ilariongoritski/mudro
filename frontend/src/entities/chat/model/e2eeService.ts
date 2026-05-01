@@ -1,6 +1,17 @@
 import nacl from 'tweetnacl'
 import { encodeBase64, decodeBase64 } from 'tweetnacl-util'
 
+export interface LocalE2EEKeyBundle {
+  identity: nacl.BoxKeyPair
+  signedPrekey: nacl.BoxKeyPair
+}
+
+export interface RemoteE2EEKeyBundle {
+  identity: Uint8Array
+  signedPrekey: Uint8Array
+  oneTimePrekey?: Uint8Array
+}
+
 export class E2EEService {
   static generateKeyPair() {
     return nacl.box.keyPair()
@@ -35,7 +46,7 @@ export class E2EEService {
     return decodeBase64(encoded)
   }
 
-  static establishSession(aliceKeys: any, bobBundle: any) {
+  static establishSession(aliceKeys: LocalE2EEKeyBundle, bobBundle: RemoteE2EEKeyBundle) {
     // Alice's ephemeral key
     const ephemeralKeyPair = nacl.box.keyPair()
 

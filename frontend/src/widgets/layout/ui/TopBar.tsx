@@ -41,7 +41,7 @@ export const TopBar = () => {
     <header className="mudro-topbar">
       <div className="mudro-topbar__copy">
         <span className="mudro-topbar__eyebrow">Mudro</span>
-        <h1 className="mudro-topbar__title">{meta.title}</h1>
+        <p className="mudro-topbar__title">{meta.title}</p>
         {meta.subtitle && <p className="mudro-topbar__subtitle">{meta.subtitle}</p>}
       </div>
 

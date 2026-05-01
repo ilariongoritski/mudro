@@ -56,5 +56,5 @@ contracts/
 ## Переходный статус (сейчас)
 
 - Активные runtime entrypoints: `services/feed-api`, `services/agent`, `services/bot`.
-- `cmd/api|agent|bot|reporter` перенесены в `legacy/old/cmd-runtime/*`.
+- Legacy runtime entrypoints are kept in `legacy/old/cmd-runtime/*`.
 - Импортеры/backfill/maintenance перенесены в `tools/*`, а `cmd/*` оставлен как временный forwarding-слой.

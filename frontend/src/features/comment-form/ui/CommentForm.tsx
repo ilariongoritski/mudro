@@ -15,7 +15,7 @@ export const CommentForm = ({ postId }: CommentFormProps) => {
 
   if (!token) {
     return (
-      <p className="text-xs text-slate-400 text-center py-2">
+      <p className="text-xs text-mudro-muted text-center py-2">
         Войдите, чтобы комментировать
       </p>
     )
@@ -35,7 +35,7 @@ export const CommentForm = ({ postId }: CommentFormProps) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-slate-100">
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-3 border-t border-mudro-line">
       <label htmlFor={`comment-input-${postId}`} className="sr-only">Написать комментарий</label>
       <Input
         id={`comment-input-${postId}`}
@@ -49,7 +49,7 @@ export const CommentForm = ({ postId }: CommentFormProps) => {
         type="submit"
         disabled={isLoading || !text.trim()}
         aria-label="Отправить комментарий"
-        className="p-2 text-sky-500 hover:bg-sky-50 rounded-lg transition-colors disabled:opacity-40"
+        className="p-2 text-mudro-accent hover:bg-mudro-accent/10 rounded-lg transition-colors disabled:opacity-40"
       >
         <Send className="w-4 h-4" aria-hidden="true" />
       </button>

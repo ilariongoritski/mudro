@@ -4,23 +4,28 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/shared/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mudro-accent focus-visible:ring-offset-2 focus-visible:ring-offset-mudro-bg disabled:pointer-events-none disabled:opacity-40 cursor-pointer',
   {
     variants: {
       variant: {
-        default: 'bg-sky-600 text-white hover:bg-sky-700 shadow-sm',
-        destructive: 'bg-red-500 text-white hover:bg-red-600',
-        outline: 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
-        ghost: 'hover:bg-slate-100 text-slate-600',
-        link: 'text-sky-600 underline-offset-4 hover:underline',
-        pink: 'bg-mudro-pink text-white hover:bg-mudro-pink/90 shadow-sm',
+        // Акцентный — розовый с glow
+        default:     'bg-mudro-accent text-white hover:opacity-90 shadow-[0_0_20px_var(--mudro-accent-glow)]',
+        // Деструктивный
+        destructive: 'bg-red-600/80 text-white hover:bg-red-600 border border-red-500/30',
+        // Контурный стеклянный
+        outline:     'border border-mudro-line bg-transparent text-mudro-text hover:border-mudro-accent hover:text-mudro-accent',
+        // Полупрозрачный вторичный
+        secondary:   'bg-white/8 text-mudro-text hover:bg-white/12 border border-mudro-line',
+        // Призрак без фона
+        ghost:       'bg-transparent text-mudro-muted hover:bg-white/6 hover:text-mudro-text',
+        // Ссылка
+        link:        'text-mudro-accent underline-offset-4 hover:underline p-0 h-auto',
       },
       size: {
         default: 'h-10 px-4 py-2',
-        sm: 'h-8 rounded-lg px-3 text-xs',
-        lg: 'h-12 rounded-xl px-8 text-base',
-        icon: 'h-10 w-10',
+        sm:      'h-8 rounded-lg px-3 text-xs',
+        lg:      'h-12 rounded-xl px-8 text-base',
+        icon:    'h-10 w-10',
       },
     },
     defaultVariants: {

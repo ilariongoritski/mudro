@@ -85,7 +85,7 @@ export default function AuthPage() {
           <button
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError('') }}
-            className="mt-4 text-sm text-slate-500 hover:text-slate-700 w-full text-center"
+            className="mt-4 text-sm text-mudro-muted hover:text-mudro-text w-full text-center transition-colors"
           >
             {isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
           </button>

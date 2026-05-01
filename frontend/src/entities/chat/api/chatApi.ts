@@ -2,8 +2,10 @@ import { mudroApi } from '@/shared/api/mudroApi'
 import type {
   ChatMessage,
   ChatMessagesResponse,
+  E2EEKeyBundle,
   GetChatMessagesArgs,
   SendChatMessageRequest,
+  UploadKeysRequest,
 } from '@/entities/chat/model/types'
 
 export const chatApi = mudroApi.injectEndpoints({
@@ -26,14 +28,14 @@ export const chatApi = mudroApi.injectEndpoints({
         body,
       }),
     }),
-    uploadKeys: build.mutation<void, any>({
+    uploadKeys: build.mutation<void, UploadKeysRequest>({
       query: (body) => ({
         url: '/chat/keys',
         method: 'POST',
         body,
       }),
     }),
-    getKeysBundle: build.query<any, number>({
+    getKeysBundle: build.query<E2EEKeyBundle, number>({
       query: (userId) => ({
         url: '/chat/keys',
         params: { user_id: userId },

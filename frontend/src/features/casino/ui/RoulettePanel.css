@@ -103,7 +103,7 @@
   height: 18px;
   margin-left: -9px;
   border-radius: 4px;
-  background: linear-gradient(180deg, #ffcf58, #ff5fba);
+  background: linear-gradient(180deg, var(--mudro-casino-gold), var(--mudro-casino-magenta));
   box-shadow: 0 0 22px rgba(255, 95, 186, 0.34);
   z-index: 2;
 }
@@ -320,7 +320,7 @@
 }
 
 .roulette-panel__primary {
-  background: linear-gradient(120deg, #ff5fba, #ffcf58);
+  background: linear-gradient(120deg, var(--mudro-casino-magenta), var(--mudro-casino-gold));
   color: #160b12;
   font-weight: 800;
 }

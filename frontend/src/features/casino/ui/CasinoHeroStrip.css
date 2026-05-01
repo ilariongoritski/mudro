@@ -9,9 +9,9 @@
   overflow: hidden;
   color: #fff7fb;
   background:
-    radial-gradient(circle at 12% 18%, rgba(255, 105, 180, 0.28), transparent 36%),
-    radial-gradient(circle at 88% 16%, rgba(255, 182, 193, 0.2), transparent 30%),
-    linear-gradient(135deg, rgba(18, 10, 24, 0.94), rgba(38, 13, 48, 0.9), rgba(255, 20, 147, 0.3));
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--mudro-accent) 28%, transparent), transparent 36%),
+    radial-gradient(circle at 88% 16%, color-mix(in srgb, var(--mudro-casino-soft) 20%, transparent), transparent 30%),
+    linear-gradient(135deg, rgba(18, 10, 24, 0.94), rgba(38, 13, 48, 0.9), color-mix(in srgb, var(--mudro-accent) 30%, transparent));
   border: 1px solid rgba(255, 182, 214, 0.16);
   box-shadow:
     0 28px 54px rgba(9, 5, 14, 0.34),
@@ -26,7 +26,7 @@
   width: 240px;
   height: 240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 20, 147, 0.3), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--mudro-accent) 30%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -88,8 +88,8 @@
   color: #1b0714;
   text-decoration: none;
   font-weight: 800;
-  background: linear-gradient(135deg, #ffb4d7, #ff4fb0);
-  box-shadow: 0 16px 30px rgba(255, 79, 176, 0.28);
+  background: linear-gradient(135deg, var(--mudro-casino-soft), var(--mudro-casino-magenta));
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--mudro-casino-magenta) 28%, transparent);
 }
 
 .casino-hero-strip__signals {
