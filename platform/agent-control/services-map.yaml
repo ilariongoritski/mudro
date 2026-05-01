@@ -40,7 +40,7 @@ runtime:
     - name: reporter-old
       path: legacy/old/services/reporter-old/cmd
       run: go run ./legacy/old/services/reporter-old/cmd
-      status: "Old (not used by default)"
+      status: "Removed from repository; keep only as historical reference"
       env_files: [env/common.env, env/reporter.env]
 
 cli:

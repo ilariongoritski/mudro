@@ -1,5 +1,6 @@
 services:
   reporter:
+    profiles: ["removed"]
     image: golang:1.23
     restart: unless-stopped
     working_dir: /app

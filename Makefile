@@ -192,7 +192,7 @@ tables-core:
 	$(PSQL_CORE_CMD) -X -c "\\dt"
 
 test:
-	$(GO) test ./...
+	$(MAKE) test-unit
 
 test-active:
 	$(MAKE) test-unit

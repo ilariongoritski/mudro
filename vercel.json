@@ -7,8 +7,16 @@
       "destination": "/api/feed"
     },
     {
+      "source": "/api/:path*",
+      "destination": "/api/feed"
+    },
+    {
       "source": "/feed",
       "destination": "/api/feed"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

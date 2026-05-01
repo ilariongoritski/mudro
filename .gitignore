@@ -68,6 +68,7 @@ pixel-agents/
 
 # npm cache
 frontend/npm-cache/
+frontend/.npm-cache/
 
 # AI Agents and IDEs
 .agents/
@@ -76,4 +77,6 @@ frontend/npm-cache/
 .skaro/
 .vscode/
 .kilocode/
-env/
+env/*
+!env/
+!env/*.env.example
