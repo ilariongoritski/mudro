@@ -50,5 +50,6 @@ cli:
 
 compose:
   core: ops/compose/docker-compose.core.yml
+  casino_local: ops/compose/docker-compose.casino.local.yml
   services: ops/compose/docker-compose.services.yml
   legacy: ops/compose/docker-compose.legacy.yml

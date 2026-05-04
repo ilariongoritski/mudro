@@ -48,6 +48,15 @@ jobs:
       - name: Build backend targets
         run: go build ./services/... ./tools/... ./cmd/...
 
+  migration-safety:
+    name: Migration Safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check migration up lists
+        run: make check-migration-up-list
+
   backend-unit:
     name: Backend Unit
     runs-on: ubuntu-latest
@@ -60,10 +69,101 @@ jobs:
           go-version: '1.24'
 
       - name: Run backend unit tests
-        run: go test -short ./internal/... ./services/... ./tools/... ./cmd/...
+        run: go test -short ./...
 
   backend-integration:
     name: Backend Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      MUDRO_INTEGRATION_TEST_DSN: postgres://postgres:postgres@127.0.0.1:5432/mudro_ci?sslmode=disable
+      MUDRO_CASINO_INTEGRATION_TEST_DSN: postgres://postgres:postgres@127.0.0.1:5432/mudro_casino_ci?sslmode=disable
+      MUDRO_E2E_TEST_DSN: postgres://postgres:postgres@127.0.0.1:5432/mudro_ci?sslmode=disable
+      JWT_SECRET: ci-test-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create isolated integration databases
+        run: |
+          createdb mudro_ci
+          createdb mudro_casino_ci
+
+      - name: Apply feed database migrations
+        run: |
+          set -euo pipefail
+          for f in $(make -s migrate-list); do
+            psql "$MUDRO_INTEGRATION_TEST_DSN" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Apply casino database migrations
+        run: |
+          set -euo pipefail
+          for f in $(bash ./scripts/migrate-casino.sh --list); do
+            psql "$MUDRO_CASINO_INTEGRATION_TEST_DSN" -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run feed integration tests
+        run: go test -run Integration -v ./services/feed-api/internal/feed
+
+      - name: Run casino integration tests
+        run: go test -run Integration -v ./services/casino/internal/casino
+
+      - name: Run e2e smoke tests
+        run: go test -v ./e2e
+
+  release-smoke:
+    name: Release Compose & Docker Smoke
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-postgres
+      CASINO_POSTGRES_PASSWORD: ci-casino-postgres
+      MUDRO_APP_DSN: postgres://mudro_app:ci@db:5432/gallery?sslmode=disable
+      CASINO_APP_DSN: postgres://mudro_casino_app:ci@casino-db:5432/mudro_casino?sslmode=disable
+      JWT_SECRET: ci-jwt-secret
+      CASINO_INTERNAL_SECRET: ci-casino-internal-secret
+      MINIO_ROOT_USER: minio-ci
+      MINIO_ROOT_PASSWORD: minio-ci-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production compose config
+        run: docker compose -f docker-compose.prod.yml config
+
+      - name: Build feed API production image
+        run: docker build --build-arg SERVICE=services/feed-api/cmd -t mudro-feed-api:ci .
+
+      - name: Build casino API production image
+        run: docker build --build-arg SERVICE=services/casino/cmd/casino -t mudro-casino-api:ci .
+
+  contracts:
+    name: Contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,8 +173,8 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Run feed integration tests
-        run: go test -run Integration -v ./services/feed-api/internal/feed
+      - name: Validate HTTP contracts
+        run: go run ./tools/validate-contracts -dir contracts
 
   frontend:
     name: Frontend Build, Lint & Test
