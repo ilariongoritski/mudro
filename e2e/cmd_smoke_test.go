@@ -47,10 +47,20 @@ func isExpectedKilledErr(err error) bool {
 	return strings.Contains(msg, "signal: killed") || strings.Contains(msg, "exit status 1")
 }
 
+func e2eDSN(t *testing.T) string {
+	t.Helper()
+	dsn := strings.TrimSpace(os.Getenv("MUDRO_E2E_TEST_DSN"))
+	if dsn == "" {
+		t.Skip("skip e2e smoke test: set MUDRO_E2E_TEST_DSN to an isolated migrated database")
+	}
+	return dsn
+}
+
 func TestCmdAPISmokeHealthz(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skip smoke test in short mode")
 	}
+	dsn := e2eDSN(t)
 
 	root := repoRoot(t)
 	bin := testBinPath(t.TempDir(), "mudro-api-smoke")
@@ -74,7 +84,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 	cmd.Dir = root
 	cmd.Env = append(os.Environ(),
 		"API_ADDR="+addr,
-		"DSN=postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable",
+		"DSN="+dsn,
 		"JWT_SECRET=test-secret-123456",
 	)
 	var out bytes.Buffer
@@ -125,6 +135,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skip smoke test in short mode")
 	}
+	dsn := e2eDSN(t)
 
 	root := repoRoot(t)
 	bin := testBinPath(t.TempDir(), "mudro-bot-smoke")
@@ -146,7 +157,7 @@ func TestCmdBotSmokeMissingToken(t *testing.T) {
 		}
 		env = append(env, e)
 	}
-	env = append(env, "DSN=postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable")
+	env = append(env, "DSN="+dsn)
 	cmd.Env = env
 
 	var out bytes.Buffer

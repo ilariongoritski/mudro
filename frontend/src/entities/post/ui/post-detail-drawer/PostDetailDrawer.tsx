@@ -15,6 +15,7 @@ import {
 } from "@/entities/post/lib/postPresentation";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDateTime } from "@/shared/lib/format/date";
+import { CommentForm } from "@/features/comment-form/ui/CommentForm";
 import "./PostDetailDrawer.css";
 
 interface PostDetailDrawerProps {
@@ -312,6 +313,11 @@ export const PostDetailDrawer = ({ post, onClose }: PostDetailDrawerProps) => {
             </div>
           </section>
         ) : null}
+
+        <section className="post-drawer__comment-form" aria-label="Новый комментарий">
+          <span className="post-drawer__section-label">Добавить комментарий</span>
+          <CommentForm postId={post.id} />
+        </section>
       </motion.aside>
     </div>
       )}

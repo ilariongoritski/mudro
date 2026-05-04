@@ -1,0 +1,43 @@
+services:
+  casino-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mudro_casino
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${CASINO_POSTGRES_PASSWORD:-postgres}"
+    ports:
+      - "127.0.0.1:${CASINO_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - casino_pgdata_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mudro_casino"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  casino-api:
+    image: golang:1.24
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "/usr/local/go/bin/go run ./services/casino/cmd/casino"
+    environment:
+      CASINO_ADDR: ":8081"
+      CASINO_DSN: "${CASINO_DSN:-postgres://postgres:${CASINO_POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable}"
+      CASINO_MAIN_DSN: "${CASINO_MAIN_DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@host.docker.internal:5433/gallery?sslmode=disable}"
+      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:-local-casino-internal-secret}"
+      CASINO_START_BALANCE: "${CASINO_START_BALANCE:-500}"
+      CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
+      CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
+    depends_on:
+      casino-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CASINO_API_PORT:-8082}:8081"
+    volumes:
+      - ../../:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  casino_pgdata_local:

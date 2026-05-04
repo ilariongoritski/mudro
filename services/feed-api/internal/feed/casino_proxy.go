@@ -130,6 +130,14 @@ func (s *Server) handleCasinoRouletteBets(w http.ResponseWriter, r *http.Request
 	s.proxyCasino(w, r, "/roulette/bets", false)
 }
 
+func (s *Server) handleCasinoRouletteInstantSpin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/roulette/instant-spin", false)
+}
+
 func (s *Server) handleCasinoRouletteHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -192,6 +200,22 @@ func (s *Server) handleCasinoBlackjackAction(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	s.proxyCasino(w, r, "/blackjack/action", false)
+}
+
+func (s *Server) handleCasinoRotateServerSeed(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/fairness/rotate-server-seed", false)
+}
+
+func (s *Server) handleCasinoUpdateClientSeed(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/fairness/client-seed", false)
 }
 
 func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPath string, adminOnly bool) {

@@ -11,6 +11,12 @@
 - `frontend/` — React/TypeScript UI.
 - `migrations/` — SQL schema changes.
 
+## Compose Entrypoints
+
+- `ops/compose/docker-compose.core.yml` — основной локальный runtime.
+- `ops/compose/docker-compose.casino.local.yml` — отдельный локальный casino runtime.
+- `docker-compose.prod.yml` — production-style VPS/self-hosted runtime.
+
 ## Transitional / Compatibility
 
 - `cmd/` — temporary forwarding stubs to `tools/*`.

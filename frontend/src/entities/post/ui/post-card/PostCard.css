@@ -143,6 +143,15 @@
   color: var(--mudro-accent);
 }
 
+.post-card__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.post-card__action:disabled:hover {
+  color: var(--mudro-muted);
+}
+
 .post-card__action svg {
   width: 20px;
   height: 20px;
@@ -154,6 +163,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.post-card__guest-cta {
+  padding: 0 16px 12px;
+  color: var(--mudro-muted);
+  font-size: 12px;
 }
 
 .post-card__media-attachments {

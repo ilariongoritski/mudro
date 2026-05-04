@@ -4,8 +4,6 @@ import { useLazyGetChatMessagesQuery, useSendChatMessageMutation, useGetChatMess
 import type { ChatMessage, ChatSocketEvent } from '@/entities/chat/model/types'
 import { env } from '@/shared/config/env'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
-import { E2EEService } from '@/entities/chat/model/e2eeService'
-import { SessionManager } from '@/entities/chat/model/sessionManager'
 
 interface UseChatRoomOptions {
   room?: string
@@ -137,21 +135,6 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
         }
 
         const message = payload.message
-        if (message.encrypted_body && message.nonce) {
-          const session = await SessionManager.getSession(message.user.id.toString())
-          if (session) {
-            const decrypted = E2EEService.decryptMessage(
-              session.receivingChainKey,
-              message.encrypted_body,
-              message.nonce
-            )
-            if (decrypted) {
-              message.body = decrypted
-              // Rotate receiving chain key logic would go here in full DR
-            }
-          }
-        }
-        
         setMessages((current) => mergeMessages(current, [message]))
       } catch (err) {
         console.error('Chat socket message parse failed', err)
@@ -184,23 +167,9 @@ export const useChatRoom = ({ room = 'main', limit = DEFAULT_LIMIT }: UseChatRoo
       return
     }
 
-    // Try to encrypt for main chat if session is established (demo approach)
-    // In production, we'd look up the room's secret or individual recipients
-    let encryptedData = null
-    const mainRoomPartnerId = '1' // Example
-    try {
-      encryptedData = await SessionManager.encryptForUser(mainRoomPartnerId, trimmed)
-    } catch (e) {
-      console.warn('E2EE: Failed to encrypt for main room', e)
-    }
-
-    const message = await sendChatMessage({ 
-      room, 
+    const message = await sendChatMessage({
+      room,
       body: trimmed,
-      ...(encryptedData && {
-        encrypted_body: encryptedData.cyphertext,
-        nonce: encryptedData.nonce
-      })
     }).unwrap()
     setMessages((current) => mergeMessages(current, [message]))
   }

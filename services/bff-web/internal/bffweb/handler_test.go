@@ -23,6 +23,20 @@ func (f fakeTimeline) LoadPosts(_ context.Context, _ *time.Time, _ *int64, _ *in
 	return f.items, f.next, f.err
 }
 
+func TestHealth(t *testing.T) {
+	handler := NewHandler(fakeTimeline{}, "")
+	req := httptest.NewRequest(http.MethodGet, "/api/bff/web/v1/healthz", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if !strings.Contains(rec.Body.String(), `"status":"ok"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
 func TestTimeline(t *testing.T) {
 	handler := NewHandler(fakeTimeline{
 		items: []posts.Post{

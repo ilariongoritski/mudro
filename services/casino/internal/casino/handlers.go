@@ -1,7 +1,6 @@
 package casino
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,70 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
-
-type Handler struct {
-	store       *Store
-	hub         *RouletteHub
-	userLimiter *UserRateLimiter
-}
-
-func NewHandler(ctx context.Context, store *Store, hub *RouletteHub) *Handler {
-	return &Handler{
-		store:       store,
-		hub:         hub,
-		userLimiter: NewUserRateLimiter(ctx, 10, time.Minute),
-	}
-}
-
-func (h *Handler) Router() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", h.handleHealth)
-
-	internal := internalAuthMiddleware()
-
-	mux.Handle("/balance", internal(h.handleBalance))
-	mux.Handle("/history", internal(h.handleHistory))
-	mux.Handle("/spin", internal(h.handleSpin))
-	mux.Handle("/config", internal(h.handleConfig))
-	mux.Handle("/bonus/state", internal(h.handleBonusState))
-	mux.Handle("/bonus/claim-subscription", internal(h.handleBonusClaimSubscription))
-	mux.Handle("/bonus/history", internal(h.handleBonusHistory))
-
-	mux.Handle("/roulette/state", internal(h.handleRouletteState))
-	mux.Handle("/roulette/bets", internal(h.handleRouletteBets))
-	mux.Handle("/roulette/instant-spin", internal(h.handleRouletteInstantSpin))
-	mux.Handle("/roulette/history", internal(h.handleRouletteHistory))
-	mux.Handle("/roulette/stream", internal(h.handleRouletteStream))
-
-	mux.Handle("/profile", internal(h.handleProfile))
-	mux.Handle("/activity", internal(h.handleActivity))
-	mux.Handle("/live-feed", internal(h.handleLiveFeed))
-	mux.Handle("/top-wins", internal(h.handleTopWins))
-	mux.Handle("/reactions", internal(h.handleReactions))
-
-	mux.Handle("/plinko/config", internal(h.handlePlinkoConfig))
-	mux.Handle("/plinko/state", internal(h.handlePlinkoState))
-	mux.Handle("/plinko/drop", internal(h.handlePlinkoDrop))
-
-	mux.Handle("/blackjack/state", internal(h.handleBlackjackState))
-	mux.Handle("/blackjack/start", internal(h.handleBlackjackStart))
-	mux.Handle("/blackjack/action", internal(h.handleBlackjackAction))
-
-	mux.Handle("/fairness/rotate-server-seed", internal(h.handleRotateServerSeed))
-	mux.Handle("/fairness/client-seed", internal(h.handleUpdateClientSeed))
-	return mux
-}
-
-func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
-	if err := h.store.Health(r.Context()); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "error"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
 
 func (h *Handler) handleBalance(w http.ResponseWriter, r *http.Request) {
 	actor, err := authContextFromHeaders(r)
@@ -718,104 +655,6 @@ func (h *Handler) handleBlackjackAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, state)
-}
-
-type UserRateLimiter struct {
-	mu       sync.Mutex
-	requests map[int64]*userBucket
-	rate     int
-	window   time.Duration
-	stopCh   chan struct{}
-}
-
-type userBucket struct {
-	count       int
-	windowStart time.Time
-}
-
-func NewUserRateLimiter(ctx context.Context, rate int, window time.Duration) *UserRateLimiter {
-	l := &UserRateLimiter{
-		requests: make(map[int64]*userBucket),
-		rate:     rate,
-		window:   window,
-		stopCh:   make(chan struct{}),
-	}
-	go l.cleanupLoop(ctx)
-	return l
-}
-
-func (l *UserRateLimiter) cleanupLoop(ctx context.Context) {
-	ticker := time.NewTicker(l.window)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			l.cleanup()
-		case <-l.stopCh:
-			return
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func (l *UserRateLimiter) cleanup() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	now := time.Now()
-	staleCutoff := now.Add(-2 * l.window)
-	for userID, bucket := range l.requests {
-		if bucket.windowStart.Before(staleCutoff) {
-			delete(l.requests, userID)
-		}
-	}
-}
-
-func (l *UserRateLimiter) Stop() {
-	close(l.stopCh)
-}
-
-func (l *UserRateLimiter) Allow(userID int64) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	now := time.Now()
-	bucket, exists := l.requests[userID]
-
-	if !exists || now.Sub(bucket.windowStart) > l.window {
-		l.requests[userID] = &userBucket{count: 1, windowStart: now}
-		return true
-	}
-
-	if bucket.count >= l.rate {
-		return false
-	}
-
-	bucket.count++
-	return true
-}
-
-func (h *Handler) rateLimited(actor ParticipantInput) bool {
-	if h.userLimiter == nil {
-		return false
-	}
-	return !h.userLimiter.Allow(actor.UserID)
-}
-
-func internalAuthMiddleware() func(http.HandlerFunc) http.Handler {
-	secret := InternalSecret()
-	return func(next http.HandlerFunc) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if secret != "" {
-				if r.Header.Get("X-Internal-Secret") != secret {
-					http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-					return
-				}
-			}
-			next(w, r)
-		})
-	}
 }
 
 func (h *Handler) handleRotateServerSeed(w http.ResponseWriter, r *http.Request) {

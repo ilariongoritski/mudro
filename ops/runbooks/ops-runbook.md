@@ -17,6 +17,8 @@
 3. Проверить БД:
    - `make dbcheck`
 4. Применить миграции:
+   - `make migrate-list` для проверки порядка up-миграций
+   - `make check-migration-up-list` перед bootstrap/recovery, если менялся migration inventory
    - `make migrate`
    - `make migrate-agent`
    - `make migrate-comments`
@@ -64,6 +66,12 @@
 - сайт открывается по `http://<server-ip>/`
 - API и media продолжают жить на том же VPS, но уже за reverse proxy
 - Vercel перестает быть обязательной точкой входа для MVP
+
+HTTPS rollout, Certbot, security headers and external smoke checklist:
+- `ops/runbooks/vps-https-nginx.md`
+
+Secrets rotation without writing secrets to the repo:
+- `ops/runbooks/secrets-rotation.md`
 
 ### 0) Hardening Postgres на VPS
 Цель: не держать публично доступный `postgres/postgres` на `0.0.0.0:5433`.
@@ -127,6 +135,7 @@ Canonical runtime checks now use active core compose and full runtime migrations
 make core-up
 make core-ps
 make dbcheck-core
+make migrate-list
 make migrate-runtime
 make tables-core
 make test-active
@@ -139,6 +148,49 @@ One-command health loop:
 make health
 ```
 
+## Production compose hardening
+
+`docker-compose.prod.yml` is the production-style smoke stack. It must not run API, agent, or casino services with `postgres` superuser DSN. Telegram/report bots are kept outside the default production stack and should be started as a separate, explicitly approved contour.
+
+Required `.env` values before `docker compose -f docker-compose.prod.yml up -d`:
+
+Required variables for the production shell or secret manager:
+
+```text
+POSTGRES_PASSWORD
+CASINO_POSTGRES_PASSWORD
+MUDRO_APP_DSN
+CASINO_APP_DSN
+JWT_SECRET
+CASINO_INTERNAL_SECRET
+MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD
+```
+
+Fail-fast guards are intentional: missing `JWT_SECRET`, MinIO credentials, `CASINO_INTERNAL_SECRET`, or app DSNs should stop compose config/start before containers run with weak defaults.
+
+Before switching services to app DSNs, create/grant non-superuser roles. Main DB can use the existing VPS helper:
+
+```bash
+export MUDRO_DB_APP_PASSWORD='<app password>'
+export MUDRO_DB_SUPERUSER_PASSWORD='<postgres superuser password>'
+bash ops/scripts/harden_vps_db_auth.sh
+```
+
+For the casino DB, create an equivalent non-superuser role and grants:
+
+```sql
+CREATE ROLE mudro_casino_app LOGIN PASSWORD '<casino app password>' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+GRANT CONNECT ON DATABASE mudro_casino TO mudro_casino_app;
+GRANT USAGE ON SCHEMA public TO mudro_casino_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO mudro_casino_app;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO mudro_casino_app;
+ALTER DEFAULT PRIVILEGES FOR USER postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO mudro_casino_app;
+ALTER DEFAULT PRIVILEGES FOR USER postgres IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO mudro_casino_app;
+```
+
+API port canonical binding for nginx is `127.0.0.1:8080`. Keep `API_PORT` unset unless there is an explicit local conflict; nginx should proxy `/api`, `/media`, and `/healthz` to `127.0.0.1:8080`.
+
 ## Casino on Supabase
 
 Use this when the casino contour should run against Supabase instead of the local `casino-db` container.
@@ -146,11 +198,12 @@ Use this when the casino contour should run against Supabase instead of the loca
 Checklist:
 - set `CASINO_DSN` to the Supabase direct connection string and keep `sslmode=require`
 - keep `CASINO_START_BALANCE=500`
+- inspect order with `make migrate-casino-list` or `make migrate-casino-dry-run`
 - run `bash ./scripts/migrate-casino.sh`
 - verify the casino service health endpoint after migration
 
 Notes:
-- `scripts/migrate-casino.sh` applies every `*.sql` file in `services/casino/migrations/`
+- `scripts/migrate-casino.sh` applies only up migrations from `services/casino/migrations/` and excludes `*.down.sql`
 - legacy slot tables stay in place; the new casino tables extend the schema for multi-game history and roulette
 
 ## Railway rollout

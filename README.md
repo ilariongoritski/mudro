@@ -1,29 +1,31 @@
 # MUDRO
 
-MUDRO is a microservices-first monorepo for feed ingestion, agent workflows, Telegram operations, casino runtime, frontend UI, and data import tooling.
+MUDRO — Go-first monorepo для пред-MVP социального продукта: лента VK/TG-контента, авторизация, чат, casino showcase, agent-worker контур, Telegram-боты, import/backfill инструменты и self-hosted/VPS runtime.
 
-## Release / Showcase State
+Текущее состояние: `v0.1.0-mvp`, pre-MVP launch readiness. Код собирается и тестируется, но публичный запуск требует внешней ротации секретов, настройки VPS/HTTPS и применения миграций на целевых БД.
 
-Current release line: `v0.1.0-mvp`.
+## MVP Состояние
 
-The current showcase is centered on a single clear path:
-- backend auth flow only
-- canonical local runtime via `ops/compose/docker-compose.core.yml`
-- release smoke via `docker-compose.prod.yml`
-- separate casino contour with its own DB and wallet sync
+Готово для инженерной проверки:
 
-## Canonical Runtime
+- backend `feed-api` с `/healthz`, `/api/front`, auth/admin/chat/casino proxy;
+- frontend React/Vite с лентой, login/register, chat, casino, admin guard;
+- отдельный casino runtime с собственной БД и internal secret между `feed-api` и `casino-api`;
+- up-only миграционный контур с guard против случайного применения `*.down.sql`;
+- CI workflow для Go/frontend/contracts/migration safety/integration DB/release smoke;
+- production compose с обязательными секретами и non-superuser DSN;
+- nginx/HTTPS/secret rotation runbook-и для VPS.
 
-Use these contours deliberately:
+Не считать готовым без ручной проверки:
 
-- `ops/compose/docker-compose.core.yml` — canonical local runtime for `db`, `redis`, `kafka/redpanda`, `api`, and `agent`
-- `ops/compose/docker-compose.services.yml` — additive service layer for `auth-api`, `orchestration-api`, `bff-web`, and `api-gateway`
-- `docker-compose.prod.yml` — release stack for production-style smoke
-- `docker-compose.yml` — legacy root contour, kept only for compatibility and recovery
+- реальные секреты должны быть ротированы вне репозитория;
+- роли `mudro_app` и `mudro_casino_app` должны быть созданы/grant на VPS БД;
+- HTTPS и домен должны быть подняты по runbook;
+- локальная браузерная демка должна пройти smoke по `/`, `/login`, `/casino`, `/chat`, `/admin`.
 
-## Quick Start
+## Быстрый Локальный Запуск
 
-Canonical local bootstrap:
+Основной локальный контур:
 
 ```bash
 make core-up
@@ -33,54 +35,14 @@ make tables-core
 make health-runtime
 ```
 
-Full MVP bootstrap, including the separate casino database/runtime:
+Отдельный локальный casino contour:
 
 ```bash
-make health
+make casino-up
+make health-casino
 ```
 
-Showcase flow:
-
-```bash
-make demo-up
-cd frontend && npm.cmd run dev
-make demo-check
-```
-
-Or use the helper script:
-
-```bash
-bash ./scripts/release-demo.sh
-```
-
-Expected endpoints:
-- API health: `http://127.0.0.1:8080/healthz`
-- Casino health: `http://127.0.0.1:8082/healthz`
-- Frontend dev server: `http://127.0.0.1:5173`
-
-## Casino Contour
-
-Casino is intentionally separate from the main runtime.
-
-For the local casino DB:
-- set `CASINO_DSN` to the casino database
-- set `CASINO_MAIN_DSN` to the main Mudro wallet DB
-- keep `CASINO_START_BALANCE=500`
-- apply both migration tracks:
-
-```bash
-bash ./scripts/migrate-casino-main.sh
-bash ./scripts/migrate-casino.sh
-```
-
-Release / smoke checks for casino:
-- `make health-casino`
-- `go test -run Integration -v ./services/casino/internal/casino` with `MUDRO_CASINO_INTEGRATION_TEST_DSN` set to an isolated migrated casino DB
-- wallet-sync scenarios via `docs/casino-smoke-checklist.md`
-
-## Frontend
-
-Frontend lives in [`frontend/`](frontend/).
+Frontend:
 
 ```bash
 cd frontend
@@ -88,72 +50,142 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Additional frontend commands:
+Ожидаемые адреса:
+
+- Frontend: `http://127.0.0.1:5173`
+- Feed API: `http://127.0.0.1:8080/healthz`
+- Casino API: `http://127.0.0.1:8082/healthz`
+
+Проверка демо:
 
 ```bash
-npm.cmd run lint
-npm.cmd run build
+make demo-check
 ```
 
-The frontend dev server proxies API requests to `http://127.0.0.1:8080`.
+Если БД пустая, нужен seed/import данных. Для полноценного локального просмотра сначала убедиться, что `/api/front?limit=1` отдаёт непустую ленту.
 
-See also: [`frontend/README.md`](frontend/README.md)
+## Архитектура
 
-## Import, Backfill, and Maintenance
+Активные runtime-сервисы:
 
-The repository contains operational CLI tooling under [`tools/`](tools/), including:
+- `services/feed-api/cmd` — основной HTTP API для MVP: feed, auth, admin, chat, casino proxy.
+- `services/casino/cmd/casino` — отдельный casino service с собственной Postgres БД.
+- `services/agent/cmd` — planner/worker automation.
+- `services/bot/cmd` — Telegram control-plane.
 
-- Telegram imports
-- VK imports
-- comment/media backfill
-- dedupe and merge maintenance utilities
+Additive/bootstrap сервисы:
 
-Examples:
+- `services/api-gateway/cmd` — будущий edge/API gateway.
+- `services/bff-web/cmd` — web aggregation layer.
+- `services/auth-api/cmd` — выделяемая auth/admin граница.
+- `services/orchestration-api/cmd` — выделяемая orchestration/status граница.
+
+Инструменты:
+
+- `tools/importers/*` — импорт VK/TG и CSV/HTML источников.
+- `tools/backfill/*` — backfill медиа/комментариев.
+- `tools/maintenance/*` — dedupe, merge, диагностика.
+- `tools/validate-contracts` — проверка HTTP contracts.
+
+## Compose Контуры
+
+- `ops/compose/docker-compose.core.yml` — canonical local runtime: db, redis, kafka, api, agent, bff/movie-catalog.
+- `ops/compose/docker-compose.casino.local.yml` — локальный casino DB/API без prod secrets.
+- `ops/compose/docker-compose.services.yml` — дополнительные сервисы для микросервисной декомпозиции.
+- `docker-compose.prod.yml` — production-style release stack для VPS/self-hosted.
+- `docker-compose.yml` — legacy/deprecated compatibility файл.
+
+Production compose намеренно fail-fast: без `MUDRO_APP_DSN`, `CASINO_APP_DSN`, `JWT_SECRET`, MinIO credentials и `CASINO_INTERNAL_SECRET` он не должен стартовать. Telegram-боты запускаются отдельным контуром, чтобы не расширять blast radius основного MVP runtime.
+
+## Миграции
+
+Основная БД:
 
 ```bash
-make tg-csv-import CSV=/path/to/export.csv
-make tg-comments-csv-import CSV=/path/to/comments.csv
-make tg-comment-media-import DIR=/path/to/media
-make comment-backfill
-make media-backfill
+make migrate-list
+make migrate-all-dry-run
+make migrate-all
 ```
 
-## Direct Entrypoints
-
-When you need to run services directly:
+Casino БД:
 
 ```bash
-go run ./services/feed-api/cmd
-go run ./services/agent/cmd
-go run ./services/bot/cmd
-go run ./services/casino/cmd/casino
+make migrate-casino-list
+make migrate-casino-dry-run
+make migrate-casino
 ```
 
-Useful make targets:
+Guard:
 
 ```bash
-make bot-run
-make agent-plan-once
-make agent-plan
-make agent-work
-make casino-run
+make check-migration-up-list
 ```
 
-## Legacy and Transitional Areas
+Обычный bootstrap/recovery не должен применять `*.down.sql`.
 
-The repository still contains compatibility paths that are intentionally not the primary release entrypoints:
+## Проверки
 
-- [`legacy/old/`](legacy/old/)
-- [`cmd/`](cmd/)
-- [`ops/compose/docker-compose.legacy.yml`](ops/compose/docker-compose.legacy.yml)
+Базовый набор:
 
-Treat them as recovery or compatibility paths unless a task explicitly targets them.
+```bash
+make selftest
+go test ./...
+go build ./services/... ./tools/... ./cmd/... ./pkg/...
+go run ./tools/validate-contracts -dir contracts
+cd frontend && npm.cmd run lint
+cd frontend && npm.cmd run test
+cd frontend && npm.cmd run build
+docker compose -f ops/compose/docker-compose.core.yml config
+docker compose -f ops/compose/docker-compose.casino.local.yml config
+```
 
-## Release References
+Production config проверять только с dummy env или в закрытом CI/VPS shell. Не публиковать вывод `docker compose config`, он раскрывает значения env:
 
-- [`CHANGELOG.md`](CHANGELOG.md)
-- [`docs/release-showcase-checklist.md`](docs/release-showcase-checklist.md)
-- [`docs/casino-smoke-checklist.md`](docs/casino-smoke-checklist.md)
-- [`docs/casino-db-stabilization-checklist.md`](docs/casino-db-stabilization-checklist.md)
-- [`ops/runbooks/ops-runbook.md`](ops/runbooks/ops-runbook.md)
-- [`Makefile`](Makefile)
+```bash
+docker compose -f docker-compose.prod.yml config
+```
+
+## VPS / Release
+
+Каноничный MVP target: self-hosted/VPS через `docker-compose.prod.yml` + nginx/HTTPS.
+
+Документы:
+
+- `ops/runbooks/ops-runbook.md`
+- `ops/runbooks/vps-https-nginx.md`
+- `ops/runbooks/secrets-rotation.md`
+- `docs/release-showcase-checklist.md`
+
+Перед запуском:
+
+- ротировать Telegram/OpenAI/OpenRouter/JWT/MinIO secrets;
+- создать non-superuser DB roles;
+- заполнить env на VPS вне git;
+- применить up-only миграции;
+- пройти smoke: `/healthz`, `/api/front`, frontend route refresh, casino balance/action/history.
+
+## GitHub / CI Состояние
+
+В репозитории есть GitHub Actions workflow `.github/workflows/ci.yml`.
+
+CI покрывает:
+
+- Go build/test;
+- migration safety;
+- backend unit/integration с Postgres service;
+- e2e smoke с явным DSN;
+- frontend lint/test/build;
+- HTTP contracts validation;
+- release compose и Docker build smoke.
+
+Текущие локальные изменения могут быть не закоммичены. Перед PR/merge обязательно проверить `git status --short`, не смешивать unrelated WIP и не коммитить реальные секреты.
+
+## Legacy
+
+Legacy зоны не являются основным runtime:
+
+- `legacy/old/`
+- root `docker-compose.yml`
+- исторические `cmd/*` stubs
+
+Использовать их только для recovery/compatibility задач.

@@ -14,6 +14,9 @@
 ## Перед стартом
 
 - рабочая ветка без случайного WIP в auth flow;
+- `.env` для `docker-compose.prod.yml` заполнен без реальных секретов в git: `MUDRO_APP_DSN`, `CASINO_APP_DSN`, `JWT_SECRET`, MinIO credentials, `CASINO_INTERNAL_SECRET`;
+- prod app DSN указывает на non-superuser role (`mudro_app` / `mudro_casino_app`), не на `postgres`;
+- API опубликован для nginx как `127.0.0.1:8080`;
 - `make selftest` проходит;
 - frontend: `npm run lint`, `npm run test`, `npm run build`;
 - backend build проходит;

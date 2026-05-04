@@ -71,6 +71,7 @@ services:
       MUDRO_ROOT: /app
       MEDIA_ROOT: /app/data/nu
       CASINO_SERVICE_URL: "${CASINO_SERVICE_URL:-http://host.docker.internal:8082}"
+      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:-local-casino-internal-secret}"
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
       REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"

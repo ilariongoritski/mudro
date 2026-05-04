@@ -10,7 +10,6 @@ import (
 	"github.com/goritskimihail/mudro/services/feed-api/internal/feed/contracts"
 )
 
-
 func (s *Server) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.ContextUserID(r.Context())
 	if !ok {

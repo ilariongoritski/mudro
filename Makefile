@@ -19,8 +19,10 @@ USE_DOCKER_PSQL ?= 1
 GO ?= /usr/local/go/bin/go
 PROD_COMPOSE_FILE ?= docker-compose.prod.yml
 CORE_COMPOSE_FILE ?= ops/compose/docker-compose.core.yml
+CASINO_COMPOSE_FILE ?= ops/compose/docker-compose.casino.local.yml
 PROD_COMPOSE = docker compose -f $(PROD_COMPOSE_FILE)
 CORE_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE)
+CASINO_COMPOSE = docker compose -f $(CASINO_COMPOSE_FILE)
 SERVICES_COMPOSE_FILE ?= ops/compose/docker-compose.services.yml
 MICRO_COMPOSE = docker compose -f $(CORE_COMPOSE_FILE) -f $(SERVICES_COMPOSE_FILE)
 ENV_COMMON ?= env/common.env
@@ -35,6 +37,12 @@ RUNTIME_MIGRATIONS ?= $(UP_MIGRATIONS) $(MOVIE_CATALOG_MIGRATION)
 
 ifeq ($(wildcard $(GO)),)
 GO := go
+endif
+
+ifeq ($(OS),Windows_NT)
+BASH ?= C:/Program Files/Git/bin/bash.exe
+else
+BASH ?= bash
 endif
 
 ifeq ($(OS),Windows_NT)
@@ -64,9 +72,9 @@ logs:
 	$(PROD_COMPOSE) logs --no-color --tail=200
 
 casino-up:
-	$(PROD_COMPOSE) up -d casino-db
+	$(CASINO_COMPOSE) up -d casino-db
 	$(MAKE) migrate-casino
-	$(PROD_COMPOSE) up -d casino-api
+	$(CASINO_COMPOSE) up -d casino-api
 
 core-up:
 	$(CORE_COMPOSE) up -d
@@ -119,8 +127,13 @@ migrate-runtime:
 		fi || exit $$?; \
 	done
 
+migrate-list:
+	$(foreach f,$(UP_MIGRATIONS),$(info $(f)))
+
+migrate-all-dry-run: migrate-list
+
 migrate-all:
-	@for f in $(shell ls $(MIGRATIONS_DIR)/*.sql | sort); do \
+	@for f in $(UP_MIGRATIONS); do \
 		echo "==> applying $$f"; \
 		if [ "$(USE_DOCKER_PSQL)" = "1" ]; then cat "$$f" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1; else $(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$$f"; fi || exit $$?; \
 	done
@@ -183,7 +196,16 @@ else
 endif
 
 migrate-casino:
-	bash ./scripts/migrate-casino.sh
+	CASINO_COMPOSE_FILE="$(CASINO_COMPOSE_FILE)" "$(BASH)" ./scripts/migrate-casino.sh
+
+migrate-casino-list:
+	"$(BASH)" ./scripts/migrate-casino.sh --list
+
+migrate-casino-dry-run:
+	"$(BASH)" ./scripts/migrate-casino.sh --dry-run
+
+check-migration-up-list:
+	"$(BASH)" ./scripts/check-migration-up-list.sh
 
 tables:
 	$(PSQL_CMD) -X -c "\\dt"
@@ -230,7 +252,7 @@ lint:
 	golangci-lint run ./...
 	cd frontend && npm run lint
 
-check: lint test
+check: check-migration-up-list lint test
 
 validate-contracts:
 	$(GO) run ./tools/validate-contracts -dir ./contracts
@@ -306,7 +328,7 @@ count-posts-core:
 
 casino-dbcheck:
 	@if [ "$(USE_DOCKER_PSQL)" = "1" ]; then \
-		$(PROD_COMPOSE) exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
+		$(CASINO_COMPOSE) exec -T casino-db psql -U postgres -d mudro_casino -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	else \
 		psql "$${CASINO_DSN:-postgres://postgres:postgres@localhost:5434/mudro_casino?sslmode=disable}" -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"; \
 	fi

@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
+import { MobileNavigation, Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
 import './layout.css'
@@ -15,6 +15,7 @@ export const AppLayout = () => {
           <Outlet />
         </main>
       </div>
+      <MobileNavigation />
     </div>
   )
 }

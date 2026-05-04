@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: gallery
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for database superuser bootstrap}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     environment:
       POSTGRES_DB: mudro_casino
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${CASINO_POSTGRES_PASSWORD:?CASINO_POSTGRES_PASSWORD is required for casino database superuser bootstrap}
     ports:
       - "127.0.0.1:${CASINO_POSTGRES_PORT:-5434}:5432"
     volumes:
@@ -41,8 +41,9 @@ services:
     restart: unless-stopped
     environment:
       CASINO_ADDR: ":8081"
-      CASINO_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@casino-db:5432/mudro_casino?sslmode=disable"
-      CASINO_MAIN_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      CASINO_DSN: "${CASINO_APP_DSN:?CASINO_APP_DSN is required and must use a non-superuser casino app role}"
+      CASINO_MAIN_DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required and must use a non-superuser app role}"
+      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:?CASINO_INTERNAL_SECRET is required}"
       CASINO_START_BALANCE: "${CASINO_START_BALANCE:-500}"
       CASINO_RTP_BPS: "${CASINO_RTP_BPS:-9500}"
       CASINO_MAX_BET: "${CASINO_MAX_BET:-1000}"
@@ -108,8 +109,8 @@ services:
     restart: unless-stopped
     environment:
       API_ADDR: ":8080"
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      JWT_SECRET: "${JWT_SECRET}"
+      DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required and must use a non-superuser app role}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
       MUDRO_ENV: "${MUDRO_ENV:-production}"
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
@@ -119,6 +120,7 @@ services:
       REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       REDIS_DB: "${REDIS_DB:-0}"
       CASINO_SERVICE_URL: "http://casino-api:8081"
+      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:?CASINO_INTERNAL_SECRET is required}"
     depends_on:
       db:
         condition: service_healthy
@@ -129,7 +131,7 @@ services:
       casino-api:
         condition: service_started
     ports:
-      - "127.0.0.1:${API_PORT:-8081}:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
 
   agent:
     build:
@@ -139,7 +141,7 @@ services:
     restart: unless-stopped
     command: ["/service", "--mode", "worker", "--interval", "15s"]
     environment:
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
+      DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required and must use a non-superuser app role}"
       MUDRO_ENV: "${MUDRO_ENV:-production}"
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
@@ -153,34 +155,13 @@ services:
       kafka:
         condition: service_healthy
 
-  reporter:
-    build:
-      context: .
-      args:
-        SERVICE: services/bot/cmd
-    restart: unless-stopped
-    environment:
-      DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable"
-      MUDRO_ENV: "${MUDRO_ENV:-production}"
-      REPORT_BOT_TOKEN: "${REPORT_BOT_TOKEN}"
-      REPORT_CHAT_ID: "${REPORT_CHAT_ID:-}"
-      REPORT_INTERVAL_MIN: "${REPORT_INTERVAL_MIN:-30}"
-      API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
-      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
-      TELEGRAM_ALLOWED_USERNAME: "${TELEGRAM_ALLOWED_USERNAME}"
-    depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
-
   minio:
     image: minio/minio:RELEASE.2024-06-22T05-26-45Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}"
     ports:
       - "127.0.0.1:${MINIO_PORT:-9000}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"

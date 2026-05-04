@@ -62,6 +62,7 @@ func NewHandler(timeline TimelineLoader, apiBaseURL string) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", h.handleHealth)
+	mux.HandleFunc("/api/bff/web/v1/healthz", h.handleHealth)
 	mux.HandleFunc("/api/bff/web/v1/timeline", h.handleTimeline)
 	mux.HandleFunc("/api/bff/web/v1/orchestration/status", h.handleOrchestrationStatus)
 	mux.HandleFunc("/api/bff/web/v1/casino/widget", h.handleCasinoWidget)

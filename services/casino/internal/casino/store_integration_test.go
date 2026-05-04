@@ -23,12 +23,12 @@ func testCasinoIntegrationStore(t *testing.T) *Store {
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		t.Skipf("skip integration test: db connect: %v", err)
+		t.Fatalf("db connect: %v", err)
 	}
 	t.Cleanup(pool.Close)
 
 	if err := pool.Ping(ctx); err != nil {
-		t.Skipf("skip integration test: db ping: %v", err)
+		t.Fatalf("db ping: %v", err)
 	}
 
 	if _, err := pool.Exec(ctx, `
@@ -49,7 +49,7 @@ func testCasinoIntegrationStore(t *testing.T) *Store {
 		restart identity cascade;
 		delete from casino_config;
 	`); err != nil {
-		t.Skipf("skip integration test: truncate casino schema: %v", err)
+		t.Fatalf("truncate casino schema: %v", err)
 	}
 
 	if _, err := pool.Exec(ctx, `
@@ -59,7 +59,7 @@ func testCasinoIntegrationStore(t *testing.T) *Store {
 			('user', 'USER_101', 500)
 		on conflict (code) do nothing
 	`); err != nil {
-		t.Skipf("skip integration test: seed ledger accounts: %v", err)
+		t.Fatalf("seed ledger accounts: %v", err)
 	}
 
 	return NewStore(pool, NewEngine())

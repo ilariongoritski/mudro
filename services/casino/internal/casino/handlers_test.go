@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-
 func TestAuthContextFromHeaders(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
 	req.Header.Set("X-User-ID", "42")
@@ -22,6 +21,66 @@ func TestAuthContextFromHeaders(t *testing.T) {
 	}
 	if actor.UserID != 42 || actor.Role != "admin" || actor.Username != "alice" || actor.Email != "alice@example.com" {
 		t.Fatalf("unexpected auth context: %#v", actor)
+	}
+}
+
+func TestInternalAuthMiddlewareRequiresConfiguredSecret(t *testing.T) {
+	t.Setenv("CASINO_INTERNAL_SECRET", "")
+
+	called := false
+	handler := internalAuthMiddleware()(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	if called {
+		t.Fatal("next handler was called")
+	}
+}
+
+func TestInternalAuthMiddlewareRejectsWrongSecret(t *testing.T) {
+	t.Setenv("CASINO_INTERNAL_SECRET", "expected-secret")
+
+	called := false
+	handler := internalAuthMiddleware()(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
+	req.Header.Set("X-Internal-Secret", "wrong-secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+	if called {
+		t.Fatal("next handler was called")
+	}
+}
+
+func TestInternalAuthMiddlewareAcceptsConfiguredSecret(t *testing.T) {
+	t.Setenv("CASINO_INTERNAL_SECRET", "expected-secret")
+
+	handler := internalAuthMiddleware()(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
+	req.Header.Set("X-Internal-Secret", "expected-secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusAccepted)
 	}
 }
 

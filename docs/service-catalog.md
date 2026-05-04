@@ -22,6 +22,7 @@
 - Run: `go run ./services/casino/cmd/casino`
 - Purpose: isolated casino runtime with its own Postgres database, RTP/admin settings, and separate API surface.
 - Note: `go run ./services/casino/cmd` is kept only as a compatibility alias and resolves to the same runtime.
+- Local compose: `ops/compose/docker-compose.casino.local.yml`.
 
 ## Bootstrap / Migration Services
 
