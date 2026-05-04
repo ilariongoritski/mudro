@@ -1327,11 +1327,29 @@ func (s *Store) ensurePlayer(ctx context.Context, tx pgx.Tx, actor ParticipantIn
 	}
 
 	if tx != nil {
-		_, err := tx.Exec(ctx, queryPlayer, args...)
-		return err
+		if _, err := tx.Exec(ctx, queryPlayer, args...); err != nil {
+			return err
+		}
+		return s.ensurePlayerLedgerAccountTx(ctx, tx, actor.UserID, initialBalance)
 	}
 
-	_, err := s.pool.Exec(ctx, queryPlayer, args...)
+	if _, err := s.pool.Exec(ctx, queryPlayer, args...); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, `
+		insert into casino_accounts (user_id, type, code, balance, updated_at)
+		values ($1, 'user', $2, $3, now())
+		on conflict (code) do nothing
+	`, actor.UserID, fmt.Sprintf("USER_%d", actor.UserID), initialBalance)
+	return err
+}
+
+func (s *Store) ensurePlayerLedgerAccountTx(ctx context.Context, tx pgx.Tx, userID int64, balance int64) error {
+	_, err := tx.Exec(ctx, `
+		insert into casino_accounts (user_id, type, code, balance, updated_at)
+		values ($1, 'user', $2, $3, now())
+		on conflict (code) do nothing
+	`, userID, fmt.Sprintf("USER_%d", userID), balance)
 	return err
 }
 
@@ -1392,7 +1410,7 @@ func (s *Store) getWalletStateForUpdate(ctx context.Context, tx pgx.Tx, userID i
 	var clientSeed, serverSeed string
 	var nonce int
 	err := tx.QueryRow(ctx, `
-		select balance, free_spins_balance, client_seed, server_seed, current_nonce, (bonus_claimed_at is not null or bonus_claim_status <> '')
+		select balance, free_spins_balance, client_seed, coalesce(server_seed, ''), current_nonce, (bonus_claimed_at is not null or bonus_claim_status <> '')
 		from casino_players
 		where user_id = $1
 		for update

@@ -30,7 +30,7 @@ alter table casino_roulette_rounds
 -- Exhaustive list mirrors roulettePayout() switch in roulette.go.
 alter table casino_roulette_bets
   add constraint casino_roulette_bets_bet_type_chk
-    check (bet_type in ('straight', 'red', 'black', 'green', 'odd', 'even', 'low', 'high'))
+    check (bet_type in ('straight', 'red', 'black', 'green', 'odd', 'even', 'low', 'high', 'dozen1', 'dozen2', 'dozen3'))
     not valid;
 
 -- 'placed' is the initial value; settleRouletteRound writes lowercase 'win'/'lost'.
@@ -43,10 +43,10 @@ alter table casino_roulette_bets
 -- ── casino_game_activity ──────────────────────────────────────────────────────
 
 -- game_type values come from every call site of insertActivityTx:
--- slots (002 backfill), roulette, plinko, blackjack, bonus (ClaimSubscriptionBonus).
+-- slots (002 backfill), roulette/live roulette, plinko, blackjack, bonus.
 alter table casino_game_activity
   add constraint casino_game_activity_game_type_chk
-    check (game_type in ('slots', 'roulette', 'plinko', 'blackjack', 'bonus'))
+    check (game_type in ('slots', 'roulette', 'roulette_instant', 'plinko', 'blackjack', 'bonus'))
     not valid;
 
 -- status values per game type:
@@ -74,10 +74,10 @@ alter table casino_blackjack_games
     check (status in ('player_turn', 'dealer_turn', 'resolved'))
     not valid;
 
--- winner is NULL until the game ends; comment in models.go: 'player', 'dealer', 'push'.
+-- winner is blank until the game ends; comment in models.go: 'player', 'dealer', 'push'.
 alter table casino_blackjack_games
   add constraint casino_blackjack_games_winner_chk
-    check (winner is null or winner in ('player', 'dealer', 'push'))
+    check (winner is null or winner in ('', 'player', 'dealer', 'push'))
     not valid;
 
 -- Index for "get game history for user" queries (complement to the partial
