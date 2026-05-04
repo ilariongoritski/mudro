@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 
-import { Sidebar } from './Sidebar'
+import { MobileNavigation, Sidebar } from './Sidebar'
 
 vi.mock('@/shared/lib/hooks/storeHooks', () => ({
   useAppDispatch: () => vi.fn(),
@@ -32,7 +32,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /Лента/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Мессенджер/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Казино/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Контур/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Контур/ })).not.toBeInTheDocument()
   })
 
   it('ссылка Лента ведёт на /', () => {
@@ -60,5 +60,16 @@ describe('Sidebar', () => {
     renderSidebar()
     expect(screen.getByRole('complementary')).toBeInTheDocument()
     expect(screen.getByRole('navigation')).toBeInTheDocument()
+  })
+
+  it('рендерит мобильную навигацию', () => {
+    render(
+      <MemoryRouter>
+        <MobileNavigation />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('navigation', { name: 'Мобильная навигация' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Лента/ })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: /Войти/ })).toHaveAttribute('href', '/login')
   })
 })

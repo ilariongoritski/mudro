@@ -46,15 +46,30 @@ const casinoBoundaryWrap = (children: ReactNode) => (
 )
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
-  const isAuthenticated = useAppSelector((state) => state.session.isAuthenticated)
+  const { isAuthenticated, isInitialized } = useAppSelector((state) => state.session)
+  if (!isInitialized) {
+    return suspenseWrap(null)
+  }
   if (isAuthenticated) {
     return <Navigate to="/" replace />
   }
   return <>{children}</>
 }
 
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated, isInitialized } = useAppSelector((state) => state.session)
+  if (!isInitialized) {
+    return suspenseWrap(null)
+  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
 const AdminRoute = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated, user } = useAppSelector((state) => state.session)
+  const { isAuthenticated, isInitialized, user } = useAppSelector((state) => state.session)
+  if (!isInitialized) {
+    return suspenseWrap(null)
+  }
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (user?.role !== 'admin') return <Navigate to="/" replace />
   return <>{children}</>
@@ -109,11 +124,21 @@ export const AppRouterProvider = () => {
         },
         {
           path: '/profile',
-          element: suspenseWrap(<ProfilePage />),
+          element: (
+            <ProtectedRoute>
+              {suspenseWrap(<ProfilePage />)}
+            </ProtectedRoute>
+          ),
         },
         {
           path: '/orchestration',
-          element: suspenseWrap(<OrchestrationPage />),
+          element: (
+            <ProtectedRoute>
+              <AdminRoute>
+                {suspenseWrap(<OrchestrationPage />)}
+              </AdminRoute>
+            </ProtectedRoute>
+          ),
         },
         {
           path: '/admin',

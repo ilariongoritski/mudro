@@ -110,9 +110,6 @@ export const ChatPage = () => {
                   <span>{new Date(message.created_at).toLocaleString('ru-RU')}</span>
                 </header>
                 <p>{message.body}</p>
-                {message.encrypted_body && (
-                  <span className="chat-page__message-e2ee" title="Зашифровано E2EE">🔒</span>
-                )}
               </motion.article>
             )
           })}

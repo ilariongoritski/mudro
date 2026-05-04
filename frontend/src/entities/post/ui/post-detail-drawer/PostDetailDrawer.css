@@ -250,6 +250,15 @@
   gap: 0.65rem;
 }
 
+.post-drawer__comment-form {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--mudro-card);
+  border: var(--mudro-glass-border);
+}
+
 .post-drawer__comment-list {
   display: grid;
   gap: 0.65rem;

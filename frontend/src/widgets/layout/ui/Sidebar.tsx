@@ -1,21 +1,31 @@
 import { Home, LogIn, LogOut, MessageCircle, Settings2, Shield, Sparkles, User, UserPlus } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { logout } from '@/entities/session/model/sessionSlice'
 import { cn } from '@/shared/lib/utils'
 import { MudroLogoMark } from '@/shared/ui/MudroLogoMark'
 
-const navItems = [
+interface NavItem {
+  to: string
+  icon: LucideIcon
+  label: string
+  description: string
+  adminOnly?: boolean
+}
+
+const navItems: NavItem[] = [
   { to: '/', icon: Home, label: 'Лента', description: 'Посты и обновления' },
   { to: '/chat', icon: MessageCircle, label: 'Мессенджер', description: 'Общий чат' },
   { to: '/casino', icon: Sparkles, label: 'Казино', description: 'Игровой зал' },
-  { to: '/orchestration', icon: Settings2, label: 'Контур', description: 'Статус и оркестрация' },
+  { to: '/orchestration', icon: Settings2, label: 'Контур', description: 'Статус и оркестрация', adminOnly: true },
 ]
 
 export const Sidebar = () => {
   const dispatch = useAppDispatch()
   const token = useAppSelector((state) => state.session.token)
   const user = useAppSelector((state) => state.session.user)
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || user?.role === 'admin')
 
   return (
     <aside className="mudro-sidebar">
@@ -30,7 +40,7 @@ export const Sidebar = () => {
       <div className="mudro-sidebar__section">
         <span className="mudro-sidebar__section-label">Навигация</span>
         <nav className="mudro-sidebar__nav">
-          {navItems.map(({ to, icon: Icon, label, description }) => (
+          {visibleNavItems.map(({ to, icon: Icon, label, description }) => (
             <NavLink
               key={to}
               to={to}
@@ -107,5 +117,47 @@ export const Sidebar = () => {
         </span>
       </div>
     </aside>
+  )
+}
+
+export const MobileNavigation = () => {
+  const token = useAppSelector((state) => state.session.token)
+  const user = useAppSelector((state) => state.session.user)
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || user?.role === 'admin')
+  const items = user?.role === 'admin'
+    ? [...visibleNavItems, { to: '/admin', icon: Shield, label: 'Админ', description: 'Панель' }]
+    : visibleNavItems
+
+  return (
+    <nav className="mudro-mobile-nav" aria-label="Мобильная навигация">
+      {items.map(({ to, icon: Icon, label }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          className={({ isActive }) => cn('mudro-mobile-nav__link', isActive && 'mudro-mobile-nav__link_active')}
+        >
+          <Icon size={19} aria-hidden="true" />
+          <span>{label}</span>
+        </NavLink>
+      ))}
+      {token ? (
+        <NavLink
+          to="/profile"
+          className={({ isActive }) => cn('mudro-mobile-nav__link', isActive && 'mudro-mobile-nav__link_active')}
+        >
+          <User size={19} aria-hidden="true" />
+          <span>Профиль</span>
+        </NavLink>
+      ) : (
+        <NavLink
+          to="/login"
+          className={({ isActive }) => cn('mudro-mobile-nav__link', isActive && 'mudro-mobile-nav__link_active')}
+        >
+          <LogIn size={19} aria-hidden="true" />
+          <span>Войти</span>
+        </NavLink>
+      )}
+    </nav>
   )
 }

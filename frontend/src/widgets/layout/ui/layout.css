@@ -476,7 +476,15 @@
   background: rgba(255, 20, 147, 0.12);
 }
 
+.mudro-mobile-nav {
+  display: none;
+}
+
 @media (max-width: 960px) {
+  .mudro-app-shell__main {
+    padding-bottom: 6rem;
+  }
+
   .mudro-sidebar {
     display: none;
   }
@@ -484,5 +492,59 @@
   .mudro-topbar {
     margin-left: 0.5rem;
     margin-right: 0.5rem;
+  }
+
+  .mudro-mobile-nav {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 70;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(4.25rem, 1fr);
+    gap: 0.35rem;
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 0.45rem;
+    overflow-x: auto;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(8, 6, 12, 0.9);
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .mudro-mobile-nav__link {
+    min-width: 4.25rem;
+    min-height: 3.35rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.4rem 0.35rem;
+    border-radius: 14px;
+    color: rgba(255, 244, 249, 0.7);
+    text-decoration: none;
+    border: 1px solid transparent;
+    background: transparent;
+  }
+
+  .mudro-mobile-nav__link span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.05;
+  }
+
+  .mudro-mobile-nav__link_active {
+    color: #fff;
+    border-color: rgba(255, 20, 147, 0.32);
+    background: rgba(255, 20, 147, 0.16);
   }
 }

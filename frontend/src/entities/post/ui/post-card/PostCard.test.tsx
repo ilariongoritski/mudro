@@ -4,6 +4,17 @@ import { describe, expect, it, vi } from 'vitest'
 import { PostCard } from './PostCard'
 import type { Post } from '@/entities/post/model/types'
 
+vi.mock('@/shared/lib/hooks/storeHooks', () => ({
+  useAppSelector: (selector: (state: { session: { token: string | null } }) => unknown) => selector({ session: { token: null } }),
+}))
+
+vi.mock('@/entities/post/model/postsApi', () => ({
+  useToggleLikeMutation: () => [
+    () => ({ unwrap: async () => undefined }),
+    { isLoading: false },
+  ],
+}))
+
 const mockPost: Post = {
   id: 1,
   source: 'tg',

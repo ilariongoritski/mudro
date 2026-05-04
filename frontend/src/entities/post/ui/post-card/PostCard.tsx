@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import type { Post, PostComment } from "@/entities/post/model/types";
+import { useToggleLikeMutation } from "@/entities/post/model/postsApi";
 import {
   mediaKindLabel,
   metricDisplay,
@@ -14,6 +15,7 @@ import {
   resolveMediaUrl,
 } from "@/entities/post/lib/postPresentation";
 import { formatDateTime } from "@/shared/lib/format/date";
+import { useAppSelector } from "@/shared/lib/hooks/storeHooks";
 import { MudroLogoMark } from "@/shared/ui/MudroLogoMark";
 import "./PostCard.css";
 
@@ -35,6 +37,8 @@ const normalizeCommentReactions = (reactions?: PostComment["reactions"]) => {
 };
 
 export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
+  const token = useAppSelector((state) => state.session.token);
+  const [toggleLike, { isLoading: isLikeLoading }] = useToggleLikeMutation();
   const reactions = normalizeReactions(post.reactions);
   const mediaItems = post.media ?? [];
   const visibleMedia = mediaItems.slice(0, 3);
@@ -44,6 +48,22 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
   const bodyText = post.text?.trim() || "Описание для этого поста пока не подтянулось.";
   const viewsMetric = metricDisplay(post.views_count);
   const sourceName = post.source === "tg" ? "Мудро (тг)" : "Мудро (вк)";
+  const canEngage = Boolean(token);
+
+  const handleLikeClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (!canEngage || isLikeLoading) return;
+    try {
+      await toggleLike(post.id).unwrap();
+    } catch {
+      // RTK Query exposes the failed state through invalidation/refetch surfaces.
+    }
+  };
+
+  const handleCommentClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onOpen?.(post);
+  };
 
   return (
     <motion.article
@@ -123,19 +143,35 @@ export const PostCard = React.memo(({ post, onOpen }: PostCardProps) => {
       )}
 
       <div className="post-card__actions">
-        <div className="post-card__action" aria-label={`${metricLabel(post.likes_count)} лайков`}>
+        <button
+          type="button"
+          className="post-card__action"
+          aria-label={canEngage ? `${metricLabel(post.likes_count)} лайков, поставить лайк` : `${metricLabel(post.likes_count)} лайков, войдите чтобы поставить лайк`}
+          disabled={!canEngage || isLikeLoading}
+          onClick={handleLikeClick}
+          title={canEngage ? "Поставить лайк" : "Войдите, чтобы поставить лайк"}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           <span aria-hidden="true">{metricLabel(post.likes_count)}</span>
-        </div>
-        <div className="post-card__action" aria-label={`${metricLabel(totalComments)} комментариев`}>
+        </button>
+        <button
+          type="button"
+          className="post-card__action"
+          aria-label={`${metricLabel(totalComments)} комментариев, открыть обсуждение`}
+          onClick={handleCommentClick}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span aria-hidden="true">{metricLabel(totalComments)}</span>
-        </div>
+        </button>
         <div className="post-card__action" aria-label={`${viewsMetric.value} просмотров`}>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
           <span aria-hidden="true">{viewsMetric.value}</span>
         </div>
       </div>
+
+      {!canEngage ? (
+        <div className="post-card__guest-cta">Войдите, чтобы лайкать и комментировать.</div>
+      ) : null}
 
       {reactions.length > 0 && (
         <div className="post-card__reactions">
