@@ -2,13 +2,14 @@ package feed
 
 import (
 	"context"
-	"github.com/goritskimihail/mudro/internal/posts"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/goritskimihail/mudro/internal/posts"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func testDBServer(t *testing.T) *Server {
@@ -60,7 +61,7 @@ func TestLoadPostsAndFrontHandlersIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadPosts: %v", err)
 	}
-	if len(posts) != 2 || next == nil {
+	if len(posts) != 2 || next != nil {
 		t.Fatalf("unexpected posts len=%d next=%v", len(posts), next)
 	}
 	if posts[0].Reactions["👍"] != 3 {
