@@ -43,8 +43,8 @@ func NewServer(postsSvc *posts.Service, chatHandler *chat.Handler, authSvc *auth
 		postsSvc:         postsSvc,
 		authSvc:          authSvc,
 		chatHandler:      chatHandler,
-		httpClient:      &http.Client{Timeout: 10 * time.Second, Transport: transport},
-		sseClient:       &http.Client{Timeout: 0, Transport: streamingTransport},
+		httpClient:       &http.Client{Timeout: 10 * time.Second, Transport: transport},
+		sseClient:        &http.Client{Timeout: 0, Transport: streamingTransport},
 		casinoServiceURL: config.CasinoServiceURL(),
 	}
 }
@@ -67,6 +67,8 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(mediaRoot))))
 	mux.HandleFunc("/healthz", mhttputil.HandleHealth("feed-api"))
 	mux.HandleFunc("/api/posts", s.handlePosts)
+	mux.Handle("POST /api/posts/{id}/like", s.requireUser(http.HandlerFunc(s.handleToggleLike)))
+	mux.Handle("POST /api/posts/{id}/comments", s.requireUser(http.HandlerFunc(s.handleCreateComment)))
 	mux.HandleFunc("/api/front", s.handleFront)
 	if s.authSvc != nil {
 		mux.HandleFunc("/api/auth/login", s.handleAuthLogin)
@@ -74,6 +76,8 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/auth/me", s.handleAuthMe)
 		mux.HandleFunc("/api/auth/refresh", s.handleAuthRefresh)
 		mux.HandleFunc("/api/auth/telegram", s.handleAuthTelegram)
+		mux.HandleFunc("/api/admin/users", s.handleAdminUsers)
+		mux.HandleFunc("/api/admin/stats", s.handleAdminStats)
 
 		mux.HandleFunc("/api/casino/balance", s.handleCasinoBalance)
 		mux.HandleFunc("/api/casino/history", s.handleCasinoHistory)
@@ -90,6 +94,7 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/casino/reactions", s.handleCasinoReactions)
 		mux.HandleFunc("/api/casino/roulette/state", s.handleCasinoRouletteState)
 		mux.HandleFunc("/api/casino/roulette/bets", s.handleCasinoRouletteBets)
+		mux.HandleFunc("/api/casino/roulette/instant-spin", s.handleCasinoRouletteInstantSpin)
 		mux.HandleFunc("/api/casino/roulette/history", s.handleCasinoRouletteHistory)
 		mux.HandleFunc("/api/casino/roulette/stream", s.handleCasinoRouletteStream)
 		mux.HandleFunc("/api/casino/plinko/config", s.handleCasinoPlinkoConfig)
@@ -99,6 +104,8 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/casino/blackjack/state", s.handleCasinoBlackjackState)
 		mux.HandleFunc("/api/casino/blackjack/start", s.handleCasinoBlackjackStart)
 		mux.HandleFunc("/api/casino/blackjack/action", s.handleCasinoBlackjackAction)
+		mux.HandleFunc("/api/casino/fairness/rotate-server-seed", s.handleCasinoRotateServerSeed)
+		mux.HandleFunc("/api/casino/fairness/client-seed", s.handleCasinoUpdateClientSeed)
 	}
 	if s.chatHandler != nil {
 		mux.HandleFunc("/api/chat/ws", s.chatHandler.HandleWS)

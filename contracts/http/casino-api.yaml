@@ -1,98 +1,98 @@
 openapi: 3.0.3
 info:
-  title: MUDRO Casino API
-  version: 1.0.0
-  description: Casino game service — provably fair slot machine with wallet.
+  title: MUDRO Casino Service API
+  version: 1.1.0
+  description: Direct casino microservice contract. Feed API exposes these routes through /api/casino/* proxy paths.
 servers:
   - url: http://localhost:8081
-    description: Local development
+    description: Local casino service
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
+    internalSecret:
+      type: apiKey
+      in: header
+      name: X-Internal-Secret
+  parameters:
+    UserID:
+      in: header
+      name: X-User-ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+    UserName:
+      in: header
+      name: X-User-Name
+      schema:
+        type: string
+    UserRole:
+      in: header
+      name: X-User-Role
+      schema:
+        type: string
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        default: 20
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
     Balance:
       type: object
-      required: [balance, currency]
       properties:
         balance:
-          type: number
-          format: double
-        currency:
-          type: string
-
-    BetResult:
-      type: object
-      properties:
-        symbols:
-          type: array
-          items:
-            type: string
-        win:
-          type: number
-          format: double
-        bet:
-          type: number
-          format: double
-        balance:
-          type: number
-          format: double
-        is_win:
+          type: integer
+          format: int64
+        free_spins_balance:
+          type: integer
+        bonus_claimed:
           type: boolean
         rtp:
-          type: number
-          format: double
+          type: integer
+        currency:
+          type: string
+    Bet:
+      type: object
+      properties:
+        bet:
+          type: integer
+          format: int64
+    Status:
+      type: object
+      properties:
+        status:
+          type: string
+
+security:
+  - internalSecret: []
 
 paths:
   /healthz:
     get:
       summary: Health check
-      operationId: healthz
+      security: []
       responses:
         "200":
           description: OK
+        "503":
+          description: Database unavailable
 
-  /api/casino/auth/telegram:
-    post:
-      summary: Authenticate via Telegram initData
-      operationId: casinoTelegramAuth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [initData]
-              properties:
-                initData:
-                  type: string
-      responses:
-        "200":
-          description: JWT token for casino session
-        "401":
-          description: Invalid Telegram data
-
-  /api/casino/dev/init-data:
+  /balance:
     get:
-      summary: Generate dev initData (dev mode only)
-      operationId: devInitData
+      summary: Current wallet balance
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/UserName'
+        - $ref: '#/components/parameters/UserRole'
       responses:
         "200":
-          description: Dev initData string
-
-  /api/casino/wallet/balance:
-    get:
-      summary: Get wallet balance
-      operationId: getBalance
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Current balance
+          description: Balance payload
           content:
             application/json:
               schema:
@@ -100,139 +100,268 @@ paths:
         "401":
           description: Unauthorized
 
-  /api/casino/wallet/faucet:
+  /history:
+    get:
+      summary: Slot spin history
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: History list
+        "401":
+          description: Unauthorized
+
+  /spin:
     post:
-      summary: Request free credits (faucet)
-      operationId: faucet
-      security:
-        - bearerAuth: []
+      summary: Place slot bet and spin
+      parameters:
+        - $ref: '#/components/parameters/UserID'
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                amount:
-                  type: number
-                  format: double
-                  description: Amount to credit (default applied if 0)
-      responses:
-        "200":
-          description: Credits added
-        "401":
-          description: Unauthorized
-
-  /api/casino/game/prepare:
-    post:
-      summary: Prepare a spin (generate server seed)
-      operationId: prepareSpin
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Prepared spin data with hashed server seed
-        "401":
-          description: Unauthorized
-
-  /api/casino/game/bet:
-    post:
-      summary: Place a bet and spin
-      operationId: placeBet
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [amount]
-              properties:
-                amount:
-                  type: number
-                  format: double
-                client_seed:
-                  type: string
+              $ref: '#/components/schemas/Bet'
       responses:
         "200":
           description: Spin result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BetResult'
-        "400":
-          description: Insufficient balance or invalid bet
+        "401":
+          description: Unauthorized
+        "409":
+          description: Insufficient balance
+
+  /config:
+    get:
+      summary: Read casino config
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/UserRole'
+      responses:
+        "200":
+          description: Config
+        "403":
+          description: Admin only
+    put:
+      summary: Update casino config
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/UserRole'
+      responses:
+        "200":
+          description: Updated
+        "403":
+          description: Admin only
+
+  /profile:
+    get:
+      summary: Player profile
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Profile payload
         "401":
           description: Unauthorized
 
-  /api/casino/game/history:
+  /activity:
     get:
-      summary: Get bet history
-      operationId: getBetHistory
-      security:
-        - bearerAuth: []
+      summary: Current user's casino activity
       parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 20
-            maximum: 100
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
       responses:
         "200":
-          description: List of past bets
+          description: Activity list
         "401":
           description: Unauthorized
 
-  /api/casino/ws:
+  /live-feed:
     get:
-      summary: WebSocket connection for real-time casino events
-      operationId: casinoWS
-      description: |
-        Upgrade to WebSocket. Auth via ?token=<jwt> query param
-        (browser WS API does not support custom headers).
+      summary: Global casino live feed
       parameters:
-        - in: query
-          name: token
-          required: true
-          schema:
-            type: string
-      responses:
-        "101":
-          description: Switching Protocols
-
-  /api/casino/admin/stats:
-    get:
-      summary: Casino stats (admin)
-      operationId: adminCasinoStats
-      security:
-        - bearerAuth: []
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
       responses:
         "200":
-          description: Stats
-        "403":
-          description: Admin only
+          description: Live feed
+        "401":
+          description: Unauthorized
 
-  /api/casino/admin/rtp/profiles:
+  /top-wins:
     get:
-      summary: RTP profiles list (admin)
-      operationId: adminRtpProfiles
-      security:
-        - bearerAuth: []
+      summary: Top casino wins
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
       responses:
         "200":
-          description: RTP profiles
-        "403":
-          description: Admin only
+          description: Top wins
+        "401":
+          description: Unauthorized
 
-  /api/casino/admin/users:
+  /reactions:
     get:
-      summary: Casino user list (admin)
-      operationId: adminCasinoUsers
-      security:
-        - bearerAuth: []
+      summary: Casino activity reactions
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
       responses:
         "200":
-          description: Users
-        "403":
-          description: Admin only
+          description: Reaction list
+    post:
+      summary: Add casino activity reaction
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Reaction item
+
+  /bonus/state:
+    get:
+      summary: Bonus state
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Bonus state
+
+  /bonus/claim-subscription:
+    post:
+      summary: Claim subscription bonus
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Claim result
+        "412":
+          description: Verification required
+
+  /bonus/history:
+    get:
+      summary: Bonus claim history
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Bonus claim list
+
+  /roulette/state:
+    get:
+      summary: Current roulette state
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Roulette state
+
+  /roulette/bets:
+    post:
+      summary: Place roulette bets
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Bet placement result
+
+  /roulette/instant-spin:
+    post:
+      summary: Place instant roulette bets
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Instant spin result
+
+  /roulette/history:
+    get:
+      summary: Roulette history
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        "200":
+          description: Roulette history
+
+  /roulette/stream:
+    get:
+      summary: Roulette server-sent events stream
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Server-sent events stream
+
+  /plinko/config:
+    get:
+      summary: Plinko config
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Plinko config
+
+  /plinko/state:
+    get:
+      summary: Plinko state
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Plinko state
+
+  /plinko/drop:
+    post:
+      summary: Drop a plinko ball
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Plinko result
+
+  /blackjack/state:
+    get:
+      summary: Blackjack state
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Blackjack state
+
+  /blackjack/start:
+    post:
+      summary: Start blackjack game
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Blackjack state
+
+  /blackjack/action:
+    post:
+      summary: Apply blackjack action
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Blackjack state
+
+  /fairness/rotate-server-seed:
+    post:
+      summary: Rotate current user's server seed
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: New server seed hash
+
+  /fairness/client-seed:
+    post:
+      summary: Update current user's client seed
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        "200":
+          description: Updated

@@ -31,6 +31,31 @@ paths:
       responses:
         "200":
           description: Aggregated front payload
+  /feed:
+    get:
+      summary: HTML debug feed page
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: source
+          schema:
+            type: string
+            enum: [vk, tg]
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        "200":
+          description: HTML feed page
   /api/posts:
     get:
       summary: Feed items list
@@ -54,6 +79,42 @@ paths:
       responses:
         "200":
           description: Posts payload
+
+  /api/posts/{id}/like:
+    post:
+      summary: Toggle post like
+      operationId: feedPostToggleLike
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Like state and updated count
+        "401":
+          description: Unauthorized
+
+  /api/posts/{id}/comments:
+    post:
+      summary: Create post comment
+      operationId: feedPostCreateComment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created comment
+        "401":
+          description: Unauthorized
 
   /api/auth/login:
     post:
@@ -111,6 +172,386 @@ paths:
       responses:
         "200":
           description: Current user
+        "401":
+          description: Unauthorized
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh current JWT session
+      operationId: feedAuthRefresh
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Refreshed token and user
+        "401":
+          description: Unauthorized
+
+  /api/auth/telegram:
+    post:
+      summary: Login or register via Telegram identity
+      operationId: feedAuthTelegram
+      responses:
+        "200":
+          description: JWT token and user
+        "401":
+          description: Invalid Telegram auth
+
+  /api/admin/users:
+    get:
+      summary: Admin user list
+      operationId: feedAdminUsers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User list
+        "403":
+          description: Admin only
+
+  /api/admin/stats:
+    get:
+      summary: Admin stats
+      operationId: feedAdminStats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin metrics
+        "403":
+          description: Admin only
+
+  /api/casino/balance:
+    get:
+      summary: Proxy current casino balance
+      operationId: feedCasinoBalance
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Casino balance payload
+        "401":
+          description: Unauthorized
+
+  /api/casino/history:
+    get:
+      summary: Proxy slot history
+      operationId: feedCasinoHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Slot history payload
+        "401":
+          description: Unauthorized
+
+  /api/casino/spin:
+    post:
+      summary: Proxy slot spin
+      operationId: feedCasinoSpin
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bet:
+                  type: integer
+      responses:
+        "200":
+          description: Spin result
+        "401":
+          description: Unauthorized
+
+  /api/casino/config:
+    get:
+      summary: Proxy casino config
+      operationId: feedCasinoConfigGet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Casino config
+        "403":
+          description: Admin only
+    put:
+      summary: Update casino config
+      operationId: feedCasinoConfigPut
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated
+        "403":
+          description: Admin only
+
+  /api/casino/profile:
+    get:
+      summary: Proxy casino profile
+      operationId: feedCasinoProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Casino profile
+        "401":
+          description: Unauthorized
+
+  /api/casino/activity:
+    get:
+      summary: Proxy user casino activity
+      operationId: feedCasinoActivity
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Activity list
+        "401":
+          description: Unauthorized
+
+  /api/casino/live-feed:
+    get:
+      summary: Proxy casino live feed
+      operationId: feedCasinoLiveFeed
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Live feed list
+        "401":
+          description: Unauthorized
+
+  /api/casino/top-wins:
+    get:
+      summary: Proxy casino top wins
+      operationId: feedCasinoTopWins
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Top wins list
+        "401":
+          description: Unauthorized
+
+  /api/casino/reactions:
+    get:
+      summary: Proxy casino reactions
+      operationId: feedCasinoReactionsGet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Reaction list
+        "401":
+          description: Unauthorized
+    post:
+      summary: Add casino reaction
+      operationId: feedCasinoReactionsPost
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Reaction created
+        "401":
+          description: Unauthorized
+
+  /api/casino/bonus/state:
+    get:
+      summary: Proxy casino bonus state
+      operationId: feedCasinoBonusState
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Bonus state
+        "401":
+          description: Unauthorized
+
+  /api/casino/bonus/claim-subscription:
+    post:
+      summary: Claim subscription bonus
+      operationId: feedCasinoBonusClaimSubscription
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Bonus claim result
+        "401":
+          description: Unauthorized
+
+  /api/casino/bonus/history:
+    get:
+      summary: Proxy casino bonus history
+      operationId: feedCasinoBonusHistory
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Bonus claim list
+        "401":
+          description: Unauthorized
+
+  /api/casino/roulette/state:
+    get:
+      summary: Proxy roulette state
+      operationId: feedCasinoRouletteState
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roulette state
+        "401":
+          description: Unauthorized
+
+  /api/casino/roulette/bets:
+    post:
+      summary: Place roulette bets
+      operationId: feedCasinoRouletteBets
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roulette bet result
+        "401":
+          description: Unauthorized
+
+  /api/casino/roulette/instant-spin:
+    post:
+      summary: Place instant roulette bets
+      operationId: feedCasinoRouletteInstantSpin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Instant roulette result
+        "401":
+          description: Unauthorized
+
+  /api/casino/roulette/history:
+    get:
+      summary: Proxy roulette history
+      operationId: feedCasinoRouletteHistory
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roulette history
+        "401":
+          description: Unauthorized
+
+  /api/casino/roulette/stream:
+    get:
+      summary: Proxy roulette SSE stream
+      operationId: feedCasinoRouletteStream
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Server-sent events stream
+        "401":
+          description: Unauthorized
+
+  /api/casino/plinko/config:
+    get:
+      summary: Proxy plinko config
+      operationId: feedCasinoPlinkoConfig
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plinko config
+        "401":
+          description: Unauthorized
+
+  /api/casino/plinko/state:
+    get:
+      summary: Proxy plinko state
+      operationId: feedCasinoPlinkoState
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plinko state
+        "401":
+          description: Unauthorized
+
+  /api/casino/plinko/drop:
+    post:
+      summary: Drop a plinko ball
+      operationId: feedCasinoPlinkoDrop
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plinko result
+        "401":
+          description: Unauthorized
+
+  /api/casino/blackjack/state:
+    get:
+      summary: Proxy blackjack state
+      operationId: feedCasinoBlackjackState
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Blackjack state
+        "401":
+          description: Unauthorized
+
+  /api/casino/blackjack/start:
+    post:
+      summary: Start blackjack round
+      operationId: feedCasinoBlackjackStart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Blackjack state
+        "401":
+          description: Unauthorized
+
+  /api/casino/blackjack/action:
+    post:
+      summary: Apply blackjack action
+      operationId: feedCasinoBlackjackAction
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Blackjack state
+        "401":
+          description: Unauthorized
+
+  /api/casino/fairness/rotate-server-seed:
+    post:
+      summary: Rotate current casino server seed
+      operationId: feedCasinoFairnessRotateServerSeed
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: New server seed hash
+        "401":
+          description: Unauthorized
+
+  /api/casino/fairness/client-seed:
+    post:
+      summary: Update current casino client seed
+      operationId: feedCasinoFairnessClientSeed
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated client seed
         "401":
           description: Unauthorized
 

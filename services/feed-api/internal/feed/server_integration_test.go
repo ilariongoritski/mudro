@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http/httptest"
 	"os"
@@ -21,17 +22,17 @@ func testDBServer(t *testing.T) *Server {
 
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		t.Skipf("skip integration test: db connect: %v", err)
+		t.Fatalf("db connect: %v", err)
 	}
 	t.Cleanup(pool.Close)
 
 	if err := pool.Ping(ctx); err != nil {
-		t.Skipf("skip integration test: db ping: %v", err)
+		t.Fatalf("db ping: %v", err)
 	}
 
 	_, err = pool.Exec(ctx, `truncate table post_reactions, posts restart identity cascade`)
 	if err != nil {
-		t.Skipf("skip integration test: truncate: %v", err)
+		t.Fatalf("truncate: %v", err)
 	}
 
 	_, err = pool.Exec(ctx, `
@@ -48,7 +49,7 @@ func testDBServer(t *testing.T) *Server {
 		t.Fatalf("seed reactions: %v", err)
 	}
 
-	return NewServer(nil, nil, nil)
+	return NewServer(posts.NewService(pool, nil), nil, nil)
 }
 
 func TestLoadPostsAndFrontHandlersIntegration(t *testing.T) {
