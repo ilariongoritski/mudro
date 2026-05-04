@@ -70,10 +70,36 @@ alter table comment_reactions
 -- но добавляем комментарии и nullable, чтоб новый код
 -- использовал только *_media_links таблицы.
 
-comment on column posts.media is 'LEGACY: use post_media_links instead';
-comment on column post_comments.media is 'LEGACY: use comment_media_links instead';
-comment on column post_comments.reactions is 'LEGACY: use comment_reactions + comment_user_reactions instead';
-comment on column messages.media is 'LEGACY: use message_media_links instead';
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'posts' and column_name = 'media'
+  ) then
+    comment on column posts.media is 'LEGACY: use post_media_links instead';
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'post_comments' and column_name = 'media'
+  ) then
+    comment on column post_comments.media is 'LEGACY: use comment_media_links instead';
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'post_comments' and column_name = 'reactions'
+  ) then
+    comment on column post_comments.reactions is 'LEGACY: use comment_reactions + comment_user_reactions instead';
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'messages' and column_name = 'media'
+  ) then
+    comment on column messages.media is 'LEGACY: use message_media_links instead';
+  end if;
+end $$;
 
 -- ============================================================
 -- 5. ИНДЕКСЫ для Go API запросов по медиа

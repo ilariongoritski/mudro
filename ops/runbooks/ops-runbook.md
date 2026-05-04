@@ -154,15 +154,17 @@ make health
 
 Required `.env` values before `docker compose -f docker-compose.prod.yml up -d`:
 
-```bash
-POSTGRES_PASSWORD='<postgres superuser password>'
-CASINO_POSTGRES_PASSWORD='<casino postgres superuser password>'
-MUDRO_APP_DSN='postgres://mudro_app:<app password>@db:5432/gallery?sslmode=disable'
-CASINO_APP_DSN='postgres://mudro_casino_app:<casino app password>@casino-db:5432/mudro_casino?sslmode=disable'
-JWT_SECRET='<jwt secret>'
-CASINO_INTERNAL_SECRET='<shared api-to-casino secret>'
-MINIO_ROOT_USER='<minio root user>'
-MINIO_ROOT_PASSWORD='<minio root password>'
+Required variables for the production shell or secret manager:
+
+```text
+POSTGRES_PASSWORD
+CASINO_POSTGRES_PASSWORD
+MUDRO_APP_DSN
+CASINO_APP_DSN
+JWT_SECRET
+CASINO_INTERNAL_SECRET
+MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD
 ```
 
 Fail-fast guards are intentional: missing `JWT_SECRET`, MinIO credentials, `CASINO_INTERNAL_SECRET`, or app DSNs should stop compose config/start before containers run with weak defaults.

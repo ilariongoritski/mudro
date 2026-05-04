@@ -1,0 +1,6 @@
+[allowlist]
+description = "Allow documented placeholder secret names from historical MVP runbook commits only."
+regexes = [
+  '''JWT_SECRET='<jwt secret>'''',
+  '''CASINO_INTERNAL_SECRET='<shared api-to-casino secret>'''',
+]
