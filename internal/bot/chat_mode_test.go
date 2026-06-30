@@ -34,6 +34,7 @@ func TestChatModeSetAndStatus(t *testing.T) {
 	}
 
 	t.Setenv("OPENROUTER_API_KEY", "")
+	t.Setenv("OPENAI_API_KEY", "")
 	st, err := r.ChatModeStatus(123)
 	if err != nil {
 		t.Fatalf("ChatModeStatus: %v", err)
