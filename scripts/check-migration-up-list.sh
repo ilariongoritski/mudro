@@ -25,8 +25,8 @@ check_list() {
 
 main_list() {
   if [ -n "${MAIN_UP_MIGRATIONS:-}" ]; then
-    # MAIN_UP_MIGRATIONS comes from Makefile's UP_MIGRATIONS, so this verifies
-    # the exact list used by migrate-all without recursively invoking make.
+    # MAIN_UP_MIGRATIONS comes from Makefile, so this verifies the exact
+    # inventory used by migrate/migrate-all without recursively invoking make.
     printf '%s\n' ${MAIN_UP_MIGRATIONS}
     return
   fi
@@ -34,11 +34,23 @@ main_list() {
   find "${MIGRATIONS_DIR:-migrations}" -maxdepth 1 -type f -name "*.sql" ! -name "*.down.sql" -print | sort
 }
 
+runtime_list() {
+  main_list
+
+  if [ -n "${MOVIE_CATALOG_MIGRATION:-}" ]; then
+    printf '%s\n' "${MOVIE_CATALOG_MIGRATION}"
+    return
+  fi
+
+  find "${MIGRATIONS_DIR:-migrations}/movie_catalog" -maxdepth 1 -type f -name "*.sql" ! -name "*.down.sql" -print | sort
+}
+
 casino_list() {
   "${BASH:-bash}" ./scripts/migrate-casino.sh --list
 }
 
 check_list "main" main_list
+check_list "runtime" runtime_list
 check_list "casino" casino_list
 
 exit "${fail}"

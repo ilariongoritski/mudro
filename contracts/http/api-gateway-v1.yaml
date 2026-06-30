@@ -3,12 +3,17 @@ info:
   title: MUDRO API Gateway Contract
   version: 1.0.0
   description: Public gateway contract for stable external API.
+  license:
+    name: Proprietary
 servers:
-  - url: http://localhost:8080
+  - url: https://api.mudro.local
+security: []
 paths:
   /api/v1/healthz:
     get:
+      operationId: getGatewayHealth
       summary: Gateway health check
+      security: []
       responses:
         "200":
           description: Healthy
@@ -16,9 +21,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/posts:
     get:
+      operationId: listGatewayPosts
       summary: List feed posts
+      security: []
       parameters:
         - in: query
           name: limit
@@ -48,7 +57,9 @@ paths:
           $ref: "#/components/responses/InternalError"
   /api/v1/auth/telegram:
     post:
+      operationId: exchangeTelegramAuth
       summary: Exchange Telegram Mini App initData for JWT
+      security: []
       requestBody:
         required: true
         content:
@@ -70,7 +81,10 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/casino/balance:
     get:
+      operationId: getGatewayCasinoBalance
       summary: Get current casino balance for authenticated user
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Balance payload
@@ -83,6 +97,11 @@ paths:
         "502":
           $ref: "#/components/responses/BadGateway"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthResponse:
       type: object
@@ -202,4 +221,3 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
-

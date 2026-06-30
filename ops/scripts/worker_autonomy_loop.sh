@@ -51,39 +51,49 @@ LOGHDR
 failed_step=""
 failed_cmd=""
 
-if ! run_step "Шаг 1: поднять сервисы" "make up"; then
-  failed_step="make up"
-  failed_cmd="make up"
+if ! run_step "Шаг 1: поднять core runtime" "make core-up"; then
+  failed_step="make core-up"
+  failed_cmd="make core-up"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 2: docker compose ps" "docker compose ps"; then
-  failed_step="docker compose ps"
-  failed_cmd="docker compose ps"
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 2: core compose ps" "make core-ps"; then
+  failed_step="make core-ps"
+  failed_cmd="make core-ps"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 3: dbcheck" "make dbcheck"; then
-  failed_step="make dbcheck"
-  failed_cmd="make dbcheck"
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 3: dbcheck core" "make dbcheck-core"; then
+  failed_step="make dbcheck-core"
+  failed_cmd="make dbcheck-core"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 4: migrate" "make migrate"; then
-  failed_step="make migrate"
-  failed_cmd="make migrate"
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 4: проверить migration inventory" "make check-migration-up-list"; then
+  failed_step="make check-migration-up-list"
+  failed_cmd="make check-migration-up-list"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 5: tables" "make tables"; then
-  failed_step="make tables"
-  failed_cmd="make tables"
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 5: migrate runtime" "make migrate-runtime"; then
+  failed_step="make migrate-runtime"
+  failed_cmd="make migrate-runtime"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 6: test" "make test"; then
-  failed_step="make test"
-  failed_cmd="make test"
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 6: tables core" "make tables-core"; then
+  failed_step="make tables-core"
+  failed_cmd="make tables-core"
 fi
 
-if [[ -z "$failed_step" ]] && ! run_step "Шаг 7: sanity count" "psql \"${DSN:-postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable}\" -X -c \"select count(*) from posts;\""; then
-  failed_step="sanity"
-  failed_cmd="psql \"${DSN:-postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable}\" -X -c \"select count(*) from posts;\""
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 7: active tests + contracts" "make test-active"; then
+  failed_step="make test-active"
+  failed_cmd="make test-active"
+fi
+
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 8: sanity count" "make count-posts-core"; then
+  failed_step="make count-posts-core"
+  failed_cmd="make count-posts-core"
+fi
+
+if [[ -z "$failed_step" ]] && ! run_step "Шаг 9: casino contour" "make health-casino"; then
+  failed_step="make health-casino"
+  failed_cmd="make health-casino"
 fi
 
 log ""

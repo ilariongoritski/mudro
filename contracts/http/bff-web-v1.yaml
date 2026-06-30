@@ -5,6 +5,7 @@ info:
   description: Web-oriented aggregated endpoints for frontend clients.
 servers:
   - url: http://localhost:8080
+security: []
 paths:
   /api/bff/web/v1/timeline:
     get:
@@ -129,4 +130,3 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
-

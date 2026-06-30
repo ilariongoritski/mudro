@@ -25,7 +25,7 @@ $steps = @(
 )
 
 if ($FullSmoke -and -not $SkipTests) {
-    $repoSmoke = @{ Name = 'Repo-wide smoke tests'; Enabled = $true; Command = 'go test ./...' }
+    $repoSmoke = @{ Name = 'Repo-wide smoke tests'; Enabled = $true; Command = 'make test-active' }
     $steps = @($steps[0], $steps[1], $steps[2], $steps[3], $repoSmoke, $steps[4])
 }
 

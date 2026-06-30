@@ -5,9 +5,12 @@ info:
   description: |
     Authentication and user management service.
     JWT tokens are issued as HS256, expiry configurable via JWT_EXPIRY_HOURS (default 168h / 7 days).
+  license:
+    name: Proprietary
 servers:
-  - url: http://localhost:8087
-    description: Local development
+  - url: https://auth.mudro.local
+    description: Canonical auth boundary
+security: []
 
 components:
   securitySchemes:
@@ -54,14 +57,18 @@ paths:
     get:
       summary: Health check
       operationId: healthz
+      security: []
       responses:
         "200":
           description: Service is healthy
+        "503":
+          description: Service unavailable
 
   /api/v1/auth/register:
     post:
       summary: Register a new user
       operationId: register
+      security: []
       requestBody:
         required: true
         content:
@@ -87,13 +94,22 @@ paths:
                 $ref: '#/components/schemas/AuthResult'
         "400":
           description: Validation error
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         "409":
           description: Username or email already taken
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/auth/login:
     post:
       summary: Log in with credentials
       operationId: login
+      security: []
       requestBody:
         required: true
         content:
@@ -116,6 +132,10 @@ paths:
                 $ref: '#/components/schemas/AuthResult'
         "401":
           description: Invalid credentials
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/auth/refresh:
     post:
@@ -157,14 +177,18 @@ paths:
       summary: Logout (client clears token)
       operationId: logout
       description: Stateless JWT — server returns 200, client must clear the stored token.
+      security: []
       responses:
         "200":
           description: OK
+        "401":
+          description: Unauthorized
 
   /api/v1/auth/telegram:
     post:
       summary: Authenticate via Telegram WebApp
       operationId: telegramAuth
+      security: []
       requestBody:
         required: true
         content:
@@ -185,6 +209,10 @@ paths:
                 $ref: '#/components/schemas/AuthResult'
         "401":
           description: Invalid or expired Telegram session
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/admin/users:
     get:

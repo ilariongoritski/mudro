@@ -5,6 +5,7 @@ info:
   description: Read-only movie catalog staging API for MUDROTOP.
 servers:
   - url: http://127.0.0.1:8091
+security: []
 paths:
   /healthz:
     get:
