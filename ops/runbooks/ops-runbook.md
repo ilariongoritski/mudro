@@ -9,32 +9,30 @@
 - Go установлен (`go version`)
 
 ## Стандартный recovery (2-3 минуты)
-1. Поднять БД:
-   - `make up`
-2. Проверить контейнер:
-   - `docker compose ps`
-   - ожидается: `mudro-db-1` в статусе `healthy`
+1. Поднять локальный core runtime:
+   - `make core-up`
+2. Проверить контейнеры:
+   - `make core-ps`
+   - ожидается: `db`, `redis`, `kafka`, `api`, `agent`, `movie-catalog`, `bff-web`
 3. Проверить БД:
-   - `make dbcheck`
-4. Применить миграции:
-   - `make migrate-list` для проверки порядка up-миграций
-   - `make check-migration-up-list` перед bootstrap/recovery, если менялся migration inventory
-   - `make migrate`
-   - `make migrate-agent`
-   - `make migrate-comments`
-   - `make migrate-media`
-   - `make migrate-comment-model`
+   - `make dbcheck-core`
+4. Проверить migration inventory и применить runtime schema:
+   - `make migrate-list`
+   - `make check-migration-up-list`
+   - `make migrate-runtime`
 5. Проверить таблицы:
-   - `make tables`
-6. Проверить тесты:
-   - `make test`
+   - `make tables-core`
+6. Проверить backend/контракты:
+   - `make test-active`
 7. Санити-проверка данных:
-   - `make count-posts`
+   - `make count-posts-core`
+8. Проверить casino contour:
+   - `make health-casino`
 
 Критерий готовности:
-- `dbcheck` OK
+- `dbcheck-core` OK
 - таблицы `posts`, `post_comments`, `post_reactions`, `media_assets`, `comment_reactions`, `agent_queue` существуют
-- `make test` проходит
+- `make test-active` проходит
 
 ## Политика источников
 - `VK` считать архивным snapshot-источником: повторные регулярные обновления VK не планируются.
@@ -56,7 +54,7 @@
    - `npm.cmd run build`
 2. загрузить проект на VPS или хотя бы актуальный `frontend/dist`
 3. на VPS запустить:
-   - `bash /root/projects/mudro/ops/scripts/deploy_vps_frontend.sh`
+   - `bash /opt/mudro/app/ops/scripts/deploy_vps_frontend.sh`
 4. проверить:
    - `curl -fsS http://127.0.0.1/healthz`
    - `curl -I http://127.0.0.1/`

@@ -90,14 +90,14 @@ function mudro-make {
 }
 
 function mudro-health { Invoke-MudroShell -Command "make health" }
-function mudro-up { Invoke-MudroShell -Command "make up" }
-function mudro-down { Invoke-MudroShell -Command "make down" }
-function mudro-ps { Invoke-MudroShell -Command "make ps" }
-function mudro-logs { Invoke-MudroShell -Command "make logs" }
-function mudro-dbcheck { Invoke-MudroShell -Command "make dbcheck" }
-function mudro-migrate { Invoke-MudroShell -Command "make migrate" }
-function mudro-tables { Invoke-MudroShell -Command "make tables" }
-function mudro-test { Invoke-MudroShell -Command "go test ./..." }
+function mudro-up { Invoke-MudroShell -Command "make core-up" }
+function mudro-down { Invoke-MudroShell -Command "make core-down" }
+function mudro-ps { Invoke-MudroShell -Command "make core-ps" }
+function mudro-logs { Invoke-MudroShell -Command "make core-logs" }
+function mudro-dbcheck { Invoke-MudroShell -Command "make dbcheck-core" }
+function mudro-migrate { Invoke-MudroShell -Command "make migrate-runtime" }
+function mudro-tables { Invoke-MudroShell -Command "make tables-core" }
+function mudro-test { Invoke-MudroShell -Command "make test-active" }
 function mudro-e2e { Invoke-MudroShell -Command "go test ./e2e -run TestCmd -count=1" }
 function mudro-shell { Invoke-MudroShell -Command "exec bash" }
 function mudro-casino-rollout {

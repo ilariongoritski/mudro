@@ -17,14 +17,12 @@
 - `ops/compose/docker-compose.casino.local.yml` — отдельный локальный casino runtime.
 - `docker-compose.prod.yml` — production-style VPS/self-hosted runtime.
 
-## Transitional / Compatibility
+## CLI Entrypoints
 
-- `cmd/` — temporary forwarding stubs to `tools/*`.
+- `cmd/mudro` — канонический агрегирующий CLI.
+- `tools/` — одноразовые import/backfill/maintenance команды.
 
-## Archived
+## Removed Legacy
 
-- `legacy/old/` — non-default runtime and deprecated assets.
-  - `legacy/old/cmd-runtime/*`
-  - `legacy/old/services/reporter-old/*`
-  - `legacy/old/misc/*`
-  - `legacy/old/manifest.yaml`
+- Root thin-wrapper `cmd/*` и `legacy/old/*` удалены из active tree.
+- Удаленные legacy entrypoints не должны появляться в Makefile/CI/runbook как рабочие команды.

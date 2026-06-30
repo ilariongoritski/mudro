@@ -4,7 +4,7 @@
 
 ## 1) Что нужно знать за 2 минуты
 - Репозиторий: `mudro` (Go + Postgres + Docker Compose).
-- Главный цикл проверки: health loop (`make up -> ps -> dbcheck -> migrate -> tables -> test -> count-posts`).
+- Главный цикл проверки: health loop (`make core-up -> core-ps -> dbcheck-core -> check-migration-up-list -> migrate-runtime -> tables-core -> test-active -> count-posts-core -> health-casino`).
 - Канонический DSN: `postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable`.
 - Память проекта: `.codex/todo.md`, `.codex/done.md`, `.codex/top10.md`, `.codex/memory.json`, `.codex/time_runtime.json`, `.codex/tg_control.jsonl`.
 
@@ -52,13 +52,12 @@
 
 Разрешено без подтверждения:
 - повтор упавшей команды 1 раз;
-- мягкий рестарт (`make down`, `make up`, `docker compose ps`) без удаления volume;
+- мягкий рестарт (`make core-down`, `make core-up`, `make core-ps`) без удаления volume;
 - документальные и логирующие изменения в `.codex/*`.
 
 ## 5) Карта проекта (для автономного ориентирования)
 - `services/feed-api` — HTTP API и рендер `/feed`.
 - `services/bot` — Telegram бот (управление/память/отчеты).
-- `legacy/old/services/reporter-old` — старый репортер-бот (не используется по умолчанию).
 - `services/agent` + `internal/agent` — planner/worker и очередь задач.
 - `tools/importers/tgimport`, `tools/importers/tgload`, `tools/importers/vkimport`, `tools/importers/tgcommentsimport` — импорт контента.
 - `internal/api`, `internal/bot`, `internal/reporter`, `internal/config` — доменная логика.
@@ -77,13 +76,13 @@
 - Полный health loop (авто-лог + ретраи):
   - `make worker-loop`
 - Локальный подъем:
-  - `make up && docker compose ps`
+  - `make core-up && make core-ps`
 - БД/миграции:
-  - `make dbcheck && make migrate && make tables`
+  - `make dbcheck-core && make check-migration-up-list && make migrate-runtime && make tables-core`
 - Тесты:
-  - `make test`
+  - `make test-active`
 - Санити:
-  - `make count-posts`
+  - `make count-posts-core`
 
 ## 8) Критерий «работяга живой»
 - БД-контейнер healthy;

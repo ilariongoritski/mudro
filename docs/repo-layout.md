@@ -5,7 +5,7 @@
 ## Канонические корневые папки
 
 - `api/` — serverless/adaptor entrypoints
-- `cmd/` — исполняемые команды и one-shot CLI
+- `cmd/` — только канонические top-level CLI, сейчас `cmd/mudro`
 - `contracts/` — контрактные схемы и форматы
 - `data/` — локальные сырые выгрузки и приватные входные данные, не коммитятся
 - `docs/` — постоянная документация проекта
@@ -23,12 +23,12 @@
 - `tools/` — одноразовые и операционные CLI (import/backfill/maintenance)
 - `tmp/` — временные локальные файлы, не коммитятся
 
-## Миграционный слой совместимости
+## Runtime и CLI baseline
 
-- Legacy runtime entrypoints are kept in `legacy/old/cmd-runtime/*`.
-- Активный runtime-контур живет только в `services/*`.
-- `cmd/*` используется как временный forwarding-слой для CLI в `tools/*`.
-- Legacy `reporter` вынесен в `legacy/old/services/reporter-old` и не участвует в default runtime.
+- Активный runtime-контур живет в `services/*`.
+- Одноразовые и операционные команды живут в `tools/*`.
+- Root `cmd/mudro` оставлен как канонический агрегирующий CLI.
+- Legacy forwarding entrypoints и `legacy/old/*` удалены; не добавлять на них ссылки в Makefile/CI/runbook.
 
 ## Что считать "грязью"
 

@@ -6,8 +6,8 @@
 
 1. Runtime-сервисы живут в `services/*` и запускаются независимо.
 2. Общая доменная логика и контракты остаются в `internal/*` и `contracts/*`.
-3. Одноразовые утилиты импорта/обслуживания живут в `tools/*` (переходно — часть в `cmd/*`).
-4. `cmd/*` используется только как временный forwarding-слой для CLI в `tools/*`.
+3. Одноразовые утилиты импорта/обслуживания живут в `tools/*`.
+4. `cmd/mudro` оставлен как канонический агрегирующий CLI.
 
 ## Целевая карта директорий
 
@@ -44,7 +44,7 @@ contracts/
 - `feed-api`: HTTP read/query facade + health + public contract.
 - `agent`: planner/worker orchestration и lifecycle событий задач.
 - `bot`: Telegram control-plane для оператора.
-- `reporter-old`: вынесен в `legacy/old/services/reporter-old`, не является частью default runtime.
+- `reporter-old`: удален из active tree и не является частью default runtime.
 
 ## Правила расширения
 
@@ -55,6 +55,6 @@ contracts/
 
 ## Переходный статус (сейчас)
 
-- Активные runtime entrypoints: `services/feed-api`, `services/agent`, `services/bot`.
-- Legacy runtime entrypoints are kept in `legacy/old/cmd-runtime/*`.
-- Импортеры/backfill/maintenance перенесены в `tools/*`, а `cmd/*` оставлен как временный forwarding-слой.
+- Активные runtime entrypoints: `services/feed-api`, `services/agent`, `services/bot`, `services/casino`.
+- Импортеры/backfill/maintenance живут в `tools/*`.
+- Root thin-wrapper `cmd/*` удалены; `cmd/mudro` оставлен как канонический агрегирующий CLI.

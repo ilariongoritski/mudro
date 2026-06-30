@@ -26,9 +26,9 @@
 - Забирает из `agent_queue`
 - Исполняет только safe task kinds
 
-6. `reporter-old` (legacy)
+6. `reporter-old` (removed)
 - Исторический сервис дайджестов
-- Вынесен в `legacy/old/services/reporter-old`, не используется в default runtime
+- Удален из active tree, не используется в default runtime
 
 7. `telegram-bot` (отдельно от reporter)
 - Управляющие команды
