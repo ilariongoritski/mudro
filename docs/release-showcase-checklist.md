@@ -44,9 +44,9 @@
 ## Что не показываем как release-ready
 
 - незавершённые Supabase traces
-- `AuthPage`
 - mini app вне Telegram
 - admin как production-ready panel без подготовленного admin account
+- `profile` как готовую пользовательскую поверхность, пока это stub
 
 ## Known limits
 
