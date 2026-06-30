@@ -36,13 +36,6 @@ runtime:
       path: services/orchestration-api/cmd
       run: go run ./services/orchestration-api/cmd
       env_files: [env/common.env, env/api.env]
-  legacy:
-    - name: reporter-old
-      path: legacy/old/services/reporter-old/cmd
-      run: go run ./legacy/old/services/reporter-old/cmd
-      status: "Removed from repository; keep only as historical reference"
-      env_files: [env/common.env, env/reporter.env]
-
 cli:
   importers_root: tools/importers
   backfill_root: tools/backfill
@@ -52,4 +45,3 @@ compose:
   core: ops/compose/docker-compose.core.yml
   casino_local: ops/compose/docker-compose.casino.local.yml
   services: ops/compose/docker-compose.services.yml
-  legacy: ops/compose/docker-compose.legacy.yml

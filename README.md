@@ -129,7 +129,7 @@ make check-migration-up-list
 
 ```bash
 make selftest
-go test ./...
+make test-active
 go build ./services/... ./tools/... ./cmd/... ./pkg/...
 go run ./tools/validate-contracts -dir contracts
 cd frontend && npm.cmd run lint
@@ -179,13 +179,3 @@ CI покрывает:
 - release compose и Docker build smoke.
 
 Текущие локальные изменения могут быть не закоммичены. Перед PR/merge обязательно проверить `git status --short`, не смешивать unrelated WIP и не коммитить реальные секреты.
-
-## Legacy
-
-Legacy зоны не являются основным runtime:
-
-- `legacy/old/`
-- root `docker-compose.yml`
-- исторические `cmd/*` stubs
-
-Использовать их только для recovery/compatibility задач.

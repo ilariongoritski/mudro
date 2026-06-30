@@ -1,7 +1,7 @@
 DSN ?= postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable
 MIGRATIONS_DIR ?= migrations
 UP_MIGRATIONS ?= $(filter-out %.down.sql,$(sort $(wildcard $(MIGRATIONS_DIR)/*.sql)))
-MIGRATION ?= $(MIGRATIONS_DIR)/001_init.sql
+MAIN_UP_MIGRATIONS ?= $(UP_MIGRATIONS)
 ACCOUNT_LIKES_MIGRATION ?= $(MIGRATIONS_DIR)/002_account_post_likes.sql
 AGENT_MIGRATION ?= $(MIGRATIONS_DIR)/002b_agent_queue.sql
 COMMENTS_MIGRATION ?= $(MIGRATIONS_DIR)/004_post_comments.sql
@@ -33,7 +33,7 @@ ENV_REPORTER ?= env/reporter.env
 ENV_CASINO ?= env/casino.env
 MOVIE_CATALOG_MIGRATION ?= $(MIGRATIONS_DIR)/movie_catalog/0001_init.sql
 TEST_UNIT_PACKAGES ?= ./internal/... ./services/... ./tools/... ./cmd/...
-RUNTIME_MIGRATIONS ?= $(UP_MIGRATIONS) $(MOVIE_CATALOG_MIGRATION)
+RUNTIME_MIGRATIONS ?= $(MAIN_UP_MIGRATIONS) $(MOVIE_CATALOG_MIGRATION)
 
 ifeq ($(wildcard $(GO)),)
 GO := go
@@ -52,7 +52,7 @@ GUARD_MAIN_CLEAN_SCRIPT = bash ./scripts/git/guard_clean_main.sh
 endif
 
 ifeq ($(USE_DOCKER_PSQL),1)
-PSQL_CMD = docker compose exec -T db psql -U postgres -d gallery
+PSQL_CMD = $(PROD_COMPOSE) exec -T db psql -U postgres -d gallery
 PSQL_CORE_CMD = $(CORE_COMPOSE) exec -T db psql -U postgres -d gallery
 else
 PSQL_CMD = psql "$(DSN)"
@@ -107,15 +107,7 @@ dbcheck-core:
 	$(PSQL_CORE_CMD) -X -v ON_ERROR_STOP=1 -e -a -c "select 1;"
 
 migrate:
-ifeq ($(USE_DOCKER_PSQL),1)
-	cat "$(MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-	cat "$(USERS_AUTH_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-	cat "$(USERS_TELEGRAM_MIGRATION)" | docker compose exec -T db psql -U postgres -d gallery -X -v ON_ERROR_STOP=1
-else
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(MIGRATION)"
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_AUTH_MIGRATION)"
-	$(PSQL_CMD) -X -v ON_ERROR_STOP=1 -f "$(USERS_TELEGRAM_MIGRATION)"
-endif
+	$(MAKE) migrate-all
 
 migrate-runtime:
 	@for f in $(RUNTIME_MIGRATIONS); do \
@@ -129,6 +121,9 @@ migrate-runtime:
 
 migrate-list:
 	$(foreach f,$(UP_MIGRATIONS),$(info $(f)))
+
+migrate-runtime-list:
+	$(foreach f,$(RUNTIME_MIGRATIONS),$(info $(f)))
 
 migrate-all-dry-run: migrate-list
 
@@ -258,10 +253,7 @@ validate-contracts:
 	$(GO) run ./tools/validate-contracts -dir ./contracts
 
 validate-openapi:
-	@for f in contracts/http/*.yaml; do \
-		echo "==> validating $$f"; \
-		npx --yes @redocly/cli lint "$$f" --format=summary || exit $$?; \
-	done
+	@"$(BASH)" -lc 'set -euo pipefail; for f in contracts/http/*.yaml; do echo "==> validating $$f"; npx --yes @redocly/cli lint "$$f" --format=summary; done'
 
 validate-microservices:
 	$(MAKE) test-active
@@ -300,7 +292,8 @@ guard-main-clean:
 	$(GUARD_MAIN_CLEAN_SCRIPT)
 
 selftest:
-	$(MAKE) test-unit
+	$(MAKE) check-migration-up-list
+	$(MAKE) test-active
 
 media-backfill:
 	$(GO) run ./tools/backfill/mediabackfill/cmd
@@ -423,18 +416,6 @@ casino-run:
 	if [ -f "$(ENV_CASINO)" ]; then . "$(ENV_CASINO)"; fi; \
 	set +a; \
 	$(GO) run ./services/casino/cmd/casino
-
-report-run:
-	@echo "DEPRECATED: report-run is Old. Use legacy-report-run if you really need reporter."
-	$(MAKE) legacy-report-run
-
-legacy-report-run:
-	@set -a; \
-	if [ -f ./.env ]; then . ./.env; fi; \
-	if [ -f "$(ENV_COMMON)" ]; then . "$(ENV_COMMON)"; fi; \
-	if [ -f "$(ENV_REPORTER)" ]; then . "$(ENV_REPORTER)"; fi; \
-	set +a; \
-	$(GO) run ./legacy/old/services/reporter-old/cmd
 
 memento:
 	@set -a; \

@@ -20,4 +20,4 @@
 Операционные документы и контур запуска:
 - [ops/runbooks/ops-runbook.md](ops/runbooks/ops-runbook.md)
 - [ops/compose/docker-compose.core.yml](ops/compose/docker-compose.core.yml)
-- [ops/compose/docker-compose.legacy.yml](ops/compose/docker-compose.legacy.yml)
+- [ops/compose/docker-compose.casino.local.yml](ops/compose/docker-compose.casino.local.yml)
