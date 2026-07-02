@@ -303,6 +303,8 @@
 }
 
 .casino-miniapp__center {
+  overflow-x: hidden;
+  min-width: 0;
   display: grid;
   gap: 14px;
   min-width: 0;
@@ -966,4 +968,27 @@
   .casino-miniapp__history-item {
     flex-direction: column;
   }
+}
+
+.casino-miniapp__faucet-btn {
+  padding: 6px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,215,0,0.4);
+  background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+  color: #ffd700;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.casino-miniapp__faucet-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.1));
+  transform: translateY(-1px);
+}
+.casino-miniapp__faucet-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.casino-miniapp__faucet-msg {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-left: 8px;
 }

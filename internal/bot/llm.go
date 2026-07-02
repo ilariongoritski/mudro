@@ -21,7 +21,7 @@ func (r *Runner) AskMudro(query string) ([]byte, error) {
 
 	apiKey := config.OpenRouterAPIKey()
 	if apiKey == "" {
-		return nil, fmt.Errorf("OPENROUTER_API_KEY is not set")
+		return nil, fmt.Errorf("LLM_API_KEY is not set")
 	}
 
 	systemPrompt := strings.Join([]string{

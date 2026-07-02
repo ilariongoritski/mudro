@@ -63,11 +63,11 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 		// Reset draw counter for each spin to ensure determinism across identical seed/nonce inputs
 		e.fairness.DrawCounter = 0
 	}
-	symbols := make([]string, 3)
-	var rolls [3]int
+	symbols := make([]string, 5)
+	var rolls [5]int
 	if e.fairness != nil {
 		// Generate 3 deterministic rolls based on server/client seeds and nonce
-		for i := 0; i < 3; i++ {
+		for i := 0; i < 5; i++ {
 			r, err := e.fairness.NextRoll(totalWeight)
 			if err != nil {
 				return nil, 0, err
@@ -75,7 +75,7 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 			rolls[i] = r
 		}
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		var roll int
 		if e.fairness != nil {
 			roll = rolls[i]
@@ -97,23 +97,31 @@ func (e *Engine) Spin(cfg Config, bet int64) ([]string, int64, error) {
 	}
 
 	multiplier := int64(0)
-	switch {
-	case symbols[0] == symbols[1] && symbols[1] == symbols[2]:
-		// Triple match: full payout according to paytable
-		multiplier = cfg.Paytable[symbols[0]]
-	case symbols[0] == symbols[1] || symbols[0] == symbols[2] || symbols[1] == symbols[2]:
-		// Two-of-a-kind: smaller payout, avoid zero multiplier
-		var sym string
-		if symbols[0] == symbols[1] || symbols[0] == symbols[2] {
-			sym = symbols[0]
-		} else {
-			sym = symbols[1]
+	// Count symbol frequencies
+	counts := make(map[string]int)
+	for _, s := range symbols {
+		counts[s]++
+	}
+	maxCount := 0
+	var maxSym string
+	for sym, cnt := range counts {
+		if cnt > maxCount {
+			maxCount = cnt
+			maxSym = sym
 		}
-		base := cfg.Paytable[sym]
-		multiplier = base / 2
-		if multiplier == 0 {
-			multiplier = 1
-		}
+	}
+	switch maxCount {
+	case 5:
+		multiplier = cfg.Paytable[maxSym]
+	case 4:
+		multiplier = cfg.Paytable[maxSym] * 6 / 10
+	case 3:
+		multiplier = cfg.Paytable[maxSym] * 3 / 10
+	case 2:
+		multiplier = 1
+	}
+	if multiplier == 0 && maxCount >= 2 {
+		multiplier = 1
 	}
 
 	win := int64(0)

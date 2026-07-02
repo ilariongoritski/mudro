@@ -1,0 +1,13 @@
+# Multi-stage Dockerfile for MUDRO services
+FROM golang:1.24-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum go.work ./
+RUN go mod download
+COPY . .
+ARG SERVICE=services/feed-api/cmd
+RUN CGO_ENABLED=0 go build -o /service ./${SERVICE}
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /service /service
+ENTRYPOINT ["/service"]

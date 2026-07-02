@@ -15,7 +15,7 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
 import './CasinoPage.css'
 
-const reelFallback = ['🎰', '🍒', '🍋']
+const reelFallback = ['🍒', '🍋', '🍫', '7️⃣', '💎']
 const betOptions = [10, 25, 50, 100]
 
 const formatCasinoTimestamp = (value: string) => {
@@ -134,11 +134,11 @@ export const CasinoPage = () => {
 
     setSpinFeedback(null)
     setCelebrateSpin(false)
-    setReels(['🎰', '🎰', '🎰'])
+    setReels(['🍒', '🍒', '🍒', '🍒', '🍒'])
 
     try {
       const response = await spinCasino({ bet }).unwrap()
-      const nextReels = response.symbols?.length === 3 ? response.symbols : reelFallback
+      const nextReels = response.symbols?.length >= 3 ? response.symbols : reelFallback
       setReels(nextReels)
       setCelebrateSpin(response.win > 0)
       setSpinFeedback(

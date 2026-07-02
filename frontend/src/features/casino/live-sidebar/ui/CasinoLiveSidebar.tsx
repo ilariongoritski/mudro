@@ -11,7 +11,7 @@ import './CasinoLiveSidebar.css'
 
 interface CasinoLiveSidebarProps {
   isAuthenticated: boolean
-  activeGame: 'slots' | 'roulette' | 'bonus' | 'plinko'
+  activeGame: 'slots' | 'roulette' | 'blackjack' | 'bonus' | 'plinko'
   bonusAvailable: number
 }
 

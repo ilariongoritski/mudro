@@ -17,7 +17,7 @@ func TestFairnessDeterministicRolls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error on first spin: %v", err)
 	}
-	if len(firstSymbols) != 3 {
+	if len(firstSymbols) != 5 {
 		t.Fatalf("expected 3 symbols, got %d", len(firstSymbols))
 	}
 
@@ -26,10 +26,10 @@ func TestFairnessDeterministicRolls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error on second spin: %v", err)
 	}
-	if len(secondSymbols) != 3 {
+	if len(secondSymbols) != 5 {
 		t.Fatalf("expected 3 symbols on second spin, got %d", len(secondSymbols))
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		if firstSymbols[i] != secondSymbols[i] {
 			t.Fatalf("fairness spin not deterministic at reel %d: %s vs %s", i, firstSymbols[i], secondSymbols[i])
 		}

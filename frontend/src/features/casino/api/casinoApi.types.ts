@@ -282,3 +282,11 @@ export interface BonusStateResponse {
   telegram_channel?: string
   claimed?: boolean
 }
+
+export interface FaucetResponse {
+  claimed: boolean
+  amount: number
+  balance?: number
+  next_claim_at?: string | null
+  cooldown_hours: number
+}

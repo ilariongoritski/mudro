@@ -104,6 +104,8 @@ func (s *Server) Router() http.Handler {
 		mux.HandleFunc("/api/casino/blackjack/state", s.handleCasinoBlackjackState)
 		mux.HandleFunc("/api/casino/blackjack/start", s.handleCasinoBlackjackStart)
 		mux.HandleFunc("/api/casino/blackjack/action", s.handleCasinoBlackjackAction)
+		mux.HandleFunc("/api/casino/faucet/claim", s.handleCasinoFaucetClaim)
+		mux.HandleFunc("/api/casino/faucet/state", s.handleCasinoFaucetState)
 		mux.HandleFunc("/api/casino/fairness/rotate-server-seed", s.handleCasinoRotateServerSeed)
 		mux.HandleFunc("/api/casino/fairness/client-seed", s.handleCasinoUpdateClientSeed)
 	}

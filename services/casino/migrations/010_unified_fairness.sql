@@ -1,3 +1,4 @@
+-- NOTE: This migration is for the casino DB (mudro_casino), not the main DB.
 alter table if exists casino_players
   add column if not exists client_seed text not null default 'default',
   add column if not exists current_nonce integer not null default 0,

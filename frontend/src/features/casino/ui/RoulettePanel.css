@@ -1,6 +1,8 @@
 .roulette-panel {
   display: grid;
   gap: 16px;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .roulette-panel__header,
@@ -198,7 +200,7 @@
 
 .roulette-panel__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
   gap: 16px;
 }
 
@@ -451,6 +453,12 @@
 }
 
 @media (max-width: 640px) {
+  .roulette-panel__wheel {
+    padding: 10px 8px;
+  }
+  .roulette-wheel-svg {
+    max-width: 180px;
+  }
   .roulette-panel__header,
   .roulette-panel__surface-head,
   .roulette-panel__basket-head,
@@ -483,4 +491,9 @@
     min-width: 56px;
     min-height: 64px;
   }
+}
+
+.roulette-panel__wheel svg {
+  max-width: 100%;
+  height: auto;
 }

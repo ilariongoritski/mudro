@@ -54,6 +54,52 @@ func TestEnvOrAndAPIBaseURL(t *testing.T) {
 	}
 }
 
+func TestLLMConfigPrefersGenericEnv(t *testing.T) {
+	t.Setenv("LLM_API_KEY", "llm-key")
+	t.Setenv("LLM_MODEL", "glm-5.2")
+	t.Setenv("LLM_BASE_URL", "https://po.zapro.su/v1/")
+	t.Setenv("OPENROUTER_API_KEY", "openrouter-key")
+	t.Setenv("OPENROUTER_MODEL", "openrouter/model")
+	t.Setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+
+	if got := LLMAPIKey(); got != "llm-key" {
+		t.Fatalf("LLMAPIKey=%q", got)
+	}
+	if got := LLMModel(); got != "glm-5.2" {
+		t.Fatalf("LLMModel=%q", got)
+	}
+	if got := LLMBaseURL(); got != "https://po.zapro.su/v1" {
+		t.Fatalf("LLMBaseURL=%q", got)
+	}
+}
+
+func TestLLMConfigKeepsOpenRouterFallback(t *testing.T) {
+	t.Setenv("OPENROUTER_API_KEY", "openrouter-key")
+	t.Setenv("OPENROUTER_MODEL", "openrouter/model")
+	t.Setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/")
+
+	if got := LLMAPIKey(); got != "openrouter-key" {
+		t.Fatalf("LLMAPIKey=%q", got)
+	}
+	if got := LLMModel(); got != "openrouter/model" {
+		t.Fatalf("LLMModel=%q", got)
+	}
+	if got := LLMBaseURL(); got != "https://openrouter.ai/api/v1" {
+		t.Fatalf("LLMBaseURL=%q", got)
+	}
+}
+
+func TestLLMConfigDefaultsToZaproWhenGenericKeyIsSet(t *testing.T) {
+	t.Setenv("LLM_API_KEY", "llm-key")
+
+	if got := LLMModel(); got != DefaultLLMModel {
+		t.Fatalf("LLMModel=%q", got)
+	}
+	if got := LLMBaseURL(); got != DefaultLLMBaseURL {
+		t.Fatalf("LLMBaseURL=%q", got)
+	}
+}
+
 func TestTelegramAllowedUsernameRequiresExplicitEnv(t *testing.T) {
 	t.Setenv("TELEGRAM_ALLOWED_USERNAME", "")
 	if got := TelegramAllowedUsername(); got != "" {

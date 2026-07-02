@@ -202,6 +202,23 @@ func (s *Server) handleCasinoBlackjackAction(w http.ResponseWriter, r *http.Requ
 	s.proxyCasino(w, r, "/blackjack/action", false)
 }
 
+
+func (s *Server) handleCasinoFaucetClaim(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/faucet/claim", false)
+}
+
+func (s *Server) handleCasinoFaucetState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.proxyCasino(w, r, "/faucet/state", false)
+}
+
 func (s *Server) handleCasinoRotateServerSeed(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

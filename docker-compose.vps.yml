@@ -1,0 +1,32 @@
+# docker-compose.vps.yml — production override for VPS
+# Usage: docker compose -f docker-compose.prod.yml -f docker-compose.vps.yml up -d
+services:
+  api:
+    build:
+      context: .
+      args:
+        SERVICE: services/feed-api/cmd
+    image: mudro/feed-api:latest
+    restart: unless-stopped
+
+  casino-api:
+    build:
+      context: .
+      args:
+        SERVICE: services/casino/cmd/casino
+    image: mudro/casino-api:latest
+    restart: unless-stopped
+    environment:
+      CASINO_FAUCET_AMOUNT: "${CASINO_FAUCET_AMOUNT:-1000}"
+      CASINO_BONUS_FREE_SPINS: "${CASINO_BONUS_FREE_SPINS:-10}"
+
+  agent:
+    build:
+      context: .
+      args:
+        SERVICE: services/agent/cmd
+    image: mudro/agent:latest
+    restart: unless-stopped
+    command: ["/service", "--mode", "worker", "--interval", "15s"]
+    env_file:
+      - /etc/mudro/.env

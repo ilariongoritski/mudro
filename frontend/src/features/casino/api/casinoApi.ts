@@ -45,6 +45,7 @@ import type {
   RouletteHistoryResponse,
   RouletteInstantSpinResponse,
   RouletteStateResponse,
+  FaucetResponse,
 } from '@/features/casino/api/casinoApi.types'
 
 export type {
@@ -86,6 +87,7 @@ export type {
   RoulettePhase,
   RouletteRoundHistoryItem,
   RouletteStateResponse,
+  FaucetResponse,
 } from '@/features/casino/api/casinoApi.types'
 
 export { normalizeRouletteStateResponse } from '@/features/casino/api/casinoApi.normalizers'
@@ -282,6 +284,19 @@ export const casinoApi = mudroApi.injectEndpoints({
       transformResponse: (response: RawBonusClaimResponse) => normalizeBonusClaimResponse(response),
       invalidatesTags: ['Casino'],
     }),
+    getFaucetState: build.query<FaucetResponse, void>({
+      query: () => ({
+        url: '/casino/faucet/state',
+      }),
+      providesTags: ['Casino'],
+    }),
+    claimFaucet: build.mutation<FaucetResponse, void>({
+      query: () => ({
+        url: '/casino/faucet/claim',
+        method: 'POST',
+      }),
+      invalidatesTags: ['Casino'],
+    }),
     updateCasinoConfig: build.mutation<{ status: string }, CasinoConfigResponse>({
       query: (body) => ({
         url: '/casino/config',
@@ -343,6 +358,8 @@ export const {
   useDropPlinkoMutation,
   useGetCasinoBonusStateQuery,
   useClaimCasinoBonusSubscriptionMutation,
+  useGetFaucetStateQuery,
+  useClaimFaucetMutation,
   useUpdateCasinoConfigMutation,
   useSpinCasinoMutation,
   useGetBlackjackStateQuery,

@@ -218,6 +218,20 @@ func ValidateConfig(cfg Config) error {
 	return nil
 }
 
+
+func FaucetAmount() int64 {
+	if v := strings.TrimSpace(os.Getenv("CASINO_FAUCET_AMOUNT")); v != "" {
+		if n, ok := parsePositiveInt64(v); ok {
+			return n
+		}
+	}
+	return 1000
+}
+
+func FaucetCooldown() time.Duration {
+	return 24 * time.Hour
+}
+
 func marshalJSON(value any) []byte {
 	raw, _ := json.Marshal(value)
 	return raw

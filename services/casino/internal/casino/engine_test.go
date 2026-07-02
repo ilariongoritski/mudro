@@ -3,7 +3,7 @@ package casino
 import "testing"
 
 func TestEngineSpinAppliesPaytableAndRTP(t *testing.T) {
-	draws := []int{0, 0, 0}
+	draws := []int{0, 0, 0, 0, 0}
 	engine := NewEngineWithDraw(func(max int) (int, error) {
 		v := draws[0]
 		draws = draws[1:]
@@ -25,10 +25,10 @@ func TestEngineSpinAppliesPaytableAndRTP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Spin() error = %v", err)
 	}
-	if win != 300 {
+	if win != 300 { // 5-of-a-kind: paytable[cherry]=3, bet=100, RTP=100% → 3*100=300
 		t.Fatalf("win = %d, want 300", win)
 	}
-	if len(symbols) != 3 || symbols[0] != "cherry" || symbols[1] != "cherry" || symbols[2] != "cherry" {
+	if len(symbols) != 5 || symbols[0] != "cherry" || symbols[1] != "cherry" || symbols[2] != "cherry" || symbols[3] != "cherry" || symbols[4] != "cherry" {
 		t.Fatalf("unexpected symbols: %#v", symbols)
 	}
 }

@@ -7,6 +7,7 @@ import (
 )
 
 const hubBroadcastInterval = time.Second
+const hubMaxSubscribers = 500
 
 // RouletteHub maintains a single background goroutine that polls roulette state
 // once per second and fans it out to all connected SSE subscribers.
@@ -36,6 +37,11 @@ func (h *RouletteHub) Start(ctx context.Context) {
 func (h *RouletteHub) Subscribe() chan RouletteState {
 	ch := make(chan RouletteState, 2)
 	h.mu.Lock()
+	if len(h.subs) >= hubMaxSubscribers {
+		h.mu.Unlock()
+		close(ch)
+		return ch // closed channel signals rejection to caller
+	}
 	h.subs[ch] = struct{}{}
 	h.mu.Unlock()
 	return ch

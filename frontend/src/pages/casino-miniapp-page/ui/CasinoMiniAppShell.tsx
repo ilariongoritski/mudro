@@ -11,12 +11,15 @@ import {
   useGetCasinoBonusStateQuery,
   useGetCasinoHistoryQuery,
   useGetCasinoProfileQuery,
+  useClaimFaucetMutation,
+  useGetFaucetStateQuery,
   useSpinCasinoMutation,
 } from '@/features/casino/api/casinoApi'
 import { BonusPanel } from '@/features/casino/bonus/ui/BonusPanel'
 import { CasinoLiveSidebar } from '@/features/casino/live-sidebar/ui/CasinoLiveSidebar'
 import { buildCasinoActivityFromApi, buildCasinoProfileSummary } from '@/features/casino/model/profile'
 import { PlinkoPanel } from '@/features/casino/plinko/ui/PlinkoPanel'
+import { BlackjackPanel } from '@/features/casino/blackjack/ui/BlackjackPanel'
 import { CasinoProfileModal } from '@/features/casino/profile/ui/CasinoProfileModal'
 import { RoulettePanel } from '@/features/casino/roulette/ui/RoulettePanel'
 import { SlotsPanel } from '@/features/casino/slots/ui/SlotsPanel'
@@ -25,10 +28,10 @@ import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
 
 import './CasinoMiniAppPage.css'
 
-const reelFallback = ['🎰', '🍒', '🍋']
+const reelFallback = ['🍒', '🍋', '🍫', '7️⃣', '💎']
 const betOptions = [10, 25, 50, 100]
 
-type GameTab = 'slots' | 'roulette' | 'bonus' | 'plinko'
+type GameTab = 'slots' | 'roulette' | 'blackjack' | 'bonus' | 'plinko'
 type CasinoTheme = 'midnight' | 'aurora' | 'ember'
 
 const themeOptions: Array<{ value: CasinoTheme; label: string }> = [
@@ -79,6 +82,7 @@ export const CasinoMiniAppShell = () => {
   const [rouletteMainAction, setRouletteMainAction] = useState<GameMainAction | null>(null)
   const [bonusMainAction, setBonusMainAction] = useState<GameMainAction | null>(null)
   const [plinkoMainAction, setPlinkoMainAction] = useState<GameMainAction | null>(null)
+  const [blackjackMainAction, setBlackjackMainAction] = useState<GameMainAction | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') {
       return true
@@ -96,6 +100,7 @@ export const CasinoMiniAppShell = () => {
     return stored === 'aurora' || stored === 'ember' || stored === 'midnight' ? stored : 'midnight'
   })
   const [fairnessOpen, setFairnessOpen] = useState(false)
+  const [faucetMsg, setFaucetMsg] = useState<string | null>(null)
   const bootstrapStarted = useRef(false)
 
   const { initData, isTelegram, webApp } = useTelegramWebApp()
@@ -125,6 +130,8 @@ export const CasinoMiniAppShell = () => {
   const { data: bonusData } = useGetCasinoBonusStateQuery(undefined, {
     skip: !isAuthenticated,
   })
+  const { data: faucetData } = useGetFaucetStateQuery(undefined, { skip: !isAuthenticated })
+  const [claimFaucet, { isLoading: isClaimingFaucet }] = useClaimFaucetMutation()
 
   const balance = balanceData?.balance ?? 0
   const freeSpinsBalance = balanceData?.free_spins_balance ?? bonusData?.free_spins_available ?? 0
@@ -294,6 +301,24 @@ export const CasinoMiniAppShell = () => {
       }
     }
 
+    if (activeTab === 'blackjack') {
+      const currentAction = blackjackMainAction
+      const onMainButton = () => {
+        if (!currentAction?.disabled) {
+          currentAction?.onTrigger()
+        }
+      }
+
+      webApp.MainButton.setText(currentAction?.busy ? 'Ждём...' : currentAction?.label ?? 'Раздать')
+      webApp.MainButton.show()
+      webApp.MainButton.onClick(onMainButton)
+
+      return () => {
+        webApp.MainButton.offClick(onMainButton)
+        webApp.MainButton.hide()
+      }
+    }
+
     if (activeTab === 'bonus') {
       const currentAction = bonusMainAction
       const onMainButton = () => {
@@ -323,7 +348,22 @@ export const CasinoMiniAppShell = () => {
       webApp.MainButton.offClick(onMainButton)
       webApp.MainButton.hide()
     }
-  }, [activeTab, bet, bonusMainAction, canSpin, isAuthenticated, isSpinning, onSpin, plinkoMainAction, rouletteMainAction, webApp])
+  }, [activeTab, bet, blackjackMainAction, bonusMainAction, canSpin, isAuthenticated, isSpinning, onSpin, plinkoMainAction, rouletteMainAction, webApp])
+
+  const handleFaucetClaim = async () => {
+    if (!isAuthenticated || isClaimingFaucet || !faucetReady) return
+    try {
+      const res = await claimFaucet().unwrap()
+      if (res.claimed) {
+        setFaucetMsg(`+Faucet: ${res.amount} credits`)
+      } else {
+        const next = res.next_claim_at ? new Date(res.next_claim_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'позже'
+        setFaucetMsg(`Faucet через ${next}`)
+      }
+    } catch {
+      setFaucetMsg('Faucet error')
+    }
+  }
 
   const topMessage = useMemo(() => {
     if (isBootstrapping) {
@@ -352,6 +392,8 @@ export const CasinoMiniAppShell = () => {
 
   const statusText = status ?? (user ? `Игрок: ${user.username}` : 'Ожидание авторизации')
   const bonusAvailable = bonusData?.free_spins_available ?? 0
+  const faucetReady = faucetData?.claimed ?? false
+  const faucetAmount = faucetData?.amount ?? 1000
   const bonusSubscribed = bonusData?.subscribed ?? false
   const bonusCtaLabel = bonusAvailable > 0 ? `+${bonusAvailable}` : '+10'
   const centerChipLabel =
@@ -441,6 +483,14 @@ export const CasinoMiniAppShell = () => {
             <span>🔻</span> Plinko
           </button>
 
+                    <button
+            type="button"
+            className={activeTab === 'blackjack' ? 'casino-miniapp__menu-item casino-miniapp__menu-item_active' : 'casino-miniapp__menu-item'}
+            onClick={() => setActiveTab('blackjack')}
+          >
+            <span>🃏</span> Blackjack
+          </button>
+
           <div className="casino-miniapp__menu-tools">
             <button
               type="button"
@@ -475,6 +525,12 @@ export const CasinoMiniAppShell = () => {
               <span className="casino-miniapp__center-chip">{centerChipLabel}</span>
               <span className="casino-miniapp__center-user">Пользователь: {displayLabel}</span>
             </div>
+            {isAuthenticated && faucetReady ? (
+              <button type="button" className="casino-miniapp__faucet-btn" onClick={() => void handleFaucetClaim()} disabled={isClaimingFaucet}>
+                {isClaimingFaucet ? "..." : `Faucet +${faucetAmount}`}
+              </button>
+            ) : null}
+            {faucetMsg ? <span className="casino-miniapp__faucet-msg">{faucetMsg}</span> : null}
             <p className="casino-miniapp__center-note">
               {activeTab === 'bonus' && bonusAvailable > 0 ? `Доступно ${bonusAvailable} free spins.` : statusText}
             </p>
@@ -530,6 +586,14 @@ export const CasinoMiniAppShell = () => {
                 userName={usernameLabel}
                 telegramInitData={initData}
                 onMainActionChange={setBonusMainAction}
+              />
+            ) : activeTab === 'blackjack' ? (
+              <BlackjackPanel
+                isAuthenticated={isAuthenticated}
+                isActive={activeTab === 'blackjack'}
+                balance={balance}
+                userName={usernameLabel}
+                onMainActionChange={setBlackjackMainAction}
               />
             ) : activeTab === 'plinko' ? (
               <PlinkoPanel

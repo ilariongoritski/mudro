@@ -318,6 +318,16 @@ func (h *Handler) handleRouletteStream(w http.ResponseWriter, r *http.Request) {
 	ch := h.hub.Subscribe()
 	defer h.hub.Unsubscribe(ch)
 
+	// Reject if hub is at subscriber capacity (closed channel).
+	select {
+	case _, ok := <-ch:
+		if !ok && len(h.hub.subs) == 0 {
+			writeError(w, http.StatusServiceUnavailable, fmt.Errorf("too many SSE subscribers"))
+			return
+		}
+	default:
+	}
+
 	for {
 		select {
 		case <-r.Context().Done():
@@ -652,6 +662,51 @@ func (h *Handler) handleBlackjackAction(w http.ResponseWriter, r *http.Request) 
 	state, err := h.store.BlackjackAction(r.Context(), actor, req.Action)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, state)
+}
+
+
+func (h *Handler) handleFaucetClaim(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+		return
+	}
+	resp, err := h.store.ClaimFaucet(r.Context(), actor)
+	if err != nil {
+		if errors.Is(err, ErrFaucetCooldown) {
+			writeJSON(w, http.StatusOK, resp)
+			return
+		}
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) handleFaucetState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	state, err := h.store.GetFaucetState(r.Context(), actor)
+	if err != nil {
+		writeDomainError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, state)

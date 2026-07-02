@@ -14,6 +14,8 @@ const (
 	DefaultTelegramLimit     = 3800
 	DefaultOpenAIModel       = "gpt-4.1-mini"
 	DefaultOpenRouterBaseURL = "https://openrouter.ai/api/v1"
+	DefaultLLMModel          = "glm-5.2"
+	DefaultLLMBaseURL        = "https://po.zapro.su/v1"
 	DefaultAPIAddr           = ":8080"
 	DefaultAPIBaseURL        = "http://127.0.0.1:8080"
 	DefaultCasinoServiceURL  = "http://127.0.0.1:8081"
@@ -50,6 +52,9 @@ func TelegramAllowedUsername() string {
 }
 
 func OpenRouterAPIKey() string {
+	if v := strings.TrimSpace(os.Getenv("LLM_API_KEY")); v != "" {
+		return v
+	}
 	if v := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")); v != "" {
 		return v
 	}
@@ -57,6 +62,12 @@ func OpenRouterAPIKey() string {
 }
 
 func OpenRouterModel() string {
+	if v := strings.TrimSpace(os.Getenv("LLM_MODEL")); v != "" {
+		return v
+	}
+	if strings.TrimSpace(os.Getenv("LLM_API_KEY")) != "" {
+		return DefaultLLMModel
+	}
 	if v := strings.TrimSpace(os.Getenv("OPENROUTER_MODEL")); v != "" {
 		return v
 	}
@@ -64,7 +75,25 @@ func OpenRouterModel() string {
 }
 
 func OpenRouterBaseURL() string {
+	if v := strings.TrimSpace(os.Getenv("LLM_BASE_URL")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	if strings.TrimSpace(os.Getenv("LLM_API_KEY")) != "" {
+		return DefaultLLMBaseURL
+	}
 	return strings.TrimRight(envOr("OPENROUTER_BASE_URL", DefaultOpenRouterBaseURL), "/")
+}
+
+func LLMAPIKey() string {
+	return OpenRouterAPIKey()
+}
+
+func LLMModel() string {
+	return OpenRouterModel()
+}
+
+func LLMBaseURL() string {
+	return OpenRouterBaseURL()
 }
 
 func OpenAIAPIKey() string {
@@ -302,11 +331,12 @@ func JWTSecret() string {
 // ValidateJWTSecret returns an error if the JWT secret is the insecure default
 // and the environment looks like production, or if it's too short in any environment.
 func ValidateJWTSecret() error {
-	if JWTSecret() == "mudro-dev-secret-change-me" && isProductionLikeEnv(MudroEnv()) {
-		return fmt.Errorf("JWT_SECRET must be explicitly set in production (MUDRO_ENV=%q)", MudroEnv())
+	secret := JWTSecret()
+	if secret == "mudro-dev-secret-change-me" {
+		return fmt.Errorf("JWT_SECRET must be explicitly set — refusing to start with insecure default")
 	}
-	if len(JWTSecret()) < 16 {
-		return fmt.Errorf("JWT_SECRET is too short (got %d chars, min 16)", len(JWTSecret()))
+	if len(secret) < 16 {
+		return fmt.Errorf("JWT_SECRET is too short (got %d chars, min 16)", len(secret))
 	}
 	return nil
 }

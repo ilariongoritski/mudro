@@ -33,7 +33,7 @@ func (r *Runner) ChatModeStatus(chatID int64) ([]byte, error) {
 	enabled := r.isChatModeEnabled(chatID)
 	if enabled {
 		if config.OpenRouterAPIKey() == "" {
-			return []byte("Режим чата: ON\nOPENROUTER_API_KEY не задан, LLM-ответы недоступны.\nДобавь ключ в .env или используй команды."), nil
+			return []byte("Режим чата: ON\nLLM_API_KEY не задан, LLM-ответы недоступны.\nДобавь ключ в секреты окружения или используй команды."), nil
 		}
 		return []byte("Режим чата: ON\nТеперь можно писать обычные сообщения без команд."), nil
 	}

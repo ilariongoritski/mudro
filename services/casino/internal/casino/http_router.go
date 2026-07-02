@@ -54,6 +54,8 @@ func (h *Handler) Router() http.Handler {
 	mux.Handle("/blackjack/start", internal(h.handleBlackjackStart))
 	mux.Handle("/blackjack/action", internal(h.handleBlackjackAction))
 
+	mux.Handle("/faucet/claim", internal(h.handleFaucetClaim))
+	mux.Handle("/faucet/state", internal(h.handleFaucetState))
 	mux.Handle("/fairness/rotate-server-seed", internal(h.handleRotateServerSeed))
 	mux.Handle("/fairness/client-seed", internal(h.handleUpdateClientSeed))
 	return mux

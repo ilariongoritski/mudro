@@ -1,0 +1,213 @@
+.bjp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 30%, #1a472a 0%, #0d1a10 100%);
+  box-shadow: inset 0 0 80px rgba(0,0,0,0.5);
+  color: #fff;
+  min-height: 420px;
+}
+
+.bjp-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bjp-panel__kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.5);
+}
+
+.bjp-panel__balance {
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(0,0,0,0.3);
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.bjp-panel__table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.bjp-panel__game {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  position: relative;
+}
+
+.bjp-hand-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.bjp-hand-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.bjp-hand-title {
+  font-weight: 600;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.bjp-score-badge {
+  background: rgba(0,0,0,0.4);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.bjp-hand-container {
+  display: flex;
+  justify-content: center;
+}
+
+.bjp-card {
+  width: 80px;
+  height: 112px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-right: -50px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  color: #000;
+  position: relative;
+  animation: bjp-deal 0.4s ease-out;
+}
+.bjp-card:last-child { margin-right: 0; }
+
+.bjp-card-hidden {
+  background: repeating-linear-gradient(45deg, #1a1a1a, #1a1a1a 10px, #2a2a2a 10px, #2a2a2a 20px);
+  color: transparent;
+}
+
+.bjp-card-rank { position: absolute; top: 6px; left: 8px; font-size: 18px; font-weight: 700; }
+.bjp-card-suit { font-size: 32px; }
+.bjp-card-hearts, .bjp-card-diamonds { color: #e63946; }
+.bjp-card-spades, .bjp-card-clubs { color: #1d3557; }
+
+@keyframes bjp-deal {
+  from { transform: translateY(-150px) rotate(180deg); opacity: 0; }
+  to { transform: translateY(0) rotate(0); opacity: 1; }
+}
+
+.bjp-panel__controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.bjp-btn {
+  padding: 10px 28px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+
+.bjp-btn-primary {
+  background: linear-gradient(135deg, #ffd700, #e6be00);
+  color: #000;
+  box-shadow: 0 4px 15px rgba(255,215,0,0.3);
+}
+.bjp-btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.bjp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bjp-btn:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+.bjp-panel__start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px;
+}
+
+.bjp-panel__bet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bjp-panel__bet-chips { display: flex; gap: 8px; }
+
+.bjp-chip {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.bjp-chip-active {
+  background: #ffd700;
+  color: #000;
+  border-color: #ffd700;
+}
+
+.bjp-panel__result-overlay {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 28px 56px;
+  background: rgba(0,0,0,0.85);
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  text-align: center;
+  z-index: 10;
+  animation: bjp-pop 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+
+@keyframes bjp-pop {
+  from { transform: translate(-50%,-50%) scale(0.8); opacity: 0; }
+  to { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+}
+
+.bjp-panel__result-title { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+.bjp-panel__result-subtitle { color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 14px; }
+
+.bjp-panel__status {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+}
+
+.bjp-panel__not-auth, .bjp-panel__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  gap: 12px;
+}
