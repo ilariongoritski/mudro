@@ -757,6 +757,9 @@ func scanRouletteRound(row pgx.Row) (RouletteRound, error) {
 		resultSequenceTx  string
 		winningNumber     *int
 		winningColor      *string
+		clientSeed        *string
+		nonce             *int64
+		roundHash         *string
 	)
 	if err := row.Scan(
 		&item.ID,
@@ -772,15 +775,24 @@ func scanRouletteRound(row pgx.Row) (RouletteRound, error) {
 		&item.CreatedAt,
 		&item.ServerSeed,
 		&item.ServerSeedHash,
-		&item.ClientSeed,
-		&item.Nonce,
-		&item.RoundHash,
+		&clientSeed,
+		&nonce,
+		&roundHash,
 	); err != nil {
 		return RouletteRound{}, err
 	}
 	item.WinningNumber = winningNumber
 	if winningColor != nil {
 		item.WinningColor = *winningColor
+	}
+	if clientSeed != nil {
+		item.ClientSeed = *clientSeed
+	}
+	if nonce != nil {
+		item.Nonce = *nonce
+	}
+	if roundHash != nil {
+		item.RoundHash = *roundHash
 	}
 	if err := json.Unmarshal([]byte(displaySequenceTx), &item.DisplaySequence); err != nil {
 		return RouletteRound{}, err
