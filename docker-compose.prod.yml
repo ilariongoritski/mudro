@@ -149,6 +149,7 @@ services:
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
       KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
       KAFKA_CLIENT_ID: "${KAFKA_CLIENT_ID:-mudro-agent}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
     depends_on:
       db:
         condition: service_healthy
