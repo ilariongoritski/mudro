@@ -78,6 +78,7 @@ services:
       REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
       REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       REDIS_DB: "${REDIS_DB:-0}"
+      JWT_SECRET: ${JWT_SECRET:-mudro-dev-secret-change-me}
     depends_on:
       db:
         condition: service_healthy
@@ -155,6 +156,7 @@ services:
       MUDRO_ROOT: /app
       BFF_WEB_API_BASE_URL: "${BFF_WEB_API_BASE_URL:-http://api:8080}"
       MOVIE_CATALOG_URL: "http://movie-catalog:8091"
+      JWT_SECRET: ${JWT_SECRET:-mudro-dev-secret-change-me}
     depends_on:
       db:
         condition: service_healthy
