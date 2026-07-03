@@ -2,7 +2,7 @@ package app
 
 import (
 	"io"
-	"log"
+	"log/slog"
 )
 
 func closeChatLifecycleCloser(closer io.Closer) {
@@ -10,6 +10,6 @@ func closeChatLifecycleCloser(closer io.Closer) {
 		return
 	}
 	if err := closer.Close(); err != nil {
-		log.Printf("close lifecycle resource: %v", err)
+		slog.Warn("close lifecycle resource", "err", err)
 	}
 }

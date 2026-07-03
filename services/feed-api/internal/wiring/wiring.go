@@ -2,7 +2,7 @@ package wiring
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,9 +22,9 @@ func NewHandler(ctx context.Context, pool *pgxpool.Pool) (http.Handler, error) {
 	var tgVisiblePostIDs []string
 	if ids, path, err := tgexport.LoadVisibleSourcePostIDsFromRepo(config.RepoRoot()); err == nil && len(ids) > 0 {
 		tgVisiblePostIDs = ids
-		log.Printf("main: loaded telegram visibility filter (%d ids) from %s", len(ids), path)
+		slog.Info("loaded telegram visibility filter", "count", len(ids), "path", path)
 	} else if err != nil {
-		log.Printf("main: telegram visibility filter disabled: %v", err)
+		slog.Warn("telegram visibility filter disabled", "err", err)
 	}
 
 	postsSvc := posts.NewService(pool, tgVisiblePostIDs)

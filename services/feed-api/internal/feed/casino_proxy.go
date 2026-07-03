@@ -3,7 +3,7 @@ package feed
 import (
 	"bytes"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -295,14 +295,14 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[casino-proxy] upstream error method=%s path=%s user_id=%d: %v", r.Method, upstreamPath, user.ID, err)
+		slog.Error("casino-proxy: upstream error", "method", r.Method, "path", upstreamPath, "user_id", user.ID, "err", err)
 		http.Error(w, "casino upstream unavailable", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 500 {
-		log.Printf("[casino-proxy] upstream 5xx method=%s path=%s user_id=%d status=%d", r.Method, upstreamPath, user.ID, resp.StatusCode)
+		slog.Error("casino-proxy: upstream 5xx", "method", r.Method, "path", upstreamPath, "user_id", user.ID, "status", resp.StatusCode)
 	}
 
 	httputil.CopyAllHeaders(w.Header(), resp.Header)
@@ -315,7 +315,7 @@ func (s *Server) proxyCasino(w http.ResponseWriter, r *http.Request, upstreamPat
 				n, err := resp.Body.Read(buf)
 				if n > 0 {
 					if _, writeErr := w.Write(buf[:n]); writeErr != nil {
-						log.Printf("[casino-proxy] client disconnected during SSE stream: %v", writeErr)
+						slog.Warn("casino-proxy: client disconnected during SSE stream", "err", writeErr)
 						break
 					}
 					flusher.Flush()

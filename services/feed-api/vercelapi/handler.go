@@ -2,7 +2,7 @@ package vercelapi
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -21,7 +21,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 
 	// Safely log the database host to verify the connection on Vercel
 	if config.DSN() != "" {
-		log.Printf("init db: %s", strings.Split(config.DSN(), "@")[len(strings.Split(config.DSN(), "@"))-1])
+		slog.Info("init db", "host", strings.Split(config.DSN(), "@")[len(strings.Split(config.DSN(), "@"))-1])
 	}
 
 	postsSvc := posts.NewService(pool, nil)

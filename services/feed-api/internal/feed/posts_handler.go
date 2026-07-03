@@ -2,7 +2,7 @@ package feed
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -42,7 +42,7 @@ func (s *Server) handlePosts(w http.ResponseWriter, r *http.Request) {
 
 	items, next, err := s.postsSvc.LoadPosts(ctx, cursorTS, cursorID, page, limit, source, posts.SortOrder(sortOrder), query)
 	if err != nil {
-		log.Printf("loadPosts: %v", err)
+		slog.Error("loadPosts", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -77,26 +77,26 @@ func (s *Server) handleFront(w http.ResponseWriter, r *http.Request) {
 
 	items, next, err := s.postsSvc.LoadPosts(ctx, nil, nil, nil, limit, source, posts.SortOrder(sortOrder), query)
 	if err != nil {
-		log.Printf("loadPosts(front): %v", err)
+		slog.Error("loadPosts(front)", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	totalPosts, err := s.postsSvc.CountVisiblePosts(ctx)
 	if err != nil {
-		log.Printf("front count posts: %v", err)
+		slog.Warn("front count posts", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	// P0 fix: via service, not direct pool
 	lastSync, err := s.postsSvc.LoadLastSyncAt(ctx)
 	if err != nil {
-		log.Printf("front max(updated_at): %v", err)
+		slog.Warn("front max(updated_at)", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	sourceStats, err := s.postsSvc.LoadSourceStats(ctx)
 	if err != nil {
-		log.Printf("front source stats: %v", err)
+		slog.Warn("front source stats", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -142,18 +142,18 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	items, _, err := s.postsSvc.LoadPosts(ctx, nil, nil, page, limit, source, posts.SortOrder(sortOrder), q)
 	if err != nil {
-		log.Printf("loadPosts(feed): %v", err)
+		slog.Error("loadPosts(feed)", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	var totalPosts int64
 	if err := s.countVisiblePosts(ctx, &totalPosts); err != nil {
-		log.Printf("feed count posts: %v", err)
+		slog.Warn("feed count posts", "err", err)
 	}
 	sourceStats, err := s.loadSourceStats(ctx)
 	if err != nil {
-		log.Printf("feed source stats: %v", err)
+		slog.Warn("feed source stats", "err", err)
 	}
 	vkTotal, tgTotal := sourceTotals(sourceStats)
 
@@ -188,6 +188,6 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := feedPageTmpl.Execute(w, data); err != nil {
-		log.Printf("template feed: %v", err)
+		slog.Warn("template feed", "err", err)
 	}
 }

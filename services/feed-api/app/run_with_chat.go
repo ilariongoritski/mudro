@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -54,7 +55,7 @@ func RunWithChat() {
 	}
 
 	go func() {
-		log.Printf("api listening on %s", addr)
+		slog.Info("api listening", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %v", err)
 		}
@@ -68,6 +69,6 @@ func RunWithChat() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("shutdown error: %v", err)
+		slog.Error("shutdown error", "err", err)
 	}
 }

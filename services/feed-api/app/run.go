@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/netip"
 	"os"
@@ -71,7 +72,7 @@ func Run() {
 	}
 
 	go func() {
-		log.Printf("api listening on %s", addr)
+		slog.Info("api listening", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %v", err)
 		}
@@ -87,7 +88,7 @@ func Run() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("shutdown error: %v", err)
+		slog.Error("shutdown error", "err", err)
 	}
 }
 
@@ -101,10 +102,10 @@ func withAPIRateLimit(next http.Handler, rps, burst int) (http.Handler, func()) 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		if err := rl.Ping(ctx); err != nil {
 			cancel()
-			log.Printf("redis rate limiter disabled (ping failed): %v", err)
+			slog.Warn("redis rate limiter disabled (ping failed)", "err", err)
 		} else {
 			cancel()
-			log.Printf("redis rate limiter enabled: addr=%s db=%d", config.RedisAddr(), config.RedisDB())
+			slog.Info("redis rate limiter enabled", "addr", config.RedisAddr(), "db", config.RedisDB())
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/healthz" {
 					next.ServeHTTP(w, r)
@@ -113,7 +114,7 @@ func withAPIRateLimit(next http.Handler, rps, burst int) (http.Handler, func()) 
 				ip := clientIP(r)
 				allowed, err := rl.Allow(r.Context(), ip, rps, time.Second)
 				if err != nil {
-					log.Printf("redis limiter error: %v", err)
+					slog.Error("redis limiter error", "err", err)
 					next.ServeHTTP(w, r)
 					return
 				}

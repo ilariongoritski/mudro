@@ -2,7 +2,7 @@ package feed
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -114,7 +114,7 @@ func (s *Server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, token, err := s.authSvc.Login(r.Context(), login, body.Password)
 	if err != nil {
-		log.Printf("auth: login failed for %q: %v", login, err)
+		slog.Warn("auth: login failed", "login", login, "err", err)
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -154,7 +154,7 @@ func (s *Server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.authSvc.Register(r.Context(), username, email, password)
 	if err != nil {
-		log.Printf("auth: register failed for %q: %v", username, err)
+		slog.Warn("auth: register failed", "username", username, "err", err)
 		http.Error(w, "registration failed", http.StatusConflict)
 		return
 	}
@@ -199,7 +199,7 @@ func (s *Server) handleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 
 	token, err := s.authSvc.IssueToken(user)
 	if err != nil {
-		log.Printf("auth: refresh token failed for %d: %v", user.ID, err)
+		slog.Warn("auth: refresh token failed", "user_id", user.ID, "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -249,14 +249,14 @@ func (s *Server) handleAuthTelegram(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.authSvc.FindOrCreateTelegramUser(r.Context(), tgAuth.TelegramID, tgAuth.Username)
 	if err != nil {
-		log.Printf("auth: telegram bootstrap failed for %d: %v", tgAuth.TelegramID, err)
+		slog.Error("auth: telegram bootstrap failed", "telegram_id", tgAuth.TelegramID, "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	token, err := s.authSvc.IssueToken(user)
 	if err != nil {
-		log.Printf("auth: telegram token failed for %d: %v", user.ID, err)
+		slog.Warn("auth: telegram token failed", "user_id", user.ID, "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
