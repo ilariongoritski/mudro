@@ -148,6 +148,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		Balance:          newBalance,
 		FreeSpinsBalance: freeSpins,
 		FreeSpinUsed:     freeSpinUsed,
+		Config:           cfg,
 		Symbols:          symbols,
 		Win:              win,
 	}, nil

@@ -84,12 +84,13 @@ func TestInternalAuthMiddlewareAcceptsConfiguredSecret(t *testing.T) {
 	}
 }
 
-func TestHandleConfigRejectsNonAdmin(t *testing.T) {
+func TestHandleConfigPUTRejectsNonAdmin(t *testing.T) {
 	store := NewStore(nil, NewEngine())
 	hub := NewRouletteHub(store)
 	handler := NewHandler(context.Background(), store, hub)
-	req := httptest.NewRequest(http.MethodGet, "/config", strings.NewReader(""))
+	req := httptest.NewRequest(http.MethodPut, "/config", strings.NewReader(`{"rtp_percent":95}`))
 	req.Header.Set("X-User-ID", "7")
+	req.Header.Set("X-User-Role", "user")
 	rec := httptest.NewRecorder()
 
 	handler.handleConfig(rec, req)

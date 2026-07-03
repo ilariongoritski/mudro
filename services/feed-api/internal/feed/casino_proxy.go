@@ -42,7 +42,9 @@ func (s *Server) handleCasinoSpin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCasinoConfig(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodGet, http.MethodPut:
+	case http.MethodGet:
+		s.proxyCasino(w, r, "/config", false)
+	case http.MethodPut:
 		s.proxyCasino(w, r, "/config", true)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
