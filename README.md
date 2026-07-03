@@ -1,5 +1,7 @@
 # MUDRO
 
+[![CI](https://github.com/ilariongoritski/mudro/actions/workflows/ci.yml/badge.svg)](https://github.com/ilariongoritski/mudro/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 MUDRO — Go-first monorepo для пред-MVP социального продукта: лента VK/TG-контента, авторизация, чат, casino showcase, agent-worker контур, Telegram-боты, import/backfill инструменты и self-hosted/VPS runtime.
 
 Текущее состояние: `v0.1.0-mvp`, pre-MVP launch readiness. Код собирается и тестируется, но публичный запуск требует внешней ротации секретов, настройки VPS/HTTPS и применения миграций на целевых БД.
@@ -178,4 +180,10 @@ CI покрывает:
 - HTTP contracts validation;
 - release compose и Docker build smoke.
 
-Текущие локальные изменения могут быть не закоммичены. Перед PR/merge обязательно проверить `git status --short`, не смешивать unrelated WIP и не коммитить реальные секреты.
+## Разработка
+
+Правила контрибьюции и политика работы — в [platform/agent-control/AGENTS.core.md](platform/agent-control/AGENTS.core.md) и [platform/agent-control/policies/repo-safety.md](platform/agent-control/policies/repo-safety.md). Перед PR убедиться, что go build ./... и go test ./... зелёные, git status --short чистый, а в коммит не попали реальные секреты.
+
+## Лицензия
+
+MIT — см. [LICENSE](./LICENSE).
