@@ -53,6 +53,12 @@ services:
       CASINO_ROULETTE_LOCK_MS: "${CASINO_ROULETTE_LOCK_MS:-1500}"
       CASINO_ROULETTE_SPIN_MS: "${CASINO_ROULETTE_SPIN_MS:-4500}"
       CASINO_ROULETTE_RESULT_MS: "${CASINO_ROULETTE_RESULT_MS:-3500}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       casino-db:
         condition: service_healthy
@@ -123,6 +129,12 @@ services:
       REDIS_DB: "${REDIS_DB:-0}"
       CASINO_SERVICE_URL: "http://casino-api:8081"
       CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:?CASINO_INTERNAL_SECRET is required}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       db:
         condition: service_healthy
@@ -149,6 +161,7 @@ services:
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
       KAFKA_TOPIC_TASKS: "${KAFKA_TOPIC_TASKS:-mudro.agent.tasks.v1}"
       KAFKA_CLIENT_ID: "${KAFKA_CLIENT_ID:-mudro-agent}"
+      MUDRO_ROOT: "/opt/mudro"
       JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
     depends_on:
       db:

@@ -18,11 +18,9 @@ else
 fi
 
 echo "==> Applying new migrations..."
-# Main DB
 for f in $(find migrations/ -name "*.sql" ! -name "*.down.sql" | sort); do
   docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -d gallery -v ON_ERROR_STOP=0 < "$f" > /dev/null 2>&1 || true
 done
-# Casino DB
 for f in $(find services/casino/migrations/ -name "*.sql" ! -name "*.down.sql" | sort); do
   docker compose -f docker-compose.prod.yml exec -T casino-db psql -U postgres -d mudro_casino -v ON_ERROR_STOP=0 < "$f" > /dev/null 2>&1 || true
 done

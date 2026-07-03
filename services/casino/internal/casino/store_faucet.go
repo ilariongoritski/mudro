@@ -3,6 +3,7 @@ package casino
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -85,7 +86,8 @@ func (s *Store) ClaimFaucet(ctx context.Context, actor ParticipantInput) (*Fauce
 		return nil, err
 	}
 
-	if err := s.insertActivityTx(ctx, tx, actor.UserID, "faucet", "faucet", 0, amount, amount, "CLAIMED", map[string]any{
+	faucetRef := fmt.Sprintf("faucet_%d_%d", actor.UserID, now.Unix())
+	if err := s.insertActivityTx(ctx, tx, actor.UserID, "faucet", faucetRef, 0, amount, amount, "CLAIMED", map[string]any{
 		"amount":  amount,
 		"source":  "daily_faucet",
 	}); err != nil {

@@ -20,6 +20,11 @@ func PlanFromTodo(ctx context.Context, repoRoot string, q TaskUsecase) (int, err
 	path := filepath.Join(repoRoot, ".codex", "todo.md")
 	f, err := os.Open(path)
 	if err != nil {
+		// todo.md is optional — planner is a no-op when it is absent.
+		// This prevents crash loops on fresh deployments (e.g. Docker containers).
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("open todo: %w", err)
 	}
 	defer f.Close()

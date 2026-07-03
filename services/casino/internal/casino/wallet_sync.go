@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -49,7 +49,7 @@ func (s *Store) StartBalanceReconciler(ctx context.Context, interval time.Durati
 				return
 			case <-ticker.C:
 				if err := s.RunBalanceReconciler(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					log.Printf("casino balance reconciler: %v", err)
+					slog.Error("casino balance reconciler", "error", err)
 				}
 			}
 		}
@@ -88,7 +88,7 @@ func (s *Store) StartRouletteSessionJanitor(ctx context.Context, interval time.D
 				return
 			case <-ticker.C:
 				if err := s.CleanupExpiredRouletteSessions(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					log.Printf("casino roulette session janitor: %v", err)
+					slog.Error("casino roulette session janitor", "error", err)
 				}
 			}
 		}
@@ -285,7 +285,7 @@ func (s *Store) reconcileNextBalanceSync(ctx context.Context) (bool, error) {
 		if requestedBalance != nil && *requestedBalance != mainBalance {
 			// Push drift to main ledger with audit context
 			if err := s.pushBalanceToMainWallet(ctx, userID, *requestedBalance, reason); err != nil {
-				log.Printf("wallet_sync: push drift failed for user %d: %v", userID, err)
+				slog.Error("wallet_sync: push drift failed", "user_id", userID, "error", err)
 				// continue to pull what's there if push failed?
 				// No, let it retry via syncErr
 				syncErr = err
@@ -369,10 +369,10 @@ func (s *Store) pushBalanceToMainWallet(ctx context.Context, userID int64, balan
 
 	// Set audit context
 	if _, err := tx.Exec(ctx, "SELECT set_config('app.casino_reason', $1, true)", reason); err != nil {
-		log.Printf("[wallet-sync] failed to set audit reason for user %d: %v", userID, err)
+		slog.Error("wallet-sync: failed to set audit reason for user %d", "user_id", userID, "error", err)
 	}
 	if _, err := tx.Exec(ctx, "SELECT set_config('app.casino_changed_by', 'casino_service', true)"); err != nil {
-		log.Printf("[wallet-sync] failed to set audit actor for user %d: %v", userID, err)
+		slog.Error("wallet-sync: failed to set audit actor for user %d", "user_id", userID, "error", err)
 	}
 
 	_, err = tx.Exec(ctx, `

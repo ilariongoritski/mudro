@@ -3,7 +3,7 @@ package casino
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -46,7 +46,7 @@ func (l *RouletteLoop) tick(ctx context.Context) {
 	_, err := l.store.SyncRouletteRound(ctx)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
-			log.Printf("casino roulette loop: get round: %v", err)
+			slog.Error("casino roulette loop: get round", "error", err)
 		}
 		return
 	}
