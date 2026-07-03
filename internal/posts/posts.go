@@ -184,6 +184,12 @@ func (s *Service) LoadPosts(ctx context.Context, beforeTS *time.Time, beforeID *
 	}
 
 	if !useCursor {
+		// First page (no cursor) or page-based pagination: return a cursor
+		// only if we likely have more results (full page returned).
+		if page == nil && len(posts) >= limit {
+			last := posts[len(posts)-1]
+			return posts, &Cursor{BeforeTS: last.PublishedAt, BeforeID: last.ID}, nil
+		}
 		return posts, nil, nil
 	}
 
