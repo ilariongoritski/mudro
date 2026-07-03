@@ -61,7 +61,7 @@ func Run() {
 	mux.Handle("/api/bff/web/v1/", bffHandler)
 
 	// Movie catalog proxy
-	mux.Handle("/api/movie-catalog/", http.StripPrefix("/api/movie-catalog", movieCatalogProxy))
+	mux.Handle("/api/movie-catalog/", movieCatalogProxy)
 
 	srv := &http.Server{
 		Addr:              addr,

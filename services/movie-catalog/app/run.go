@@ -20,7 +20,7 @@ import (
 
 const (
 	defaultAddr = ":8091"
-	defaultDSN  = "postgres://postgres:postgres@db:5432/movie_catalog?sslmode=disable"
+	defaultDSN  = "postgres://postgres:postgres@db:5432/gallery?sslmode=disable&search_path=movie_catalog,public"
 )
 
 func Run(ctx context.Context) error {
