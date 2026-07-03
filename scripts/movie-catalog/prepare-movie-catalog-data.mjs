@@ -3,7 +3,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-const defaultInput = 'E:/mudr/staging/mudrotop-source/raw/merged.json'
+const defaultInput = 'E:/mudr/tmp/mudrotop-check/src/merged.json'
 const defaultOutput = 'out/movie-catalog.slim.json'
 
 function parseArgs(argv) {

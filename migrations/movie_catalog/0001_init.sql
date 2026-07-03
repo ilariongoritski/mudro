@@ -41,3 +41,12 @@ create index if not exists idx_movie_genres_genre_movie
 
 create index if not exists idx_movie_genres_movie_genre
   on movie_catalog.movie_genres(movie_id, genre_slug);
+
+-- Grant access for non-superuser app role (for prod where MUDRO_APP_DSN is used)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mudro_app') THEN
+    GRANT USAGE ON SCHEMA movie_catalog TO mudro_app;
+    GRANT SELECT ON ALL TABLES IN SCHEMA movie_catalog TO mudro_app;
+  END IF;
+END $$;

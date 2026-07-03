@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -36,7 +37,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	dsn := getenv("MOVIE_CATALOG_DB_DSN", "postgres://postgres:postgres@localhost:5434/movie_catalog?sslmode=disable")
+	dsn := getenv("MOVIE_CATALOG_DB_DSN", "postgres://postgres:postgres@localhost:5433/gallery?sslmode=disable&search_path=movie_catalog,public")
 	input := getenv("MOVIE_CATALOG_IMPORT_FILE", "out/movie-catalog.slim.json")
 
 	raw, err := os.ReadFile(input)
@@ -180,5 +181,6 @@ func genreLabel(slug string) string {
 		return ""
 	}
 
-	return strings.ToUpper(slug[:1]) + slug[1:]
+	r, size := utf8.DecodeRuneInString(slug)
+	return strings.ToUpper(string(r)) + slug[size:]
 }

@@ -8,6 +8,12 @@ func TestGenreLabel(t *testing.T) {
 	}
 }
 
+func TestGenreLabelCyrillic(t *testing.T) {
+	if got := genreLabel("комедия"); got != "Комедия" {
+		t.Fatalf("genreLabel = %q", got)
+	}
+}
+
 func TestNullIfEmpty(t *testing.T) {
 	if got := nullIfEmpty("   "); got != nil {
 		t.Fatalf("nullIfEmpty blank = %#v", got)
