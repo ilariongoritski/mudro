@@ -152,10 +152,6 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
-	if actor.Role != "admin" {
-		writeError(w, http.StatusForbidden, ErrUnauthorized)
-		return
-	}
 
 	switch r.Method {
 	case http.MethodGet:
@@ -166,6 +162,10 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, cfg)
 	case http.MethodPut:
+		if actor.Role != "admin" {
+			writeError(w, http.StatusForbidden, ErrUnauthorized)
+			return
+		}
 		var cfg Config
 		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 			writeError(w, http.StatusBadRequest, err)
