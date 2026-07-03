@@ -171,6 +171,50 @@ services:
       kafka:
         condition: service_healthy
 
+
+  movie-catalog:
+    build:
+      context: .
+      args:
+        SERVICE: services/movie-catalog/cmd
+    restart: unless-stopped
+    environment:
+      MOVIE_CATALOG_ADDR: ":8091"
+      MOVIE_CATALOG_DB_DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required}"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8091:8091"
+    healthcheck:
+      test: ["NONE"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  bff-web:
+    build:
+      context: .
+      args:
+        SERVICE: services/bff-web/cmd
+    restart: unless-stopped
+    environment:
+      BFF_WEB_ADDR: ":8086"
+      DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      MUDRO_ENV: "${MUDRO_ENV:-production}"
+      BFF_WEB_API_BASE_URL: "http://api:8080"
+      MOVIE_CATALOG_URL: "http://movie-catalog:8091"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+      movie-catalog:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8086:8086"
   minio:
     image: minio/minio:RELEASE.2024-06-22T05-26-45Z
     restart: unless-stopped

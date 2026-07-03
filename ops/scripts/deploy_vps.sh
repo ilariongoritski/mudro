@@ -27,6 +27,27 @@ for f in $(find services/casino/migrations/ -name "*.sql" ! -name "*.down.sql" |
   docker compose -f docker-compose.prod.yml exec -T casino-db psql -U postgres -d mudro_casino -v ON_ERROR_STOP=0 < "$f" > /dev/null 2>&1 || true
 done
 
+
+echo "==> Importing movie catalog data..."
+if [ -f out/movie_catalog_data.sql ]; then
+  echo "  Restoring movie catalog data from SQL dump..."
+  docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -d gallery -v ON_ERROR_STOP=0 < out/movie_catalog_data.sql > /dev/null 2>&1 || \
+    echo "  (movie catalog data restore skipped or already up to date)"
+  echo "  Movie catalog data restored."
+elif [ -f out/movie-catalog.slim.json ]; then
+  echo "  Importing movie catalog data from slim.json..."
+  docker compose -f docker-compose.prod.yml run --rm \
+    -e MOVIE_CATALOG_DB_DSN="${MUDRO_APP_DSN}" \
+    -e MOVIE_CATALOG_IMPORT_FILE="/app/out/movie-catalog.slim.json" \
+    -v "$(pwd)/out/movie-catalog.slim.json:/app/out/movie-catalog.slim.json:ro" \
+    -v "$(pwd):/app" \
+    --no-deps \
+    movie-catalog /usr/local/bin/go run ./tools/importers/moviecatalogimport/cmd 2>&1 | tail -3 || \
+    echo "  (movie import skipped or failed)"
+  echo "  Movie catalog data imported."
+else
+  echo "  No movie catalog data file found, skipping import."
+fi
 echo "==> Rebuilding services..."
 docker compose -f docker-compose.prod.yml build --parallel 2>&1 | tail -3
 
@@ -41,6 +62,12 @@ echo "==> Reload nginx..."
 nginx -t 2>&1 && systemctl reload nginx
 
 echo "==> Health check..."
+
+# movie-catalog
+curl -s http://localhost:8091/healthz | grep -q "ok" && echo "  movie-catalog: OK" || echo "  movie-catalog: FAIL"
+# bff-web movie catalog proxy
+curl -s "http://localhost:8086/api/movie-catalog/genres" | grep -q "items" && echo "  bff-web movie-catalog proxy: OK" || echo "  bff-web movie-catalog proxy: FAIL"
+# main API
 curl -s http://localhost/healthz || echo "HEALTH FAIL"
 echo ""
 echo "DONE! Site: https://222.167.208.10.nip.io"
