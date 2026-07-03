@@ -81,3 +81,8 @@ frontend/.npm-cache/
 env/*
 !env/
 !env/*.env.example
+
+# gallery DB dumps (local, not for git)
+gallery_dump.sql
+gallery_data_only.sql
+
