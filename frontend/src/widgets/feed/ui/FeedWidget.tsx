@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { FeedCursor, Post } from '@/entities/post/model/types'
 import { useGetFrontQuery, useLazyGetPostsQuery } from '@/entities/post/model/postsApi'
@@ -46,6 +46,8 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
   const {
     data: frontData,
     isFetching: isFrontFetching,
@@ -73,8 +75,8 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
   const isInitialLoading = isFrontFetching && items.length === 0
   const showEmpty = !isInitialLoading && !isFrontError && items.length === 0
 
-  const handleLoadMore = async () => {
-    if (!effectiveCursor) return
+  const handleLoadMore = useCallback(async () => {
+    if (!effectiveCursor || isLoadingMore) return
     try {
       setLoadError(null)
       const response = await loadMorePosts({
@@ -89,7 +91,25 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
     } catch {
       setLoadError('Не удалось загрузить следующую страницу.')
     }
-  }
+  }, [effectiveCursor, isLoadingMore, loadMorePosts, limit, source, sort])
+
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !isLoadingMore) {
+          handleLoadMore()
+        }
+      },
+      { rootMargin: '400px', threshold: 0 },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore, isLoadingMore, handleLoadMore])
 
   return (
     <section className="feed-widget">
@@ -142,20 +162,24 @@ const FeedWidgetInner = ({ source, sort, limit, query }: FeedWidgetInnerProps) =
             <>
               <PostCardSkeleton />
               <PostCardSkeleton />
-              <PostCardSkeleton />
             </>
           )}
         </div>
       )}
 
+      {/* Сентинель для бесконечного скролла */}
+      {hasMore && (
+        <div ref={sentinelRef} className="feed-widget__sentinel" aria-hidden="true" />
+      )}
+
       {/* Ошибка догрузки */}
       {loadError && <p className="feed-widget__error-text">{loadError}</p>}
 
-      {/* Показать ещё */}
-      {hasMore && !isLoadingMore && (
+      {/* Fallback: кнопка если IntersectionObserver не сработал */}
+      {loadError && hasMore && !isLoadingMore && (
         <div className="feed-widget__load-more-wrap">
           <Button variant="outline" onClick={handleLoadMore}>
-            Показать ещё
+            Повторить загрузку
           </Button>
         </div>
       )}

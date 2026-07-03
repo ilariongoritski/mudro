@@ -91,24 +91,7 @@
 .post-drawer__source_tg { background: var(--mudro-tg); }
 
 /* Кнопка закрытия */
-.post-drawer__close {
-  flex-shrink: 0;
-  border: 1px solid var(--mudro-line);
-  border-radius: 999px;
-  padding: 0.5rem 1rem;
-  background: var(--mudro-glass-bg);
-  color: var(--mudro-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
 
-.post-drawer__close:hover {
-  border-color: var(--mudro-accent);
-  color: var(--mudro-accent);
-}
 
 /* Статистика */
 .post-drawer__stats {
@@ -395,4 +378,53 @@
   .post-drawer__comment-card_reply {
     margin-left: 0.5rem;
   }
+}
+
+/* Ссылка на оригинал */
+.post-drawer__original-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0.28rem 0.66rem;
+  border-radius: 999px;
+  border: 1px solid var(--mudro-line);
+  background: var(--mudro-glass-bg);
+  color: var(--mudro-accent);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: border-color 0.15s;
+  width: fit-content;
+}
+
+.post-drawer__original-link:hover {
+  border-color: var(--mudro-accent);
+}
+
+/* Кнопка закрытия — круглый крест */
+.post-drawer__close {
+  flex-shrink: 0;
+  border: 1px solid var(--mudro-line);
+  border-radius: 999px;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  background: var(--mudro-glass-bg);
+  color: var(--mudro-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-drawer__close:hover {
+  border-color: var(--mudro-accent);
+  color: var(--mudro-accent);
+  background: rgba(255, 20, 147, 0.1);
 }

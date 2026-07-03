@@ -115,6 +115,12 @@
 }
 
 /* Мобильная адаптация */
+/* Sentinel для бесконечного скролла */
+.feed-widget__sentinel {
+  height: 1px;
+  width: 100%;
+  margin-top: 1rem;
+}
 @media (max-width: 640px) {
   .feed-widget__grid {
     padding-left: 0.75rem;
