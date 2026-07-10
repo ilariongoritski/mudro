@@ -14,7 +14,7 @@ const (
 	DefaultTelegramLimit     = 3800
 	DefaultOpenAIModel       = "gpt-4.1-mini"
 	DefaultOpenRouterBaseURL = "https://openrouter.ai/api/v1"
-	DefaultLLMModel          = "glm-5.2"
+	DefaultLLMModel          = "grok-4.5"
 	DefaultLLMBaseURL        = "https://po.zapro.su/v1"
 	DefaultAPIAddr           = ":8080"
 	DefaultAPIBaseURL        = "http://127.0.0.1:8080"

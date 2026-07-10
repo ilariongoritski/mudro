@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: MUDRO Profile API
+  version: 1.0.0
+paths:
+  /api/profile/{id}:
+    get:
+      summary: Get public profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+  /api/profile/me:
+    put:
+      summary: Update own profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Updated
+  /api/profile/avatar:
+    post:
+      summary: Upload avatar
+  /api/profile/me/casino:
+    get:
+      summary: Casino stats for profile
+  /api/profile/{id}/activities:
+    get:
+      summary: User activity log
+  /api/profile/{id}/message:
+    post:
+      summary: Start private message (links to chat)
+components:
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        id: {type: integer}
+        display_name: {type: string}
+        username: {type: string}
+        email: {type: string, nullable: true}
+        age: {type: integer, nullable: true}
+        bio: {type: string, nullable: true}
+        social_links: {type: object}
+        avatar_url: {type: string, nullable: true}
+        profile_completion: {type: integer}
+        rating: {type: integer}
+        telegram_username: {type: string, nullable: true}
+    ProfileUpdate:
+      type: object
+      properties:
+        display_name: {type: string}
+        username: {type: string}
+        email: {type: string, nullable: true}
+        age: {type: integer, nullable: true}
+        bio: {type: string, nullable: true}
+        social_links: {type: object}

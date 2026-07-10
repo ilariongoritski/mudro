@@ -465,3 +465,13 @@ agent-reject:
 	if [ -f "$(ENV_AGENT)" ]; then . "$(ENV_AGENT)"; fi; \
 	set +a; \
 	$(GO) run ./services/agent/cmd --mode reject --task-id "$(TASK_ID)" --reason "$(REASON)"
+
+# === LLM & Observability targets ===
+
+validate-compose:
+	docker compose -f $(PROD_COMPOSE_FILE) config --quiet
+
+llm-test:
+	@echo "Testing LLM connectivity..."
+	@go run ./tools/llm-test/main.go || echo "LLM test failed"
+
