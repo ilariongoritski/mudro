@@ -1,8 +1,9 @@
 // services/casino-web/src/lib/casino-api.ts
-// Minimal adapter to casino-api (shared wallet, spin, history)
+// Real casino-api adapter with automatic JWT from store
 
-const CASINO_API = process.env.NEXT_PUBLIC_CASINO_API_URL || 'http://localhost:8082';
-const AUTH_API = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8080';
+import { useSlot } from "./slot/store";
+
+const CASINO_API = process.env.NEXT_PUBLIC_CASINO_API_URL || "http://localhost:8082";
 
 export interface SpinResult {
   id: number;
@@ -22,35 +23,48 @@ export interface SpinHistoryItem {
   createdAt: string;
 }
 
-export async function getBalance(token: string): Promise<number> {
+function getToken(): string | null {
+  return useSlot.getState().token;
+}
+
+export async function getBalance(): Promise<number> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
   const res = await fetch(`${CASINO_API}/wallet/balance`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error('Failed to fetch balance');
+  if (!res.ok) throw new Error("Failed to fetch balance");
   const data = await res.json();
   return data.balance ?? 0;
 }
 
-export async function spin(bet: number, token: string): Promise<SpinResult> {
+export async function spin(bet: number): Promise<SpinResult> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
   const res = await fetch(`${CASINO_API}/spin`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ bet, game: 'slot' }),
+    body: JSON.stringify({ bet, game: "slot" }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(err || 'Spin failed');
+    throw new Error(err || "Spin failed");
   }
   return res.json();
 }
 
-export async function getHistory(limit = 20, token: string): Promise<SpinHistoryItem[]> {
+export async function getHistory(limit = 20): Promise<SpinHistoryItem[]> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
   const res = await fetch(`${CASINO_API}/history?limit=${limit}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error('Failed to fetch history');
+  if (!res.ok) throw new Error("Failed to fetch history");
   return res.json();
 }
