@@ -19,11 +19,25 @@ export interface AuthResponse {
   };
 }
 
-export async function loginWithTelegram(initData: string): Promise<AuthResponse> {
+// Real Telegram WebApp login
+export async function loginWithTelegram(initData?: string): Promise<AuthResponse> {
+  let dataToSend = initData;
+
+  // If running inside Telegram WebApp, get real initData
+  if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
+    const tg = (window as any).Telegram.WebApp;
+    dataToSend = tg.initData;
+    console.log("[Telegram] Using real initData from WebApp");
+  }
+
+  if (!dataToSend) {
+    throw new Error("No Telegram initData available");
+  }
+
   const res = await fetch(`${AUTH_API}/api/auth/telegram`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ initData }),
+    body: JSON.stringify({ initData: dataToSend }),
   });
 
   if (!res.ok) {
@@ -33,7 +47,6 @@ export async function loginWithTelegram(initData: string): Promise<AuthResponse>
 
   const data: AuthResponse = await res.json();
 
-  // Save to store
   const store = useSlot.getState();
   store.setAuth(data.token, data.user);
 
@@ -56,4 +69,9 @@ export function restoreAuthFromStorage() {
       useSlot.getState().setAuth(token, user);
     } catch {}
   }
+}
+
+// Helper to check if running inside Telegram
+export function isTelegramWebApp(): boolean {
+  return typeof window !== "undefined" && !!(window as any).Telegram?.WebApp;
 }
