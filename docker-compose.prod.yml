@@ -195,3 +195,26 @@ volumes:
   redis_prod:
   kafka_prod:
   minio_prod:
+  casino-web:
+    build:
+      context: .
+      args:
+        SERVICE: services/casino-web
+    image: mudro-casino-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_CASINO_API_URL:  http://casino-api:8081
+      NEXT_PUBLIC_AUTH_API_URL: http://auth-api:8080
+    depends_on:
+      casino-api:
+        condition: service_started
+    ports:
+      - 127.0.0.1:3002:3000
+    healthcheck:
+      test: [CMD, wget, --no-verbose, --tries=1, --spider, http://localhost:3000]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
