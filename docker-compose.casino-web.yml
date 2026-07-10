@@ -9,6 +9,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_CASINO_API_URL: "http://mudro-casino-api-1:8081"
       NEXT_PUBLIC_AUTH_API_URL: "http://mudro-auth-api-1:8080"
     ports:
@@ -16,7 +17,7 @@ services:
     networks:
       - mudro_default
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

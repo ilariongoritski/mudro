@@ -39,8 +39,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-volumes:
-  casino_pgdata_local:
   casino-web:
     build:
       context: ../../services/casino-web
@@ -50,6 +48,7 @@ volumes:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
       # Casino API base URL (internal)
       NEXT_PUBLIC_CASINO_API_URL: "http://casino-api:8081"
       # Auth service (for JWT)
@@ -59,5 +58,6 @@ volumes:
         condition: service_started
     ports:
       - "127.0.0.1:3002:3000"
-    networks:
-      - mudro
+
+volumes:
+  casino_pgdata_local:
