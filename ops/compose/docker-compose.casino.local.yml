@@ -41,3 +41,23 @@ services:
 
 volumes:
   casino_pgdata_local:
+  casino-web:
+    build:
+      context: ../../services/casino-web
+      dockerfile: Dockerfile
+    image: mudro-casino-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Casino API base URL (internal)
+      NEXT_PUBLIC_CASINO_API_URL: "http://casino-api:8081"
+      # Auth service (for JWT)
+      NEXT_PUBLIC_AUTH_API_URL: "http://auth-api:8080"
+    depends_on:
+      casino-api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3002:3000"
+    networks:
+      - mudro
