@@ -1,0 +1,34 @@
+openapi: 3.1.0
+info:
+  title: Mudro internal RAG API
+  version: 1.0.0
+  description: Internal-only documentation RAG API. It is bound to localhost and is not a public frontend contract.
+servers:
+  - url: http://127.0.0.1:8092
+paths:
+  /healthz:
+    get:
+      operationId: getRAGHealth
+      summary: Service health
+      security: []
+      responses:
+        "200": { description: OK }
+  /internal/rag/ask:
+    post:
+      operationId: askDocumentationRAG
+      summary: Answer from indexed technical documentation with source paths
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string, minLength: 1, maxLength: 8192 }
+      responses:
+        "200": { description: Grounded answer }
+        "400": { description: Invalid request }
+        "422": { description: No relevant documentation }
+        "502": { description: Upstream RAG dependency failure }

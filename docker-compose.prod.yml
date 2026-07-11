@@ -213,9 +213,66 @@ services:
       retries: 3
       start_period: 30s
 
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    restart: unless-stopped
+    volumes:
+      - qdrant_prod:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:6333/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  rag-api:
+    build:
+      context: .
+      args:
+        SERVICE: services/rag-api/cmd
+    restart: unless-stopped
+    environment:
+      RAG_ADDR: ":8092"
+      QDRANT_URL: "http://qdrant:6333"
+      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs}"
+      RAG_LLM_API_KEY: "${RAG_LLM_API_KEY:-}"
+      RAG_LLM_BASE_URL: "${RAG_LLM_BASE_URL:-${LLM_BASE_URL:-https://openrouter.ai/api/v1}}"
+      RAG_LLM_MODEL: "${RAG_LLM_MODEL:-${LLM_MODEL:-openai/gpt-4.1-mini}}"
+      RAG_EMBEDDING_MODEL: "${RAG_EMBEDDING_MODEL:-openai/text-embedding-3-small}"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${RAG_API_PORT:-8092}:8092"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8092/healthz | grep -q '\"status\":\"ok\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  rag-indexer:
+    profiles: ["rag-tools"]
+    build:
+      context: .
+      args:
+        SERVICE: tools/rag-indexer/cmd
+    environment:
+      MUDRO_ROOT: "/app"
+      QDRANT_URL: "http://qdrant:6333"
+      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs}"
+      RAG_LLM_API_KEY: "${RAG_LLM_API_KEY:-}"
+      RAG_LLM_BASE_URL: "${RAG_LLM_BASE_URL:-${LLM_BASE_URL:-https://openrouter.ai/api/v1}}"
+      RAG_EMBEDDING_MODEL: "${RAG_EMBEDDING_MODEL:-openai/text-embedding-3-small}"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - ./:/app:ro
+
 volumes:
   pgdata_prod:
   casino_pgdata_prod:
   redis_prod:
   kafka_prod:
   minio_prod:
+  qdrant_prod:
