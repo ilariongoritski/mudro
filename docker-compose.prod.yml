@@ -191,9 +191,8 @@ services:
 
   casino-web:
     build:
-      context: .
-      args:
-        SERVICE: services/casino-web
+      context: services/casino-web
+      dockerfile: Dockerfile
     image: mudro-casino-web
     restart: unless-stopped
     environment:
