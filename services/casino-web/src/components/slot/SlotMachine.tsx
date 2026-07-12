@@ -7,8 +7,8 @@ import { ControlPanel } from "./ControlPanel";
 import { WinDisplay } from "./WinDisplay";
 import { Banners } from "./Banners";
 import { Particles } from "./Particles";
+import { TelegramLoginButton } from "@/components/TelegramLogin";
 import { useSlot } from "@/lib/slot/store";
-import { Button } from "@/components/ui/button";
 
 export function SlotMachine() {
   const phase = useSlot((s) => s.phase);
@@ -63,16 +63,7 @@ export function SlotMachine() {
             
             <div className="bg-zinc-950 border border-white/10 rounded-3xl p-8">
               <p className="text-sm text-slate-400 mb-4">Fast & secure login via Telegram</p>
-              <Button 
-                size="lg" 
-                className="w-full text-lg py-6 bg-[#54a9eb] hover:bg-[#4a9ad6]"
-                onClick={() => {
-                  // Trigger login modal from TopBar (simplified)
-                  window.location.reload();
-                }}
-              >
-                📱 Login with Telegram
-              </Button>
+              <TelegramLoginButton />
             </div>
           </div>
         </div>

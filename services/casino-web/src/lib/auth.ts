@@ -1,6 +1,7 @@
 import { useSlot } from "./slot/store";
 
-const AUTH_API = process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8080";
+const authAPI = process.env.NEXT_PUBLIC_AUTH_API_URL ?? "";
+export const telegramAuthEndpoint = "/api/v1/auth/telegram";
 
 export interface TelegramUser {
   id: number;
@@ -19,22 +20,20 @@ export interface AuthResponse {
   };
 }
 
-// Real Telegram WebApp login
 export async function loginWithTelegram(initData?: string): Promise<AuthResponse> {
   let dataToSend = initData;
 
-  // If running inside Telegram WebApp, get real initData
-  if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
-    const tg = (window as any).Telegram.WebApp;
-    dataToSend = tg.initData;
-    console.log("[Telegram] Using real initData from WebApp");
+  if (typeof window !== "undefined" && window.Telegram?.WebApp) {
+    const telegram = window.Telegram.WebApp;
+    telegram.ready();
+    dataToSend = telegram.initData;
   }
 
   if (!dataToSend) {
-    throw new Error("No Telegram initData available");
+    throw new Error("Open the game from Telegram to sign in");
   }
 
-  const res = await fetch(`${AUTH_API}/api/auth/telegram`, {
+  const res = await fetch(`${authAPI}${telegramAuthEndpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ initData: dataToSend }),
@@ -46,10 +45,7 @@ export async function loginWithTelegram(initData?: string): Promise<AuthResponse
   }
 
   const data: AuthResponse = await res.json();
-
-  const store = useSlot.getState();
-  store.setAuth(data.token, data.user);
-
+  useSlot.getState().setAuth(data.token, data.user);
   return data;
 }
 
@@ -65,13 +61,13 @@ export function restoreAuthFromStorage() {
   const userStr = localStorage.getItem("mudro_user");
   if (token && userStr) {
     try {
-      const user = JSON.parse(userStr);
-      useSlot.getState().setAuth(token, user);
-    } catch {}
+      useSlot.getState().setAuth(token, JSON.parse(userStr));
+    } catch {
+      // Ignore corrupted persisted auth state.
+    }
   }
 }
 
-// Helper to check if running inside Telegram
 export function isTelegramWebApp(): boolean {
-  return typeof window !== "undefined" && !!(window as any).Telegram?.WebApp;
+  return typeof window !== "undefined" && !!window.Telegram?.WebApp;
 }
