@@ -34,7 +34,7 @@ export function TumbleGrid() {
 
   return (
     <div
-      className="relative slot-grid rounded-2xl p-2 sm:p-2.5"
+      className={`relative slot-grid rounded-2xl p-2 sm:p-2.5 ${phase === "dropping" ? "slot-server-spinning" : ""}`}
       style={
         { "--cell": "clamp(48px, 13.5vw, 72px)" } as React.CSSProperties
       }

@@ -72,8 +72,17 @@ export async function getBalance(): Promise<number> {
   return data.balance;
 }
 
-export function spin(bet: number): Promise<SpinResult> {
-  return request<SpinResult>("/spin", { method: "POST", body: JSON.stringify({ bet }) });
+export async function spin(bet: number): Promise<SpinResult> {
+  const result = await request<Partial<SpinResult>>("/spin", { method: "POST", body: JSON.stringify({ bet }) });
+  return {
+    balance: Number(result.balance ?? 0),
+    win: Number(result.win ?? 0),
+    symbols: Array.isArray(result.symbols) ? result.symbols : [],
+    free_spins_balance: result.free_spins_balance,
+    free_spin_used: result.free_spin_used,
+    serverSeedHash: result.serverSeedHash,
+    nonce: result.nonce,
+  };
 }
 
 export async function getHistory(limit = 20): Promise<SpinHistoryItem[]> {

@@ -36,17 +36,23 @@ export function ControlPanel() {
   const canSpin = isLoggedIn && balance >= bet && !busy && !requestInFlight;
 
   const runSpin = async (): Promise<boolean> => {
+    const startedAt = performance.now();
     if (!beginServerSpin()) return false;
     setRequestInFlight(true);
     setError(null);
     try {
       const result = await realSpin(bet);
+      const minimumSpinMs = turbo ? 320 : 700;
+      const elapsed = performance.now() - startedAt;
+      if (elapsed < minimumSpinMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, minimumSpinMs - elapsed));
+      }
       applyServerSpin({
         balanceAfter: result.balance,
         win: result.win,
         symbols: result.symbols,
-        serverSeedHash: result.serverSeedHash || "server-verified",
-        nonce: result.nonce || 0,
+        serverSeedHash: result.serverSeedHash,
+        nonce: result.nonce,
       });
       return true;
     } catch (cause) {

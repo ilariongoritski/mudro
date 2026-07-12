@@ -500,6 +500,23 @@ body {
   }
 }
 
+/* Server-backed spin feedback: no local outcome is fabricated. */
+.slot-server-spinning .slot-reel-col {
+  animation: slot-server-reel 0.18s linear infinite alternate;
+  filter: saturate(1.15) brightness(1.08);
+}
+.slot-server-spinning .slot-reel-col:nth-child(2) { animation-delay: 0.04s; }
+.slot-server-spinning .slot-reel-col:nth-child(3) { animation-delay: 0.08s; }
+.slot-server-spinning .slot-reel-col:nth-child(4) { animation-delay: 0.12s; }
+.slot-server-spinning .slot-reel-col:nth-child(5) { animation-delay: 0.16s; }
+@keyframes slot-server-reel {
+  from { transform: translateY(-8px); filter: blur(1px) saturate(1.25) brightness(1.12); }
+  to { transform: translateY(8px); filter: blur(0) saturate(1) brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot-server-spinning .slot-reel-col { animation: none; }
+}
+
 /* custom scrollbar */
 .slot-scroll::-webkit-scrollbar {
   width: 8px;

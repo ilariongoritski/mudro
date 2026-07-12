@@ -82,8 +82,8 @@ export interface ServerSpinResult {
   balanceAfter: number;
   win: number;
   symbols: string[];
-  serverSeedHash: string;
-  nonce: number;
+  serverSeedHash?: string;
+  nonce?: number;
 }
 
 export interface SlotState {
@@ -660,22 +660,25 @@ export const useSlot = create<SlotState>((set, get) => ({
 
   applyServerSpin: (result) => {
     const s = get();
+    const win = Number.isFinite(result.win) ? result.win : 0;
     clearTimer(s);
-    const winTier = computeTier(result.win, s.bet);
+    const winTier = computeTier(win, s.bet);
     set({
       balance: round2(result.balanceAfter),
       phase: "ended",
       spinKey: s.spinKey + 1,
       tumbleKey: s.tumbleKey + 1,
-      displayWin: round2(result.win),
-      spinWin: round2(result.win),
-      lastCascadeWin: round2(result.win),
+      displayWin: round2(win),
+      spinWin: round2(win),
+      lastCascadeWin: round2(win),
       winTier,
-      fairness: { serverSeedHash: result.serverSeedHash, nonce: result.nonce },
+      fairness: result.serverSeedHash && result.nonce != null
+        ? { serverSeedHash: result.serverSeedHash, nonce: result.nonce }
+        : null,
       winningPositions: new Set(),
       cascade: 0,
       activeBombs: 0,
-      balancePulse: result.win > 0 ? s.balancePulse + 1 : s.balancePulse,
+      balancePulse: win > 0 ? s.balancePulse + 1 : s.balancePulse,
     });
   },
 }));
