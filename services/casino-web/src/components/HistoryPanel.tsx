@@ -56,7 +56,7 @@ export function HistoryPanel() {
                 <div className="flex items-center gap-4">
                   <div className="font-mono text-emerald-400">#{spin.id}</div>
                   <div className="text-slate-400">
-                    {new Date(spin.createdAt).toLocaleDateString()} {new Date(spin.createdAt).toLocaleTimeString([], { hour:  2-digit, minute: 2-digit })}
+                    {new Date(spin.createdAt).toLocaleDateString()} {new Date(spin.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
                 </div>
                 <div className="flex items-center gap-4 font-mono">
