@@ -148,6 +148,7 @@ export interface SlotState {
   buyBonus: () => void;
   hydrate: () => void;
   setAuth: (token: string, user: User) => void;
+  setServerBalance: (balance: number) => void;
   clearAuth: () => void;
   applyServerSpin: (result: ServerSpinResult) => void;
   beginServerSpin: () => boolean;
@@ -631,6 +632,11 @@ export const useSlot = create<SlotState>((set, get) => ({
       window.localStorage.setItem("mudro_user", JSON.stringify(user));
     }
     set({ token, user, isLoggedIn: true });
+  },
+
+  setServerBalance: (balance) => {
+    const value = round2(balance);
+    set({ balance: value });
   },
 
   clearAuth: () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getBalance } from "@/lib/casino-api";
 import { TopBar } from "./TopBar";
 import { TumbleGrid } from "./TumbleGrid";
 import { ControlPanel } from "./ControlPanel";
@@ -20,11 +21,11 @@ export function SlotMachine() {
   const freeSpinsWin = useSlot((s) => s.freeSpinsWin);
   const balance = useSlot((s) => s.balance);
   const bet = useSlot((s) => s.bet);
-  const spin = useSlot((s) => s.spin);
   const cascade = useSlot((s) => s.cascade);
   const activeBombs = useSlot((s) => s.activeBombs);
   const seedBoard = useSlot((s) => s.seedBoard);
   const hydrate = useSlot((s) => s.hydrate);
+  const setServerBalance = useSlot((s) => s.setServerBalance);
   const isLoggedIn = useSlot((s) => s.isLoggedIn);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -35,19 +36,10 @@ export function SlotMachine() {
     seedBoard();
   }, [hydrate, seedBoard]);
 
-  // spacebar to spin
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        const target = e.target as HTMLElement;
-        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
-        e.preventDefault();
-        if (!busy && !inFreeSpins && balance >= bet && isLoggedIn) spin();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, inFreeSpins, balance, bet, spin, isLoggedIn]);
+    if (!isLoggedIn) return;
+    void getBalance().then(setServerBalance).catch(() => undefined);
+  }, [isLoggedIn, setServerBalance]);
 
   const used = freeSpinsTotal - freeSpins;
 

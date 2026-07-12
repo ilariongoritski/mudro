@@ -157,7 +157,7 @@ export const BOMB_WEIGHTS: number[] = [
 /** Probability that a newly-filled cell becomes a bomb during free spins. */
 export const BOMB_SPAWN_CHANCE = 0.045;
 
-export const BET_PRESETS = [0.2, 0.5, 1, 2, 5, 10, 25, 50, 100];
+export const BET_PRESETS = [1, 2, 5, 10, 25, 50, 100];
 export const DEFAULT_BET = 1;
 export const STARTING_BALANCE = 1000;
 

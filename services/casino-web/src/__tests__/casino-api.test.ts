@@ -1,16 +1,16 @@
 import { getBalance, spin, getHistory } from "@/lib/casino-api";
+import { useSlot } from "@/lib/slot/store";
 
-// Smoke tests for casino API adapter
+// Adapter must remain browser-safe: all requests use the public reverse proxy.
 describe("Casino API adapter", () => {
-  it("should export getBalance function", () => {
+  it("exports the supported server-backed actions", () => {
     expect(typeof getBalance).toBe("function");
-  });
-
-  it("should export spin function", () => {
     expect(typeof spin).toBe("function");
+    expect(typeof getHistory).toBe("function");
   });
 
-  it("should export getHistory function", () => {
-    expect(typeof getHistory).toBe("function");
+  it("updates the displayed wallet only from an explicit server balance", () => {
+    useSlot.getState().setServerBalance(42);
+    expect(useSlot.getState().balance).toBe(42);
   });
 });
