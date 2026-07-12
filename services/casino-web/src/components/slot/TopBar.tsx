@@ -22,7 +22,6 @@ export function TopBar() {
   const balancePulse = useSlot((s) => s.balancePulse);
   const soundOn = useSlot((s) => s.soundOn);
   const toggleSound = useSlot((s) => s.toggleSound);
-  const resetBalance = useSlot((s) => s.resetBalance);
   const phase = useSlot((s) => s.phase);
   const inFreeSpins = useSlot((s) => s.inFreeSpins);
   const isLoggedIn = useSlot((s) => s.isLoggedIn);
@@ -67,14 +66,6 @@ export function TopBar() {
             <Wallet className="h-4 w-4 text-emerald-400" />
             <span>{fmt(balance)}</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={resetBalance}
-            className="h-9 w-9 text-white/60 hover:text-white"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Right: Controls */}
