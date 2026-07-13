@@ -25,7 +25,8 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-function fmtPay(n: number) {
+function fmtPay(n: number | undefined) {
+  if (n == null) return "-";
   return n % 1 === 0 ? String(n) : n.toFixed(2);
 }
 

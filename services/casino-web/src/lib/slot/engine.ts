@@ -1,3 +1,4 @@
+"use client";
 // Sweet Bonanza engine: pay-anywhere evaluation + tumble (cascade) logic.
 import {
   BOMB_SPAWN_CHANCE,

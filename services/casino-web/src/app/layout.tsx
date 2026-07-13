@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,18 +6,10 @@ export const metadata: Metadata = {
   description: "Play Sweet Bonanza with real balance via Telegram",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-black text-white">
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-      </body>
+      <body className="bg-black text-white">{children}</body>
     </html>
   );
 }

@@ -1,3 +1,4 @@
+"use client";
 // Sweet Bonanza style config: 5×5 grid, pay-anywhere, tumble, bombs, free spins.
 
 export type SymbolId =

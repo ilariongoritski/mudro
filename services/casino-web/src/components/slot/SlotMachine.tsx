@@ -10,7 +10,7 @@ import { Particles } from "./Particles";
 import { WinBar } from "./WinBar";
 import { useSlot } from "@/lib/slot/store";
 
-export function SlotMachine() {
+export default function SlotMachine() {
   const spinKey = useSlot((s) => s.spinKey);
   const winTier = useSlot((s) => s.winTier);
   const inFreeSpins = useSlot((s) => s.inFreeSpins);
@@ -34,7 +34,6 @@ export function SlotMachine() {
     seedBoard();
   }, [hydrate, seedBoard]);
 
-  // screen shake on mega/epic (DOM-only)
   useEffect(() => {
     if (winTier !== "mega" && winTier !== "epic") return;
     const el = panelRef.current;
@@ -46,7 +45,6 @@ export function SlotMachine() {
     return () => clearTimeout(t);
   }, [winTier, spinKey]);
 
-  // spacebar to spin
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {

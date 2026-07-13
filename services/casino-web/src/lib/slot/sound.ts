@@ -1,8 +1,9 @@
+"use client";
+
 /**
  * Procedural Web Audio sound engine for a casino slot game.
  *
  * Pure browser Web Audio API + TypeScript. No external audio files, no React,
- * no imports from other project files. All sounds are synthesized on the fly
  * from oscillators and short noise buffers.
  *
  * The AudioContext is created lazily on the first sound call (browsers require
