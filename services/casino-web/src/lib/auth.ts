@@ -1,6 +1,7 @@
-import { useSlot } from "./slot/store";
+// services/casino-web/src/lib/auth.ts
+// Telegram Mini App auth — calls through nginx /api/auth/ proxy
 
-const AUTH_API = process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8080";
+import { useSlot } from "./slot/store";
 
 export interface TelegramUser {
   id: number;
@@ -34,7 +35,7 @@ export async function loginWithTelegram(initData?: string): Promise<AuthResponse
     throw new Error("No Telegram initData available");
   }
 
-  const res = await fetch(`${AUTH_API}/api/auth/telegram`, {
+  const res = await fetch(`/api/auth/telegram`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ initData: dataToSend }),

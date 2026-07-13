@@ -1,9 +1,9 @@
 // services/casino-web/src/lib/casino-api.ts
-// Real casino-api adapter with automatic JWT from store
+// Real casino-api adapter — calls through nginx /api/casino/ proxy
 
 import { useSlot } from "./slot/store";
 
-const CASINO_API = process.env.NEXT_PUBLIC_CASINO_API_URL || "http://localhost:8082";
+const CASINO_API = "/api/casino";
 
 export interface SpinResult {
   id: number;

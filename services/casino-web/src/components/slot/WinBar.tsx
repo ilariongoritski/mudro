@@ -91,18 +91,23 @@ function StatTile({ label, value, active, accent, icon, pulseKey }: StatTileProp
 
 export function WinBar() {
   const displayWin = useSlot((s) => s.displayWin);
+  const lastSpinWin = useSlot((s) => s.lastSpinWin);
   const freeSpinsWin = useSlot((s) => s.freeSpinsWin);
   const inFreeSpins = useSlot((s) => s.inFreeSpins);
   const freeSpins = useSlot((s) => s.freeSpins);
   const freeSpinsTotal = useSlot((s) => s.freeSpinsTotal);
   const spinKey = useSlot((s) => s.spinKey);
+  const phase = useSlot((s) => s.phase);
+
+  // Show animated displayWin during spin, else lastSpinWin
+  const showWin = phase === "celebrating" || phase === "tumbling" || phase === "ended" ? displayWin : lastSpinWin;
 
   return (
     <div className="mt-2.5 flex items-stretch gap-2">
       <StatTile
         label="SPIN WIN"
-        value={displayWin}
-        active={displayWin > 0}
+        value={showWin}
+        active={showWin > 0 || lastSpinWin > 0}
         accent="#f9a8d4"
         icon="🎯"
         pulseKey={spinKey}
