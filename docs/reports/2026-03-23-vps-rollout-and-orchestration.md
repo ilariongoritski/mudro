@@ -44,7 +44,7 @@ Validated live checks:
 ### External frontend / API checks
 
 Validated external checks:
-- `https://frontend-psi-ten-33.vercel.app/api/front?limit=1` returned feed JSON
+- `https://nginx-certbot45437.hostkey.in/api/front?limit=1` returned feed JSON (Vercel deprecated)
 - deployed media GET requests returned image bodies successfully
 
 ## Sanitized subagent and review summary

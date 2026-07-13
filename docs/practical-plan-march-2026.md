@@ -10,7 +10,7 @@
 
 ### Копировать
 - **Минималистичный HTTP API**: stdlib, без фреймворков — у нас уже так
-- **Единый бинарник с embedded frontend**: Go 1.16+ embed вместо Vercel (экономия $20/мес)
+- **Единый бинарник с embedded frontend**: Go 1.16+ embed (Vercel больше не используется)
 - **Простая JWT auth**: без OAuth сложности — у нас уже есть
 - **Webhook интеграции**: у нас Telegram bot, можно добавить Discord/Slack
 
@@ -23,7 +23,7 @@ var frontendFS embed.FS
 http.Handle("/", http.FileServer(http.FS(frontendFS)))
 ```
 
-**Выгода**: Один бинарник вместо двух деплоев (API + Vercel), проще CI/CD.
+**Выгода**: Один сервис на VPS вместо двух деплоев, проще CI/CD.
 
 ---
 
@@ -236,7 +236,7 @@ func (s *Server) handleRSS(w http.ResponseWriter, r *http.Request) {
 ## 7. Highest-leverage actions (топ-5)
 
 ### 1. Embedded frontend (неделя 1)
-**Зачем**: Один бинарник вместо двух деплоев, экономия $20/мес на Vercel.
+**Зачем**: Один сервис на VPS вместо двух деплоев, экономия на внешнем хостинге.
 **Как**: `go:embed frontend/dist` + `http.FileServer`.
 **Референс**: usememos/memos.
 
@@ -276,9 +276,9 @@ func (s *Server) handleRSS(w http.ResponseWriter, r *http.Request) {
 **Решение**: JWT (30-60 дней) → Redis session (90 дней).
 **Обоснование**: JWT проще для stateless API, session лучше для security (revocation).
 
-### Vercel → Self-hosted
-**Решение**: Vercel (30 дней) → Embedded frontend (60 дней).
-**Обоснование**: Vercel проще для MVP, self-hosted дешевле для production.
+### Vercel → Self-hosted (✅ выполнено)
+**Решение**: VPS self-hosted (Vercel deprecated).
+**Обоснование**: Self-hosted проще и дешевле для единой инфраструктуры.
 
 ---
 

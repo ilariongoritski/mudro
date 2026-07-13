@@ -78,8 +78,8 @@ Worker plane:
 - `http://127.0.0.1:8080/api/front?limit=1`
 - `http://127.0.0.1:4700/`
 - `http://127.0.0.1:18789/`
-- `https://frontend-psi-ten-33.vercel.app/api/front?limit=1`
-- `https://frontend-psi-ten-33.vercel.app/media/...`
+- `https://nginx-certbot45437.hostkey.in/api/front?limit=1`
+- `https://nginx-certbot45437.hostkey.in/media/...`
 
 Итог:
 

@@ -5,7 +5,7 @@ Finalize the MUDRO MVP codebase, stabilize the Casino microservice, and prepare 
 
 ## Phase 1: Stability (COMPLETED)
 - [x] Fix Casino backend test regressions.
-- [x] Normalize Vercel infrastructure (clean rewrites).
+- [x] Vercel deprecated: всё на VPS (удалены vercel.json, api/feed.go, vercelapi)
 - [x] Secure sensitive env variables in `.env.example`.
 - [x] Fix Plinko balance synchronization.
 

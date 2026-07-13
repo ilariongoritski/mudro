@@ -1,6 +1,6 @@
 # MUDRO: 90-дневный план архитектуры (2026-03-22 → 2026-06-20)
 
-**Контекст**: Go-проект социальной ленты (VK+TG), 36 таблиц БД, 2687 постов в проде, React frontend на Vercel, API на VPS Ubuntu 24.04. Референсы: usememos/memos, bluesky-social/indigo, tinode/chat, GoToSocial.
+**Контекст**: Go-проект социальной ленты (VK+TG), 36 таблиц БД, 2687 постов в проде, React frontend на VPS, API на VPS Ubuntu 24.04. Референсы: usememos/memos, bluesky-social/indigo, tinode/chat, GoToSocial.
 
 ---
 
@@ -34,7 +34,7 @@ mudro11-reference/
 - **Backend**: Go 1.24, pgx/v5, JWT, HTTP stdlib
 - **DB**: Postgres 16, 36 таблиц, 58 FK
 - **Frontend**: React 18, TypeScript, Redux Toolkit, RTK Query, Vite
-- **Инфра**: Docker Compose, Redis, Kafka (Redpanda), MinIO, Vercel (frontend), VPS (API)
+- **Инфра**: Docker Compose, Redis, Kafka (Redpanda), MinIO, VPS (всё сам)
 - **Боты**: Telegram bot-api/v5
 - **MCP**: filesystem, git, postgres (read-only), github (опционально)
 
@@ -54,7 +54,7 @@ mudro11-reference/
 ✅ TG bot команды: `/health`, `/feed5`, `/mudro`, `/time`, `/agent24`
 ✅ Agent worker (planner + executor, 15s цикл)
 ✅ Reporter (30min отчёты в TG)
-✅ Frontend на Vercel (feed page, detail drawer, filters)
+✅ Frontend на VPS (feed page, detail drawer, filters)
 ✅ Media backfill (1591/1778 HTTP URLs)
 ✅ Rate limiting (token bucket + Redis)
 ✅ Kafka events (опционально)
@@ -90,7 +90,7 @@ mudro11-reference/
 
 **Применить к MUDRO**:
 - Упростить API: убрать лишние middleware, оставить stdlib + pgx
-- Рассмотреть embed frontend в Go бинарник (альтернатива Vercel)
+- Рассмотреть embed frontend в Go бинарник
 - Добавить webhook для внешних интеграций (Discord, Slack)
 
 ### 2.2 bluesky-social/indigo (Go, AT Protocol, федеративная соцсеть)
@@ -569,17 +569,16 @@ jobs:
 
 **Альтернатива**: Redis для cache, но не для primary storage.
 
-### 7.5 Vercel vs Self-hosted Frontend
-**Решение**: Vercel (текущий подход) → Self-hosted в Спринте 2.
+### 7.5 Vercel → Self-hosted (выполнено)
+**Решение**: VPS self-hosted (Vercel deprecated).
 
 **Обоснование**:
-- Vercel проще для MVP
-- Self-hosted дешевле для production
-- Референс (memos) использует embedded frontend
+- Self-hosted даёт полный контроль
+- Всё на одном VPS — проще инфраструктура
+- Меньше внешних зависимостей
 
 **План**:
-- Спринт 1: Vercel
-- Спринт 2: Nginx + embedded frontend (Go embed)
+- Спринт 2: ✅ Vercel удалён, всё на VPS
 
 ---
 
@@ -676,7 +675,7 @@ Highest-leverage tooling:
 - REST (не GraphQL)
 - JWT → Session (в Спринте 3)
 - Postgres (не NoSQL)
-- Vercel → Self-hosted (в Спринте 2)
+- Vercel → Self-hosted (✅ выполнено)
 
 Success metrics: HTTPS, WebSocket, RSS, микросервисы, monitoring.
 

@@ -100,8 +100,8 @@ make count-posts
 После обновления env сделать redeploy (CLI или Dashboard), затем проверить:
 
 ```bash
-curl -i https://<vercel-domain>/healthz
-curl -i "https://<vercel-domain>/feed?limit=2"
+curl -i https://nginx-certbot45437.hostkey.in/healthz
+curl -i "https://nginx-certbot45437.hostkey.in/feed?limit=2"
 ```
 
 Ожидание:

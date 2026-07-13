@@ -127,9 +127,6 @@ func ReportIntervalMinutes() int {
 }
 
 func RepoRoot() string {
-	if os.Getenv("VERCEL") == "1" {
-		return "."
-	}
 	if v := strings.TrimSpace(os.Getenv("MUDRO_ROOT")); v != "" {
 		return v
 	}

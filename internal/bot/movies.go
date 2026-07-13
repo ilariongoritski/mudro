@@ -37,7 +37,7 @@ func handleMovies(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 func getMoviesWebAppURL() string {
 	baseURL := os.Getenv("MUDRO_WEB_URL")
 	if baseURL == "" {
-		baseURL = "https://mudro.vercel.app"
+		baseURL = "https://nginx-certbot45437.hostkey.in"
 	}
 	return fmt.Sprintf("%s/movies", baseURL)
 }

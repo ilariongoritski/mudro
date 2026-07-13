@@ -63,7 +63,7 @@
 Результат:
 - сайт открывается по `http://<server-ip>/`
 - API и media продолжают жить на том же VPS, но уже за reverse proxy
-- Vercel перестает быть обязательной точкой входа для MVP
+- Vercel полностью удалён — всё на VPS
 
 HTTPS rollout, Certbot, security headers and external smoke checklist:
 - `ops/runbooks/vps-https-nginx.md`

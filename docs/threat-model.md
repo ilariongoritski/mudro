@@ -1,11 +1,11 @@
 # Overview
-MUDRO is a microservices-first monorepo with Go services (`services/*`), a React+Vite frontend (`frontend/`), CLI tooling (`tools/*`), and ops/deploy assets (`ops/*`). The runtime is a mix of new services (feed-api, auth-api, api-gateway, bff-web, casino, agent, bot, orchestration-api, movie-catalog) and legacy/transition code. Postgres is the primary datastore; Redis is used for API rate limiting; Kafka is optional for agent task events. Media files are served directly from a filesystem directory (`/media`) or via Nginx alias/MinIO. A serverless/Vercel adapter (`api/index.go`, `pkg/vercelapi`) exposes the feed API without auth.
+MUDRO is a microservices-first monorepo with Go services (`services/*`), a React+Vite frontend (`frontend/`), CLI tooling (`tools/*`), and ops/deploy assets (`ops/*`). The runtime is a mix of new services (feed-api, auth-api, api-gateway, bff-web, casino, agent, bot, orchestration-api, movie-catalog) and legacy/transition code. Postgres is the primary datastore; Redis is used for API rate limiting; Kafka is optional for agent task events. Media files are served directly from a filesystem directory (`/media`) or via Nginx alias/MinIO. All services are self-hosted on a single VPS behind Docker Compose and Nginx reverse proxy.
 
 Security-relevant functionality includes JWT-based authentication and admin roles, Telegram WebApp authentication for the casino, a Telegram bot that can trigger local operational commands, a provably fair casino ledger, and a local Opus gateway that can execute Claude Code against the repo. The architecture is in flux, so validating which services are exposed in production is part of the security posture.
 
 # Threat model, Trust boundaries and assumptions
 ## Trust boundaries
-- **Internet clients → HTTP APIs**: feed-api (`internal/api/server.go`), auth-api (`services/auth-api`), casino (`internal/casino`), movie-catalog (`services/movie-catalog`), API gateway/BFF (`services/api-gateway`, `services/bff-web`), orchestration proxy (`services/orchestration-api`), serverless handler (`api/index.go`).
+- **Internet clients → HTTP APIs**: feed-api (`internal/api/server.go`), auth-api (`services/auth-api`), casino (`internal/casino`), movie-catalog (`services/movie-catalog`), API gateway/BFF (`services/api-gateway`, `services/bff-web`), orchestration proxy (`services/orchestration-api`).
 - **Browser → API**: browser-based clients store JWTs in localStorage and send `Authorization: Bearer` headers; CORS is permissive in some services.
 - **Telegram → Bot/Miniapp**: Telegram updates are untrusted; WebApp `initData` is validated via HMAC with the bot token.
 - **Service-to-service**: gateways and BFF proxy to upstream services and forward auth headers.
