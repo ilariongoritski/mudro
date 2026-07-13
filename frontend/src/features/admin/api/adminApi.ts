@@ -13,7 +13,31 @@ export interface AdminUsersResponse {
 }
 
 export interface AdminStats {
+  total_users?: number
   active_subscriptions?: number
+}
+
+export interface RuntimeProvider {
+  name: string
+  configured: boolean
+  model?: string
+  limit?: string
+}
+
+export interface RuntimeLimits {
+  requests_per_second?: string
+  burst?: string
+}
+
+export interface RuntimeService {
+  name: string
+  status: 'healthy' | 'unavailable' | 'unknown'
+}
+
+export interface RuntimeDashboard {
+  providers: RuntimeProvider[]
+  limits: RuntimeLimits
+  services: RuntimeService[]
 }
 
 export const adminApi = mudroApi.injectEndpoints({
@@ -26,7 +50,11 @@ export const adminApi = mudroApi.injectEndpoints({
       query: () => '/admin/stats',
       providesTags: ['Auth'],
     }),
+    getRuntimeDashboard: build.query<RuntimeDashboard, void>({
+      query: () => '/admin/runtime',
+      providesTags: ['Auth'],
+    }),
   }),
 })
 
-export const { useGetAdminUsersQuery, useGetAdminStatsQuery } = adminApi
+export const { useGetAdminUsersQuery, useGetAdminStatsQuery, useGetRuntimeDashboardQuery } = adminApi

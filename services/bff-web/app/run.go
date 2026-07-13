@@ -17,6 +17,7 @@ import (
 	"github.com/goritskimihail/mudro/internal/posts"
 	"github.com/goritskimihail/mudro/internal/tgexport"
 	pkgconfig "github.com/goritskimihail/mudro/pkg/config"
+	mudrohttputil "github.com/goritskimihail/mudro/pkg/httputil"
 	"github.com/goritskimihail/mudro/services/bff-web/internal/bffweb"
 )
 
@@ -55,6 +56,9 @@ func Run() {
 
 	// Create main handler
 	mux := http.NewServeMux()
+
+	// Server-level health check
+	mux.HandleFunc("/healthz", mudrohttputil.HandleHealth("bff-web"))
 
 	// BFF endpoints
 	bffHandler := bffweb.NewHandler(posts.NewService(pool, tgVisiblePostIDs), pkgconfig.EnvOr("BFF_WEB_API_BASE_URL", config.APIBaseURL()))

@@ -147,6 +147,29 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"
 
+  auth-api:
+    build:
+      context: .
+      args:
+        SERVICE: services/auth-api/cmd
+    restart: unless-stopped
+    environment:
+      AUTH_API_ADDR: ":8087"
+      DSN: "${MUDRO_APP_DSN:?MUDRO_APP_DSN is required and must use a non-superuser app role}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}"
+    healthcheck:
+      test: ["NONE"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${AUTH_API_PORT:-8087}:8087"
+
   agent:
     build:
       context: .
@@ -199,8 +222,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
-      NEXT_PUBLIC_CASINO_API_URL: "http://casino-api:8081"
-      NEXT_PUBLIC_AUTH_API_URL: "http://auth-api:8080"
+      NEXT_PUBLIC_CASINO_API_URL: ""
+      NEXT_PUBLIC_AUTH_API_URL: ""
     depends_on:
       casino-api:
         condition: service_started

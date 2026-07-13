@@ -7,9 +7,23 @@ import { env } from '@/shared/config/env'
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: env.apiBaseUrl,
   prepareHeaders: (headers, { getState }) => {
-    const token = (getState() as RootState).session?.token
+    const state = getState() as RootState
+    const token = state.session?.token
+    const user = state.session?.user
     if (token) {
       headers.set('authorization', `Bearer ${token}`)
+    }
+    if (user?.id) {
+      headers.set('x-user-id', String(user.id))
+      if (user.username) {
+        headers.set('x-user-name', user.username)
+      }
+      if (user.email) {
+        headers.set('x-user-email', user.email)
+      }
+      if (user.role) {
+        headers.set('x-user-role', user.role)
+      }
     }
     return headers
   },

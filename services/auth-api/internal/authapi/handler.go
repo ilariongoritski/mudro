@@ -34,9 +34,11 @@ func NewHandler(authHandlers *AuthHandlers, adminHandlers *AdminHandlers) http.H
 	if authHandlers != nil && adminHandlers != nil {
 		mux.HandleFunc("/api/v1/admin/users", authHandlers.AuthAdminMiddleware(adminHandlers.HandleGetUsers))
 		mux.HandleFunc("/api/v1/admin/stats", authHandlers.AuthAdminMiddleware(adminHandlers.HandleGetStats))
+		mux.HandleFunc("/api/v1/admin/runtime", authHandlers.AuthAdminMiddleware(adminHandlers.HandleGetRuntime))
 	} else {
 		mux.HandleFunc("/api/v1/admin/users", serviceUnavailable)
 		mux.HandleFunc("/api/v1/admin/stats", serviceUnavailable)
+		mux.HandleFunc("/api/v1/admin/runtime", serviceUnavailable)
 	}
 
 	return httputil.CORS(httputil.CORSConfig{

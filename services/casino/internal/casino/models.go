@@ -292,14 +292,47 @@ type SpinRecord struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// SweetBonanza types for the new server-authoritative slot engine
+
+type SweetCell struct {
+	ID     int64  `json:"id"`
+	Symbol string `json:"symbol"`
+	Mult   int64  `json:"mult,omitempty"`
+}
+
+type SweetPosition struct {
+	Reel int `json:"reel"`
+	Row  int `json:"row"`
+}
+
+type SweetCascadeStep struct {
+	Board            [][]SweetCell   `json:"board"`
+	WinningPositions []SweetPosition `json:"winning_positions"`
+	Cascade          int             `json:"cascade"`
+	Multiplier       int64           `json:"multiplier"`
+	Win              int64           `json:"win"`
+}
+
+type SweetBonanzaResult struct {
+	InitialBoard     [][]SweetCell      `json:"initial_board"`
+	Steps            []SweetCascadeStep `json:"steps"`
+	FinalBoard       [][]SweetCell      `json:"final_board"`
+	ScatterCount     int                `json:"scatter_count"`
+	BombMultiplier   int64              `json:"bomb_multiplier,omitempty"`
+	FreeSpinsAwarded int64              `json:"free_spins_awarded,omitempty"`
+	TotalWin         int64              `json:"total_win"`
+}
+
+// SpinResult is the response returned by the slot spin endpoint
 type SpinResult struct {
-	Balance          int64        `json:"balance"`
-	FreeSpinsBalance int64        `json:"free_spins_balance,omitempty"`
-	FreeSpinUsed     bool         `json:"free_spin_used,omitempty"`
-	Config           Config       `json:"config,omitempty"`
-	History          []SpinRecord `json:"history,omitempty"`
-	Symbols          []string     `json:"symbols,omitempty"`
-	Win              int64        `json:"win,omitempty"`
+	Balance          int64                `json:"balance"`
+	FreeSpinsBalance int64                `json:"free_spins_balance,omitempty"`
+	FreeSpinUsed     bool                 `json:"free_spin_used,omitempty"`
+	Config           Config               `json:"config,omitempty"`
+	History          []SpinRecord         `json:"history,omitempty"`
+	Symbols          []string             `json:"symbols,omitempty"`
+	Win              int64                `json:"win,omitempty"`
+	SweetBonanza     *SweetBonanzaResult  `json:"sweet_bonanza,omitempty"`
 }
 
 type BlackjackCard struct {

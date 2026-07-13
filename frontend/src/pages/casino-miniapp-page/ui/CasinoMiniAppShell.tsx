@@ -25,6 +25,7 @@ import { RoulettePanel } from '@/features/casino/roulette/ui/RoulettePanel'
 import { SlotsPanel } from '@/features/casino/slots/ui/SlotsPanel'
 import { useAppSelector } from '@/shared/lib/hooks/storeHooks'
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary'
+import { playSound, initAudio } from '@/features/casino/lib/sounds'
 
 import './CasinoMiniAppPage.css'
 
@@ -175,6 +176,7 @@ export const CasinoMiniAppShell = () => {
       return
     }
 
+    initAudio()
     window.localStorage.setItem('mudro.casino.sound', soundEnabled ? '1' : '0')
   }, [soundEnabled])
 
@@ -217,6 +219,7 @@ export const CasinoMiniAppShell = () => {
     setWinPulse(false)
     setReels(['🎰', '🎰', '🎰'])
     webApp?.HapticFeedback?.impactOccurred('medium')
+    playSound('spin', soundEnabled)
 
     try {
       const response = await spinCasino({ bet }).unwrap()
@@ -230,19 +233,28 @@ export const CasinoMiniAppShell = () => {
             : `Выигрыш +${response.win}. Баланс ${response.balance}.`,
         )
         webApp?.HapticFeedback?.notificationOccurred('success')
+        if (response.win >= bet * 10) {
+          playSound('jackpot', soundEnabled)
+        } else if (response.win >= bet * 3) {
+          playSound('bigWin', soundEnabled)
+        } else {
+          playSound('win', soundEnabled)
+        }
       } else {
         setStatus(
           response.free_spin_used
             ? `Free spin использован. Баланс ${response.balance}. Осталось ${response.free_spins_balance ?? 0}.`
             : `Spin завершён. Баланс ${response.balance}.`,
         )
+        playSound('lose', soundEnabled)
       }
     } catch {
       setReels(reelFallback)
       setStatus('Casino API сейчас недоступен.')
       webApp?.HapticFeedback?.notificationOccurred('warning')
+      playSound('lose', soundEnabled)
     }
-  }, [balance, bet, freeSpinsBalance, isAuthenticated, isSpinning, spinCasino, webApp])
+  }, [balance, bet, freeSpinsBalance, isAuthenticated, isSpinning, spinCasino, webApp, soundEnabled])
 
   useEffect(() => {
     if (!webApp) {
@@ -352,16 +364,20 @@ export const CasinoMiniAppShell = () => {
 
   const handleFaucetClaim = async () => {
     if (!isAuthenticated || isClaimingFaucet || !faucetReady) return
+    playSound('click', soundEnabled)
     try {
       const res = await claimFaucet().unwrap()
       if (res.claimed) {
         setFaucetMsg(`+Faucet: ${res.amount} credits`)
+        playSound('faucet', soundEnabled)
       } else {
         const next = res.next_claim_at ? new Date(res.next_claim_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'позже'
         setFaucetMsg(`Faucet через ${next}`)
+        playSound('lose', soundEnabled)
       }
     } catch {
       setFaucetMsg('Faucet error')
+      playSound('lose', soundEnabled)
     }
   }
 
@@ -493,16 +509,16 @@ export const CasinoMiniAppShell = () => {
 
           <div className="casino-miniapp__menu-tools">
             <button
-              type="button"
-              className={soundEnabled ? 'casino-miniapp__utility-chip casino-miniapp__utility-chip_active' : 'casino-miniapp__utility-chip'}
-              onClick={() => setSoundEnabled((value) => !value)}
-            >
-              Sound {soundEnabled ? 'on' : 'off'}
-            </button>
+            type="button"
+            className={soundEnabled ? 'casino-miniapp__utility-chip casino-miniapp__utility-chip_active' : 'casino-miniapp__utility-chip'}
+            onClick={() => { setSoundEnabled((value) => !value); playSound('click', soundEnabled); }}
+          >
+            Sound {soundEnabled ? 'on' : 'off'}
+          </button>
             <button
               type="button"
               className={fairnessOpen ? 'casino-miniapp__utility-chip casino-miniapp__utility-chip_active' : 'casino-miniapp__utility-chip'}
-              onClick={() => setFairnessOpen((value) => !value)}
+              onClick={() => { setFairnessOpen((value) => !value); playSound('click', soundEnabled); }}
             >
               Fairness
             </button>
@@ -511,7 +527,7 @@ export const CasinoMiniAppShell = () => {
                 key={option.value}
                 type="button"
                 className={theme === option.value ? 'casino-miniapp__utility-chip casino-miniapp__utility-chip_active' : 'casino-miniapp__utility-chip'}
-                onClick={() => setTheme(option.value)}
+                onClick={() => { setTheme(option.value); playSound('click', soundEnabled); }}
               >
                 {option.label}
               </button>

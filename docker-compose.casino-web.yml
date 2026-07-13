@@ -11,7 +11,7 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_CASINO_API_URL: "http://mudro-casino-api-1:8081"
-      NEXT_PUBLIC_AUTH_API_URL: "http://mudro-auth-api-1:8080"
+      NEXT_PUBLIC_AUTH_API_URL: "http://mudro-auth-api-1:8087"
     ports:
       - "127.0.0.1:3002:3000"
     networks:

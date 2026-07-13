@@ -85,12 +85,13 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		return nil, ErrInsufficientBalance
 	}
 
-	s.engine.EnableFairness(serverSeed, clientSeed, int64(nonce))
-	symbols, win, err := s.engine.Spin(cfg, bet)
-	s.engine.DisableFairness()
-	if err != nil {
-		return nil, err
-	}
+	// Sweet Bonanza outcome generated entirely on the server from the existing
+	// provably-fair server seed, client seed and nonce.
+	sweet := newSweetEngine(serverSeed, clientSeed, int64(nonce)).Spin(bet, freeSpinUsed)
+	win := sweet.TotalWin
+	// Preserve the legacy history shape while the client consumes the richer
+	// sweet_bonanza timeline from the response.
+	symbols := []string{"sweet_bonanza"}
 
 	newBalance := balance + win
 	if !freeSpinUsed {
@@ -129,6 +130,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		"symbols":            symbols,
 		"free_spin_used":     freeSpinUsed,
 		"free_spins_balance": freeSpins,
+		"free_spins_awarded": sweet.FreeSpinsAwarded,
 		"nonce":              nonce,
 		"client_seed":        clientSeed,
 		"server_seed_hash":   serverSeedHash,
@@ -151,6 +153,7 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		Config:           cfg,
 		Symbols:          symbols,
 		Win:              win,
+		SweetBonanza:     &sweet,
 	}, nil
 }
 
