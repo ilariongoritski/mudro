@@ -16,6 +16,7 @@ var/log/
 # generated outputs
 out/
 output/
+go.work.sum
 /bot
 .bin/
 .codex/logs/
