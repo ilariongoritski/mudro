@@ -28,7 +28,7 @@ func LooksLikeMudroAuthor(from, fromID string) bool {
 		return true
 	}
 	id := strings.ToLower(strings.TrimSpace(fromID))
-	if strings.HasPrefix(id, "channel") && (strings.Contains(name, "1001") || strings.Contains(name, "100.1")) {
+	if strings.HasPrefix(id, "channel") && (strings.Contains(id, "1001") || strings.Contains(id, "100.1")) {
 		return true
 	}
 	return false
