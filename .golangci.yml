@@ -1,14 +1,13 @@
+version: "2"
+
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
+
     - unused
-    - gofmt
-    - goimports
     - misspell
     - unparam
     - gosec
@@ -37,6 +36,11 @@ linters:
       - path: services/movie-catalog
         linters:
           - wrapcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 run:
   timeout: 5m

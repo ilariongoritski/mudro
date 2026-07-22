@@ -61,7 +61,7 @@ services:
       retries: 20
 
   api:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/feed-api/cmd"
@@ -97,7 +97,7 @@ services:
       retries: 12
 
   agent:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/agent/cmd --mode worker --interval 15s"
@@ -124,7 +124,7 @@ services:
       retries: 5
 
   movie-catalog:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/movie-catalog/cmd"
@@ -145,7 +145,7 @@ services:
       retries: 12
 
   bff-web:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/bff-web/cmd"

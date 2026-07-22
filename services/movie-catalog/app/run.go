@@ -70,7 +70,7 @@ func Run(ctx context.Context) error {
 		return nil
 	}
 
-	closeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(closeCtx); err != nil {

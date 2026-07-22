@@ -1,32 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSlot } from "@/lib/slot/store";
-import { getHistory, SpinHistoryItem } from "@/lib/casino-api";
 import { Button } from "@/components/ui/button";
 
+interface SpinHistoryItem {
+  id: number;
+  bet: number;
+  win: number;
+  symbols: string[];
+  createdAt: string;
+}
+
 export function HistoryPanel() {
-  const [history, setHistory] = useState<SpinHistoryItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const isLoggedIn = useSlot((s) => s.isLoggedIn);
-
-  const loadHistory = async () => {
-    if (!isLoggedIn) return;
-    setLoading(true);
-    try {
-      const data = await getHistory(20);
-      setHistory(data);
-    } catch (e) {
-      console.error("Failed to load history");
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadHistory();
-    }
-  }, [isLoggedIn]);
+  const isLoggedIn = useSlot((s) => !!s.token);
+  const history = useSlot((s) => s.history) || [];
+  const historyLoading = useSlot((s) => s.historyLoading);
+  const loadHistory = useSlot((s) => s.loadHistory);
 
   if (!isLoggedIn) return null;
 
@@ -38,9 +27,9 @@ export function HistoryPanel() {
           variant="ghost"
           size="sm"
           onClick={loadHistory}
-          disabled={loading}
+          disabled={historyLoading}
         >
-          {loading ? "Loading..." : "Refresh"}
+          {historyLoading ? "Loading..." : "Refresh"}
         </Button>
       </div>
 
@@ -56,7 +45,7 @@ export function HistoryPanel() {
                 <div className="flex items-center gap-4">
                   <div className="font-mono text-emerald-400">#{spin.id}</div>
                   <div className="text-slate-400">
-                    {new Date(spin.createdAt).toLocaleDateString()} {new Date(spin.createdAt).toLocaleTimeString([], { hour:  2-digit, minute: 2-digit })}
+                    {new Date(spin.createdAt).toLocaleDateString()} {new Date(spin.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </div>
                 </div>
                 <div className="flex items-center gap-4 font-mono">

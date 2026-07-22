@@ -195,3 +195,11 @@ export const TIER_LABEL: Record<WinTier, string> = {
   mega: "MEGA WIN",
   epic: "EPIC WIN",
 };
+
+export interface SpinHistoryItem {
+ id: number;
+ bet: number;
+ win: number;
+ symbols: string[];
+ createdAt: string;
+}

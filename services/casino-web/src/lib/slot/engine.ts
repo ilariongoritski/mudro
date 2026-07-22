@@ -18,9 +18,17 @@ export interface Cell {
   /** Present when symbol === "bomb". */
   mult?: number;
 }
-
 /** board[reel][row], row 0 = top, row ROWS-1 = bottom. */
 export type Board = Cell[][];
+export type Grid = Board;
+
+export type LineWin = {
+  symbol: SymbolId;
+  count: number;
+  positions: [number, number][];
+  amount: number;
+  lineIndex: number;
+};
 
 let _id = 1;
 export function nextId(): number {

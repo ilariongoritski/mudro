@@ -2,6 +2,7 @@ package ragapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -34,11 +35,11 @@ func Run(ctx context.Context) error {
 	go func() { serverErr <- server.ListenAndServe() }()
 	select {
 	case <-ctx.Done():
-		closeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		closeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		return server.Shutdown(closeCtx)
 	case err := <-serverErr:
-		if err == http.ErrServerClosed {
+		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 		return err

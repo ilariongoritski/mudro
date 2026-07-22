@@ -1,6 +1,6 @@
 services:
   auth-api:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/auth-api/cmd"
@@ -25,7 +25,7 @@ services:
       retries: 12
 
   orchestration-api:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/orchestration-api/cmd"
@@ -46,7 +46,7 @@ services:
       retries: 12
 
   api-gateway:
-    image: golang:1.24
+    image: golang:1.25
     restart: unless-stopped
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/api-gateway/cmd"
