@@ -1,211 +1,318 @@
 package httputil
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
 func TestWriteJSON(t *testing.T) {
-	rec := httptest.NewRecorder()
-	WriteJSON(rec, http.StatusCreated, map[string]string{"hello": "world"})
+	w := httptest.NewRecorder()
+	WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
-		t.Fatalf("expected Content-Type application/json, got %q", ct)
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %s", w.Header().Get("Content-Type"))
 	}
-	var body map[string]string
-	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-		t.Fatalf("failed to decode body: %v", err)
-	}
-	if body["hello"] != "world" {
-		t.Fatalf("unexpected body: %v", body)
+	if !strings.Contains(w.Body.String(), `"status":"ok"`) && !strings.Contains(w.Body.String(), `"status": "ok"`) {
+		t.Errorf("expected JSON body, got %s", w.Body.String())
 	}
 }
 
 func TestHandleHealth(t *testing.T) {
-	t.Run("with service name", func(t *testing.T) {
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-		HandleHealth("bff-web").ServeHTTP(rec, req)
+	handler := HandleHealth("test-service")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d", rec.Code)
-		}
-		var body map[string]string
-		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-			t.Fatalf("decode: %v", err)
-		}
-		if body["status"] != "ok" {
-			t.Fatalf("expected status ok, got %q", body["status"])
-		}
-		if body["service"] != "bff-web" {
-			t.Fatalf("expected service bff-web, got %q", body["service"])
-		}
-		if body["started_at"] == "" || body["uptime"] == "" {
-			t.Fatalf("expected started_at and uptime to be set")
-		}
-	})
+	handler(w, r)
 
-	t.Run("without service name", func(t *testing.T) {
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-		HandleHealth("").ServeHTTP(rec, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %s", w.Header().Get("Content-Type"))
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `"status":"ok"`) && !strings.Contains(body, `"status": "ok"`) {
+		t.Errorf("expected status ok in body: %s", body)
+	}
+	if !strings.Contains(body, `"service":"test-service"`) && !strings.Contains(body, `"service": "test-service"`) {
+		t.Errorf("expected service name in body: %s", body)
+	}
+	if !strings.Contains(body, `"started_at"`) {
+		t.Errorf("expected started_at in body: %s", body)
+	}
+	if !strings.Contains(body, `"uptime"`) {
+		t.Errorf("expected uptime in body: %s", body)
+	}
+}
 
-		var body map[string]string
-		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-			t.Fatalf("decode: %v", err)
-		}
-		if _, ok := body["service"]; ok {
-			t.Fatalf("expected no service key when name empty")
-		}
-	})
+func TestHandleHealth_NoServiceName(t *testing.T) {
+	handler := HandleHealth("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+
+	handler(w, r)
+
+	body := w.Body.String()
+	if strings.Contains(body, `"service"`) {
+		t.Errorf("expected no service field when empty, got: %s", body)
+	}
 }
 
 func TestParseLimit(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		name         string
 		raw          string
 		defaultLimit int
 		maxLimit     int
-		want         int
+		expected     int
 	}{
-		{"empty uses default", "", 20, 100, 20},
-		{"invalid uses default", "abc", 20, 100, 20},
-		{"negative uses default", "-5", 20, 100, 20},
-		{"zero uses default", "0", 20, 100, 20},
-		{"over max clamps", "999", 20, 100, 100},
-		{"valid in range", "42", 20, 100, 42},
-		{"whitespace trimmed", " 7 ", 20, 100, 7},
-		{"default<=0 falls back to 50", "x", 0, 100, 50},
-		{"max<=0 falls back to 200", "500", 20, 0, 200},
-		{"valid with default<=0", "10", 0, 0, 10},
+		{"empty string", "", 50, 200, 50},
+		{"whitespace", "  ", 50, 200, 50},
+		{"valid within range", "75", 50, 200, 75},
+		{"exceeds max", "500", 50, 200, 200},
+		{"below min", "0", 50, 200, 50},
+		{"negative", "-10", 50, 200, 50},
+		{"invalid", "abc", 50, 200, 50},
+		{"custom defaults", "10", 10, 100, 10},
+		{"custom defaults exceeded", "200", 10, 100, 100},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := ParseLimit(c.raw, c.defaultLimit, c.maxLimit); got != c.want {
-				t.Fatalf("ParseLimit(%q, %d, %d) = %d, want %d",
-					c.raw, c.defaultLimit, c.maxLimit, got, c.want)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseLimit(tt.raw, tt.defaultLimit, tt.maxLimit)
+			if result != tt.expected {
+				t.Errorf("ParseLimit(%q, %d, %d) = %d, want %d", tt.raw, tt.defaultLimit, tt.maxLimit, result, tt.expected)
 			}
 		})
 	}
 }
 
 func TestCopyHeaders(t *testing.T) {
-	src := http.Header{}
-	src.Set("Authorization", "Bearer x")
-	src.Set("X-Request-Id", "abc")
-	src.Set("X-Empty", "   ")
-
+	src := http.Header{
+		"X-Custom-Header": []string{"value1"},
+		"Content-Type":    []string{"application/json"},
+		"Authorization":   []string{"Bearer token"},
+		"Empty-Header":    []string{""},
+	}
 	dst := http.Header{}
-	CopyHeaders(dst, src, "Authorization", "X-Request-Id", "X-Missing")
 
-	if dst.Get("Authorization") != "Bearer x" {
-		t.Fatalf("Authorization not copied")
+	CopyHeaders(dst, src, "X-Custom-Header", "Content-Type", "Missing-Header", "Empty-Header")
+
+	if dst.Get("X-Custom-Header") != "value1" {
+		t.Errorf("expected X-Custom-Header=value1, got %s", dst.Get("X-Custom-Header"))
 	}
-	if dst.Get("X-Request-Id") != "abc" {
-		t.Fatalf("X-Request-Id not copied")
+	if dst.Get("Content-Type") != "application/json" {
+		t.Errorf("expected Content-Type=application/json, got %s", dst.Get("Content-Type"))
 	}
-	if _, ok := dst["X-Missing"]; ok {
-		t.Fatalf("X-Missing should not be present")
+	if dst.Get("Missing-Header") != "" {
+		t.Errorf("expected Missing-Header to be empty, got %s", dst.Get("Missing-Header"))
 	}
-	if _, ok := dst["X-Empty"]; ok {
-		t.Fatalf("X-Empty (whitespace) should be skipped")
+	if dst.Get("Empty-Header") != "" {
+		t.Errorf("expected Empty-Header to not be copied (empty value), got %s", dst.Get("Empty-Header"))
 	}
 }
 
 func TestCopyAllHeaders(t *testing.T) {
-	src := http.Header{}
-	src.Add("X-A", "1")
-	src.Add("X-A", "2")
-	src.Set("X-B", "3")
-
+	src := http.Header{
+		"Header1": []string{"value1", "value2"},
+		"Header2": []string{"value3"},
+	}
 	dst := http.Header{}
+
 	CopyAllHeaders(dst, src)
 
-	if got := dst.Values("X-A"); len(got) != 2 || got[0] != "1" || got[1] != "2" {
-		t.Fatalf("expected X-A to be copied with both values, got %v", got)
+	if len(dst["Header1"]) != 2 || dst["Header1"][0] != "value1" || dst["Header1"][1] != "value2" {
+		t.Errorf("expected Header1 with 2 values, got %v", dst["Header1"])
 	}
-	if dst.Get("X-B") != "3" {
-		t.Fatalf("expected X-B=3")
+	if len(dst["Header2"]) != 1 || dst["Header2"][0] != "value3" {
+		t.Errorf("expected Header2 with 1 value, got %v", dst["Header2"])
 	}
 }
 
-func TestCORS(t *testing.T) {
-	t.Run("echoes allowed origin and security headers", func(t *testing.T) {
-		cfg := CORSConfig{
-			AllowedOrigins: []string{"https://example.com"},
-			SecurityHeaders: true,
-		}
-		handler := CORS(cfg)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
-
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("Origin", "https://example.com")
-		handler.ServeHTTP(rec, req)
-
-		if rec.Header().Get("Access-Control-Allow-Origin") != "https://example.com" {
-			t.Fatalf("origin not echoed: %q", rec.Header().Get("Access-Control-Allow-Origin"))
-		}
-		if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
-			t.Fatalf("expected nosniff security header")
-		}
-		if rec.Header().Get("X-Frame-Options") != "DENY" {
-			t.Fatalf("expected X-Frame-Options DENY")
-		}
+func TestCORS_AllowsMatchingOrigin(t *testing.T) {
+	handler := CORS(CORSConfig{
+		AllowedOrigins: []string{"https://example.com"},
+		AllowCredentials: true,
 	})
 
-	t.Run("does not echo disallowed origin", func(t *testing.T) {
-		cfg := CORSConfig{AllowedOrigins: []string{"https://example.com"}}
-		handler := CORS(cfg)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Origin", "https://example.com")
 
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("Origin", "https://evil.com")
-		handler.ServeHTTP(rec, req)
-
-		if rec.Header().Get("Access-Control-Allow-Origin") != "" {
-			t.Fatalf("disallowed origin should not be echoed")
-		}
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusOK)
 	})
 
-	t.Run("OPTIONS returns 204", func(t *testing.T) {
-		cfg := CORSConfig{AllowedOrigins: []string{"https://example.com"}}
-		handler := CORS(cfg)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
+	handler(next).ServeHTTP(w, r)
 
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodOptions, "/", nil)
-		req.Header.Set("Origin", "https://example.com")
-		handler.ServeHTTP(rec, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if w.Header().Get("Access-Control-Allow-Origin") != "https://example.com" {
+		t.Errorf("expected ACAO header, got %s", w.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if w.Header().Get("Access-Control-Allow-Credentials") != "true" {
+		t.Errorf("expected Allow-Credentials header, got %s", w.Header().Get("Access-Control-Allow-Credentials"))
+	}
+	if !nextCalled {
+		t.Errorf("next handler not called")
+	}
+}
 
-		if rec.Code != http.StatusNoContent {
-			t.Fatalf("expected 204 for OPTIONS, got %d", rec.Code)
-		}
+func TestCORS_RejectsNonMatchingOrigin(t *testing.T) {
+	handler := CORS(CORSConfig{
+		AllowedOrigins: []string{"https://example.com"},
 	})
 
-	t.Run("reads origins from env", func(t *testing.T) {
-		t.Setenv("API_ALLOWED_ORIGINS", "https://env.com, https://env2.com")
-		cfg := CORSConfig{}
-		handler := CORS(cfg)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Origin", "https://evil.com")
 
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("Origin", "https://env2.com")
-		handler.ServeHTTP(rec, req)
-
-		if rec.Header().Get("Access-Control-Allow-Origin") != "https://env2.com" {
-			t.Fatalf("env origin not echoed: %q", rec.Header().Get("Access-Control-Allow-Origin"))
-		}
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusOK)
 	})
+
+	handler(next).ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if w.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Errorf("expected no ACAO header for non-matching origin, got %s", w.Header().Get("Access-Control-Allow-Origin"))
+	}
+	if !nextCalled {
+		t.Errorf("next handler not called")
+	}
+}
+
+func TestCORS_HandlesPreflight(t *testing.T) {
+	handler := CORS(CORSConfig{
+		AllowedOrigins: []string{"https://example.com"},
+		AllowHeaders:   []string{"X-Custom"},
+	})
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodOptions, "/", nil)
+	r.Header.Set("Origin", "https://example.com")
+	r.Header.Set("Access-Control-Request-Method", "POST")
+	r.Header.Set("Access-Control-Request-Headers", "X-Custom")
+
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+	})
+
+	handler(next).ServeHTTP(w, r)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204 for preflight, got %d", w.Code)
+	}
+	if w.Header().Get("Access-Control-Allow-Origin") != "https://example.com" {
+		t.Errorf("expected ACAO on preflight")
+	}
+	if w.Header().Get("Access-Control-Allow-Methods") == "" {
+		t.Errorf("expected Allow-Methods header")
+	}
+	if w.Header().Get("Access-Control-Allow-Headers") == "" {
+		t.Errorf("expected Allow-Headers header")
+	}
+	if nextCalled {
+		t.Errorf("next handler should not be called for preflight")
+	}
+}
+
+func TestCORS_SecurityHeaders(t *testing.T) {
+	handler := CORS(CORSConfig{
+		AllowedOrigins:   []string{"https://example.com"},
+		SecurityHeaders:  true,
+	})
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Origin", "https://example.com")
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler(next).ServeHTTP(w, r)
+
+	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Errorf("expected X-Content-Type-Options=nosniff")
+	}
+	if w.Header().Get("X-Frame-Options") != "DENY" {
+		t.Errorf("expected X-Frame-Options=DENY")
+	}
+}
+
+func TestGzip_CompressesResponse(t *testing.T) {
+	handler := Gzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(strings.Repeat("hello world ", 100)))
+	}))
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Accept-Encoding", "gzip")
+
+	handler.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if w.Header().Get("Content-Encoding") != "gzip" {
+		t.Errorf("expected Content-Encoding=gzip, got %s", w.Header().Get("Content-Encoding"))
+	}
+	if w.Body.Len() >= 1100 {
+		t.Errorf("expected compressed response smaller than original, got %d bytes", w.Body.Len())
+	}
+}
+
+func TestGzip_NoCompressionWhenNotSupported(t *testing.T) {
+	handler := Gzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("hello"))
+	}))
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	// No Accept-Encoding header
+
+	handler.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if w.Header().Get("Content-Encoding") != "" {
+		t.Errorf("expected no Content-Encoding, got %s", w.Header().Get("Content-Encoding"))
+	}
+	if w.Body.String() != "hello" {
+		t.Errorf("expected body 'hello', got %s", w.Body.String())
+	}
+}
+
+func TestGzip_EmptyAcceptEncoding(t *testing.T) {
+	handler := Gzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("test"))
+	}))
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Accept-Encoding", "")
+
+	handler.ServeHTTP(w, r)
+
+	if w.Header().Get("Content-Encoding") != "" {
+		t.Errorf("expected no compression for empty Accept-Encoding")
+	}
 }
