@@ -72,6 +72,11 @@ pixel-agents/
 frontend/npm-cache/
 frontend/.npm-cache/
 
+# generated JavaScript/TypeScript artifacts
+**/node_modules/
+**/.next/
+*.tsbuildinfo
+
 # AI Agents and IDEs
 .agents/
 .claude/
