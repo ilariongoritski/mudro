@@ -2,7 +2,7 @@
 # Multi-stage Dockerfile for all Go services
 # Usage: docker build --build-arg SERVICE=services/feed-api/cmd -t mudro-api .
 ##################################################
-FROM golang:1.24-alpine AS build
+FROM golang:1.25-alpine AS build
 
 ARG SERVICE=services/feed-api/cmd
 

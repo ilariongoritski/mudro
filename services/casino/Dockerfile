@@ -1,4 +1,4 @@
-FROM golang:1.24 AS builder
+FROM golang:1.25 AS builder
 
 WORKDIR /app
 
@@ -17,4 +17,5 @@ COPY --from=builder /out/casino /usr/local/bin/casino
 
 EXPOSE 8081
 
+USER 65532:65532
 CMD ["/usr/local/bin/casino"]

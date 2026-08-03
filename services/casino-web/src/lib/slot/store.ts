@@ -1,5 +1,3 @@
-"use client";
-
 import { create } from "zustand";
 import {
   BET_PRESETS,
@@ -14,6 +12,7 @@ import {
   computeTier,
   type SymbolId,
   type WinTier,
+  type SpinHistoryItem,
 } from "./config";
 import {
   collectBombs,
@@ -24,6 +23,7 @@ import {
   tumbleBoard,
   type Board,
   type Cell,
+  type LineWin,
 } from "./engine";
 import { sound } from "./sound";
 
@@ -42,7 +42,6 @@ function loadBalance(): number {
   }
 }
 
-/** Hydrate balance from localStorage on the client only (after mount). */
 function hydrateBalance(): number | null {
   if (typeof window === "undefined") return null;
   const n = loadBalance();
@@ -72,22 +71,22 @@ export interface SlotState {
   bet: number;
   board: Board;
   phase: Phase;
-  spinKey: number; // bumps each new spin to retrigger enter animations
-  tumbleKey: number; // bumps each tumble step
+  spinKey: number;
+  tumbleKey: number;
 
   winningPositions: Set<string>;
-  cascade: number; // 1-based current cascade
-  cascadeMult: number; // current cascade multiplier
-  lastCascadeWin: number; // win of the most recent cascade step
-  spinWin: number; // accumulated this spin (pre bomb-mult)
-  displayWin: number; // shown total (post bomb-mult at end)
-  lastSpinWin: number; // last spin's final win (persists between spins for display)
+  cascade: number;
+  cascadeMult: number;
+  lastCascadeWin: number;
+  spinWin: number;
+  displayWin: number;
+  lastSpinWin: number;
   winTier: WinTier;
   lastWins: { symbol: SymbolId; count: number; amount: number }[];
 
-  scatterCount: number; // accumulated this spin
-  bombsTotal: number; // accumulated bomb mult this spin (free spins)
-  activeBombs: number; // bombs currently on board (for display)
+  scatterCount: number;
+  bombsTotal: number;
+  activeBombs: number;
 
   freeSpins: number;
   freeSpinsTotal: number;
@@ -102,14 +101,24 @@ export interface SlotState {
   turbo: boolean;
   soundOn: boolean;
 
-  /** Bumps each time balance increases, to drive the scale-up animation. */
   balancePulse: number;
 
-  // auth
   token: string | null;
   user: { id: number; username: string; telegram_id?: number } | null;
 
   _timer: Timer;
+
+  // --- fields for ReelGrid / WinLineOverlay compatibility ---
+  grid: Board;
+  pendingResult: { grid: Board; totalWin: number; wins: LineWin[] } | null;
+  spinning: boolean;
+  lastResult: { wins: LineWin[]; totalWin: number; scatterPositions: [number, number][] } | null;
+  commitSpin: () => void;
+
+  // history
+  history: SpinHistoryItem[];
+  historyLoading: boolean;
+  loadHistory: () => Promise<void>;
 
   // actions
   setAuth: (token: string, user: { id: number; username: string; telegram_id?: number }) => void;
@@ -184,6 +193,17 @@ export const useSlot = create<SlotState>((set, get) => ({
   user: null,
 
   _timer: null,
+
+  // --- fields for ReelGrid / WinLineOverlay compatibility ---
+  grid: emptyBoard(),
+  pendingResult: null,
+  spinning: false,
+  lastResult: null,
+  commitSpin: () => {},
+
+  // history
+  history: [],
+  historyLoading: false,
 
   setAuth: (token, user) => {
     set({ token, user });
@@ -293,8 +313,6 @@ export const useSlot = create<SlotState>((set, get) => ({
     const s = get();
     if (s.soundOn) sound.tumblePop();
 
-    // Scatters from tumbles are intentionally ignored for trigger/retrigger
-    // (only the initial board's scatters count) — prevents free-spin loops.
     const { board: newBoard } = tumbleBoard(
       s.board,
       s.winningPositions,
@@ -307,9 +325,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       phase: "tumbling",
       tumbleKey: s.tumbleKey + 1,
       winningPositions: new Set(),
-      // NOTE: scatters from tumbles do NOT accumulate toward the trigger/
-      // retrigger — only the initial board's scatters count. This prevents
-      // free spins from looping forever when scatters appear in cascades.
       scatterCount: s.scatterCount,
       activeBombs: bombs.total,
     });
@@ -323,8 +338,6 @@ export const useSlot = create<SlotState>((set, get) => ({
 
   endSequence: () => {
     const s = get();
-    // Apply bomb multiplier (free spins only): bombs on the final board sum
-    // and multiply the accumulated spin win.
     let finalWin = s.spinWin;
     let bombMult = 0;
     if (s.inFreeSpins) {
@@ -347,7 +360,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       winningPositions: new Set(),
       cascadeMult: bombMult > 0 ? bombMult : s.cascadeMult,
       balance: newBalance,
-      // pulse the balance whenever it grows
       balancePulse: finalWin > 0 ? s.balancePulse + 1 : s.balancePulse,
     });
 
@@ -356,12 +368,10 @@ export const useSlot = create<SlotState>((set, get) => ({
       else if (tier === "big") sound.winBig();
     }
 
-    // Free-spins win accumulation
     if (s.inFreeSpins && finalWin > 0) {
       set({ freeSpinsWin: round2(s.freeSpinsWin + finalWin) });
     }
 
-    // Free spins trigger / retrigger
     const trigger = s.inFreeSpins
       ? FREE_SPINS_RETRIGGER
       : FREE_SPINS_TRIGGER;
@@ -386,7 +396,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       if (s.soundOn) sound.freeSpinsTrigger();
     }
 
-    // Schedule next
     const cur = get();
     let delay = 650;
     if (cur.showFreeSpinsBanner) delay = 2400;
@@ -396,7 +405,6 @@ export const useSlot = create<SlotState>((set, get) => ({
     else if (tier === "normal") delay = 1100;
     if (cur.turbo) delay = Math.max(380, delay * 0.55);
 
-    // Free spins continue automatically
     if (cur.freeSpins > 0) {
       const t = setTimeout(() => {
         set({ phase: "ended" });
@@ -406,7 +414,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       return;
     }
 
-    // Free spins just ended
     if (cur.inFreeSpins) {
       set({
         inFreeSpins: false,
@@ -431,7 +438,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       return;
     }
 
-    // Base-game auto-spin
     if (cur.autoSpins > 0 || cur.autoInfinite) {
       if (cur.balance < cur.bet) {
         set({ autoSpins: 0, autoInfinite: false, phase: "idle" });
@@ -492,7 +498,6 @@ export const useSlot = create<SlotState>((set, get) => ({
     if (s.inFreeSpins) return;
     if (s.balance < s.bet) return;
     if (s.phase !== "idle" && s.phase !== "ended") {
-      // queue: just set the count, current spin continues
       set({ autoSpins: n, autoInfinite: false });
       return;
     }
@@ -568,7 +573,7 @@ export const useSlot = create<SlotState>((set, get) => ({
     set({ balance: nb });
     saveBalance(nb);
 
-    const board = generateBoard(true); // free-spins board (bombs can spawn)
+    const board = generateBoard(true);
     const scatters = countScatters(board);
     const bombs = collectBombs(board);
 
@@ -605,5 +610,26 @@ export const useSlot = create<SlotState>((set, get) => ({
   hydrate: () => {
     const n = hydrateBalance();
     if (n != null && n !== get().balance) set({ balance: n });
+  },
+
+  loadHistory: async () => {
+    const store = get();
+    if (!store.token) return;
+
+    set({ historyLoading: true });
+    try {
+      const res = await fetch("/api/casino/history?limit=20", {
+        headers: { Authorization: `Bearer ${store.token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ history: data.items || data, historyLoading: false });
+      } else {
+        set({ historyLoading: false });
+      }
+    } catch (e) {
+      console.warn("History load failed", e);
+      set({ historyLoading: false });
+    }
   },
 }));

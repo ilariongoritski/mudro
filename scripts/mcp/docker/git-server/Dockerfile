@@ -6,4 +6,5 @@ RUN apt-get update \
 
 RUN pip install --no-cache-dir "mcp-server-git==2026.1.14"
 
+USER nobody
 ENTRYPOINT ["mcp-server-git"]
