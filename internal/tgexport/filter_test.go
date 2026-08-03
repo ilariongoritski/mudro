@@ -56,10 +56,10 @@ func TestLooksLikeMudroAuthor(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "empty from",
+			name:     "channel ID identifies a source without a display name",
 			from:     "",
 			fromID:   "channel1001",
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "case insensitive channel prefix",
