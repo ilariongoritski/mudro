@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 import {
   BET_PRESETS,
@@ -12,7 +14,6 @@ import {
   computeTier,
   type SymbolId,
   type WinTier,
-  type SpinHistoryItem,
 } from "./config";
 import {
   collectBombs,
@@ -23,9 +24,44 @@ import {
   tumbleBoard,
   type Board,
   type Cell,
-  type LineWin,
 } from "./engine";
 import { sound } from "./sound";
+
+const serverSymbolIds: Record<string, SymbolId> = {
+  heart: "heart", grape: "grape", watermelon: "watermelon", apple: "apple",
+  blueberry: "blueberry", orange: "orange", pear: "pear", strawberry: "strawberry",
+  scatter: "scatter", bomb: "bomb",
+};
+
+type ServerSweetCell = { id: number; symbol: string; mult?: number };
+type ServerSweetStep = {
+  board: ServerSweetCell[][];
+  winning_positions: { reel: number; row: number }[];
+  cascade: number;
+  multiplier: number;
+  win: number;
+};
+type ServerSweetResult = {
+  initial_board: ServerSweetCell[][];
+  steps: ServerSweetStep[];
+  final_board: ServerSweetCell[][];
+  scatter_count: number;
+  bomb_multiplier?: number;
+  free_spins_awarded?: number;
+  total_win: number;
+};
+
+function boardFromServer(board: ServerSweetCell[][]): Board {
+  return board.map((column) => column.map((cell) => ({
+    id: cell.id,
+    symbol: serverSymbolIds[cell.symbol] ?? "strawberry",
+    ...(cell.mult ? { mult: cell.mult } : {}),
+  })));
+}
+
+function positionsFromServer(positions: ServerSweetStep["winning_positions"]): Set<string> {
+  return new Set(positions.map((position) => `${position.reel}-${position.row}`));
+}
 
 const BALANCE_KEY = "slot.balance.v2";
 
@@ -42,6 +78,7 @@ function loadBalance(): number {
   }
 }
 
+/** Hydrate balance from localStorage on the client only (after mount). */
 function hydrateBalance(): number | null {
   if (typeof window === "undefined") return null;
   const n = loadBalance();
@@ -66,27 +103,48 @@ function emptyBoard(): Board {
 type Phase = "idle" | "dropping" | "celebrating" | "tumbling" | "ended";
 type Timer = ReturnType<typeof setTimeout> | null;
 
+interface User {
+  id: number;
+  username: string;
+  telegram_id?: number;
+}
+
+export interface FairnessProof {
+  serverSeedHash: string;
+  nonce: number;
+}
+
+export interface ServerSpinResult {
+  balanceAfter: number;
+  win: number;
+  symbols: string[];
+  sweetBonanza?: ServerSweetResult;
+  freeSpinsBalance?: number;
+  freeSpinUsed?: boolean;
+  serverSeedHash?: string;
+  nonce?: number;
+}
+
 export interface SlotState {
   balance: number;
   bet: number;
   board: Board;
   phase: Phase;
-  spinKey: number;
-  tumbleKey: number;
+  spinKey: number; // bumps each new spin to retrigger enter animations
+  tumbleKey: number; // bumps each tumble step
 
   winningPositions: Set<string>;
-  cascade: number;
-  cascadeMult: number;
-  lastCascadeWin: number;
-  spinWin: number;
-  displayWin: number;
-  lastSpinWin: number;
+  cascade: number; // 1-based current cascade
+  cascadeMult: number; // current cascade multiplier
+  lastCascadeWin: number; // win of the most recent cascade step
+  spinWin: number; // accumulated this spin (pre bomb-mult)
+  displayWin: number; // shown total (post bomb-mult at end)
   winTier: WinTier;
   lastWins: { symbol: SymbolId; count: number; amount: number }[];
 
-  scatterCount: number;
-  bombsTotal: number;
-  activeBombs: number;
+  scatterCount: number; // accumulated this spin
+  bombsTotal: number; // accumulated bomb mult this spin (free spins)
+  activeBombs: number; // bombs currently on board (for display)
 
   freeSpins: number;
   freeSpinsTotal: number;
@@ -101,28 +159,20 @@ export interface SlotState {
   turbo: boolean;
   soundOn: boolean;
 
+  /** Bumps each time balance increases, to drive the scale-up animation. */
   balancePulse: number;
-
   token: string | null;
-  user: { id: number; username: string; telegram_id?: number } | null;
+  user: User | null;
+  isLoggedIn: boolean;
+  fairness: FairnessProof | null;
+  /** Five real symbols returned by the server for the last slot round. */
+  serverSymbols: string[];
+  /** Changes on every settled server response to replay reel-stop motion. */
+  serverResultKey: number;
 
   _timer: Timer;
 
-  // --- fields for ReelGrid / WinLineOverlay compatibility ---
-  grid: Board;
-  pendingResult: { grid: Board; totalWin: number; wins: LineWin[] } | null;
-  spinning: boolean;
-  lastResult: { wins: LineWin[]; totalWin: number; scatterPositions: [number, number][] } | null;
-  commitSpin: () => void;
-
-  // history
-  history: SpinHistoryItem[];
-  historyLoading: boolean;
-  loadHistory: () => Promise<void>;
-
   // actions
-  setAuth: (token: string, user: { id: number; username: string; telegram_id?: number }) => void;
-  clearAuth: () => void;
   spin: () => void;
   commitDrop: () => void;
   doTumble: () => void;
@@ -140,6 +190,12 @@ export interface SlotState {
   seedBoard: () => void;
   buyBonus: () => void;
   hydrate: () => void;
+  setAuth: (token: string, user: User) => void;
+  setServerBalance: (balance: number) => void;
+  clearAuth: () => void;
+  applyServerSpin: (result: ServerSpinResult) => void;
+  beginServerSpin: () => boolean;
+  failServerSpin: () => void;
 }
 
 function clearTimer(s: SlotState) {
@@ -167,7 +223,6 @@ export const useSlot = create<SlotState>((set, get) => ({
   lastCascadeWin: 0,
   spinWin: 0,
   displayWin: 0,
-  lastSpinWin: 0,
   winTier: "none",
   lastWins: [],
 
@@ -191,30 +246,12 @@ export const useSlot = create<SlotState>((set, get) => ({
   balancePulse: 0,
   token: null,
   user: null,
+  isLoggedIn: false,
+  fairness: null,
+  serverSymbols: [],
+  serverResultKey: 0,
 
   _timer: null,
-
-  // --- fields for ReelGrid / WinLineOverlay compatibility ---
-  grid: emptyBoard(),
-  pendingResult: null,
-  spinning: false,
-  lastResult: null,
-  commitSpin: () => {},
-
-  // history
-  history: [],
-  historyLoading: false,
-
-  setAuth: (token, user) => {
-    set({ token, user });
-    localStorage.setItem("mudro_token", token);
-    localStorage.setItem("mudro_user", JSON.stringify(user));
-  },
-  clearAuth: () => {
-    set({ token: null, user: null });
-    localStorage.removeItem("mudro_token");
-    localStorage.removeItem("mudro_user");
-  },
 
   spin: () => {
     const s = get();
@@ -248,7 +285,6 @@ export const useSlot = create<SlotState>((set, get) => ({
       lastCascadeWin: 0,
       spinWin: 0,
       displayWin: 0,
-      lastSpinWin: s.displayWin,
       winTier: "none",
       lastWins: [],
       scatterCount: scatters,
@@ -313,6 +349,8 @@ export const useSlot = create<SlotState>((set, get) => ({
     const s = get();
     if (s.soundOn) sound.tumblePop();
 
+    // Scatters from tumbles are intentionally ignored for trigger/retrigger
+    // (only the initial board's scatters count) — prevents free-spin loops.
     const { board: newBoard } = tumbleBoard(
       s.board,
       s.winningPositions,
@@ -325,6 +363,9 @@ export const useSlot = create<SlotState>((set, get) => ({
       phase: "tumbling",
       tumbleKey: s.tumbleKey + 1,
       winningPositions: new Set(),
+      // NOTE: scatters from tumbles do NOT accumulate toward the trigger/
+      // retrigger — only the initial board's scatters count. This prevents
+      // free spins from looping forever when scatters appear in cascades.
       scatterCount: s.scatterCount,
       activeBombs: bombs.total,
     });
@@ -338,6 +379,8 @@ export const useSlot = create<SlotState>((set, get) => ({
 
   endSequence: () => {
     const s = get();
+    // Apply bomb multiplier (free spins only): bombs on the final board sum
+    // and multiply the accumulated spin win.
     let finalWin = s.spinWin;
     let bombMult = 0;
     if (s.inFreeSpins) {
@@ -360,6 +403,7 @@ export const useSlot = create<SlotState>((set, get) => ({
       winningPositions: new Set(),
       cascadeMult: bombMult > 0 ? bombMult : s.cascadeMult,
       balance: newBalance,
+      // pulse the balance whenever it grows
       balancePulse: finalWin > 0 ? s.balancePulse + 1 : s.balancePulse,
     });
 
@@ -368,10 +412,12 @@ export const useSlot = create<SlotState>((set, get) => ({
       else if (tier === "big") sound.winBig();
     }
 
+    // Free-spins win accumulation
     if (s.inFreeSpins && finalWin > 0) {
       set({ freeSpinsWin: round2(s.freeSpinsWin + finalWin) });
     }
 
+    // Free spins trigger / retrigger
     const trigger = s.inFreeSpins
       ? FREE_SPINS_RETRIGGER
       : FREE_SPINS_TRIGGER;
@@ -396,6 +442,7 @@ export const useSlot = create<SlotState>((set, get) => ({
       if (s.soundOn) sound.freeSpinsTrigger();
     }
 
+    // Schedule next
     const cur = get();
     let delay = 650;
     if (cur.showFreeSpinsBanner) delay = 2400;
@@ -405,6 +452,7 @@ export const useSlot = create<SlotState>((set, get) => ({
     else if (tier === "normal") delay = 1100;
     if (cur.turbo) delay = Math.max(380, delay * 0.55);
 
+    // Free spins continue automatically
     if (cur.freeSpins > 0) {
       const t = setTimeout(() => {
         set({ phase: "ended" });
@@ -414,6 +462,7 @@ export const useSlot = create<SlotState>((set, get) => ({
       return;
     }
 
+    // Free spins just ended
     if (cur.inFreeSpins) {
       set({
         inFreeSpins: false,
@@ -438,6 +487,7 @@ export const useSlot = create<SlotState>((set, get) => ({
       return;
     }
 
+    // Base-game auto-spin
     if (cur.autoSpins > 0 || cur.autoInfinite) {
       if (cur.balance < cur.bet) {
         set({ autoSpins: 0, autoInfinite: false, phase: "idle" });
@@ -498,6 +548,7 @@ export const useSlot = create<SlotState>((set, get) => ({
     if (s.inFreeSpins) return;
     if (s.balance < s.bet) return;
     if (s.phase !== "idle" && s.phase !== "ended") {
+      // queue: just set the count, current spin continues
       set({ autoSpins: n, autoInfinite: false });
       return;
     }
@@ -573,7 +624,7 @@ export const useSlot = create<SlotState>((set, get) => ({
     set({ balance: nb });
     saveBalance(nb);
 
-    const board = generateBoard(true);
+    const board = generateBoard(true); // free-spins board (bombs can spawn)
     const scatters = countScatters(board);
     const bombs = collectBombs(board);
 
@@ -610,26 +661,145 @@ export const useSlot = create<SlotState>((set, get) => ({
   hydrate: () => {
     const n = hydrateBalance();
     if (n != null && n !== get().balance) set({ balance: n });
+    if (typeof window === "undefined") return;
+    try {
+      const token = window.localStorage.getItem("mudro_token");
+      const rawUser = window.localStorage.getItem("mudro_user");
+      if (token && rawUser) set({ token, user: JSON.parse(rawUser), isLoggedIn: true });
+    } catch {
+      /* Invalid persisted auth is ignored. */
+    }
   },
 
-  loadHistory: async () => {
-    const store = get();
-    if (!store.token) return;
-
-    set({ historyLoading: true });
-    try {
-      const res = await fetch("/api/casino/history?limit=20", {
-        headers: { Authorization: `Bearer ${store.token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        set({ history: data.items || data, historyLoading: false });
-      } else {
-        set({ historyLoading: false });
-      }
-    } catch (e) {
-      console.warn("History load failed", e);
-      set({ historyLoading: false });
+  setAuth: (token, user) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("mudro_token", token);
+      window.localStorage.setItem("mudro_user", JSON.stringify(user));
     }
+    set({ token, user, isLoggedIn: true });
+  },
+
+  setServerBalance: (balance) => {
+    const value = round2(balance);
+    set({ balance: value });
+  },
+
+  clearAuth: () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("mudro_token");
+      window.localStorage.removeItem("mudro_user");
+    }
+    set({ token: null, user: null, isLoggedIn: false, fairness: null });
+  },
+
+  beginServerSpin: () => {
+    const s = get();
+    if (!s.isLoggedIn || (s.phase !== "idle" && s.phase !== "ended") || (s.freeSpins <= 0 && s.balance < s.bet)) return false;
+    set({ phase: "dropping" });
+    return true;
+  },
+
+  failServerSpin: () => {
+    set({ phase: "ended" });
+  },
+
+  applyServerSpin: (result) => {
+    const s = get();
+    const win = Number.isFinite(result.win) ? result.win : 0;
+    const sweet = result.sweetBonanza;
+    clearTimer(s);
+
+    const settle = () => {
+      const current = get();
+      const tier = computeTier(win, current.bet);
+      set({
+        balance: round2(result.balanceAfter),
+        board: sweet ? boardFromServer(sweet.final_board) : current.board,
+        phase: "ended",
+        displayWin: round2(win),
+        spinWin: round2(win),
+        lastCascadeWin: current.lastCascadeWin,
+        winTier: tier,
+        fairness: result.serverSeedHash && result.nonce != null
+          ? { serverSeedHash: result.serverSeedHash, nonce: result.nonce }
+          : null,
+        serverSymbols: result.symbols.slice(0, 5),
+        serverResultKey: current.serverResultKey + 1,
+        winningPositions: new Set(),
+        activeBombs: sweet?.bomb_multiplier ?? 0,
+        freeSpins: Math.max(0, result.freeSpinsBalance ?? current.freeSpins),
+        freeSpinsTotal: Math.max(current.freeSpinsTotal, result.freeSpinsBalance ?? 0),
+        inFreeSpins: (result.freeSpinsBalance ?? 0) > 0,
+        balancePulse: win > 0 ? current.balancePulse + 1 : current.balancePulse,
+        _timer: null,
+      });
+      if (win > 0 && current.soundOn) {
+        if (tier === "epic" || tier === "mega") sound.jackpot();
+        else if (tier === "big") sound.winBig();
+        else sound.winSmall();
+      }
+    };
+
+    if (!sweet || !Array.isArray(sweet.initial_board) || !Array.isArray(sweet.steps)) {
+      settle();
+      return;
+    }
+
+    const playStep = (index: number) => {
+      const step = sweet.steps[index];
+      if (!step) {
+        settle();
+        return;
+      }
+      const current = get();
+      set({
+        board: boardFromServer(step.board),
+        phase: "celebrating",
+        spinKey: index === 0 ? current.spinKey + 1 : current.spinKey,
+        tumbleKey: current.tumbleKey + 1,
+        winningPositions: positionsFromServer(step.winning_positions),
+        cascade: step.cascade,
+        cascadeMult: step.multiplier,
+        lastCascadeWin: round2(step.win),
+        spinWin: round2(sweet.steps.slice(0, index + 1).reduce((sum, item) => sum + item.win, 0)),
+        displayWin: round2(sweet.steps.slice(0, index + 1).reduce((sum, item) => sum + item.win, 0)),
+        winTier: computeTier(sweet.steps.slice(0, index + 1).reduce((sum, item) => sum + item.win, 0), current.bet),
+        scatterCount: sweet.scatter_count,
+      });
+      if (current.soundOn) sound.winSmall();
+      const celebrateTimer = setTimeout(() => {
+        const nextBoard = sweet.steps[index + 1]?.board ?? sweet.final_board;
+        const afterCelebrate = get();
+        set({
+          board: boardFromServer(nextBoard),
+          phase: "tumbling",
+          tumbleKey: afterCelebrate.tumbleKey + 1,
+          winningPositions: new Set(),
+        });
+        if (afterCelebrate.soundOn) sound.tumblePop();
+        const tumbleTimer = setTimeout(() => playStep(index + 1), delayMs(620, afterCelebrate.turbo));
+        set({ _timer: tumbleTimer });
+      }, delayMs(720, current.turbo));
+      set({ _timer: celebrateTimer });
+    };
+
+    set({
+      board: boardFromServer(sweet.initial_board),
+      phase: "dropping",
+      spinKey: s.spinKey + 1,
+      tumbleKey: s.tumbleKey + 1,
+      displayWin: 0,
+      spinWin: 0,
+      lastCascadeWin: 0,
+      winTier: "none",
+      winningPositions: new Set(),
+      cascade: 0,
+      cascadeMult: 1,
+      scatterCount: sweet.scatter_count,
+      activeBombs: 0,
+    });
+    if (s.soundOn) sound.spinStart();
+    const dropTimer = setTimeout(() => playStep(0), delayMs(820, s.turbo));
+    set({ _timer: dropTimer });
   },
 }));
