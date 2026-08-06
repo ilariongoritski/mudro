@@ -145,6 +145,7 @@ jobs:
       MUDRO_APP_DSN: postgres://mudro_app:ci@db:5432/gallery?sslmode=disable
       CASINO_APP_DSN: postgres://mudro_casino_app:ci@casino-db:5432/mudro_casino?sslmode=disable
       JWT_SECRET: ci-jwt-secret
+      TELEGRAM_BOT_TOKEN: ci-telegram-token
       CASINO_INTERNAL_SECRET: ci-casino-internal-secret
       MINIO_ROOT_USER: minio-ci
       MINIO_ROOT_PASSWORD: minio-ci-password
