@@ -53,7 +53,7 @@ export function SlotMachine() {
             <div className="text-7xl mb-6">🍭</div>
             <h1 className="text-4xl font-black tracking-[-2px] mb-3">Sweet Bonanza</h1>
             <p className="text-xl text-slate-300 mb-8">Login with Telegram to play with real balance</p>
-            
+
             <div className="bg-zinc-950 border border-white/10 rounded-3xl p-8">
               <p className="text-sm text-slate-400 mb-4">Fast & secure login via Telegram</p>
               <TelegramLoginButton />
