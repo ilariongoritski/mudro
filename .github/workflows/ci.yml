@@ -161,6 +161,27 @@ jobs:
       - name: Build casino API production image
         run: docker build --build-arg SERVICE=services/casino/cmd/casino -t mudro-casino-api:ci .
 
+  casino-web-smoke:
+    name: Casino Mini App Render Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Build casino Mini App production image
+        run: docker build -t mudro-casino-web:ci -f services/casino-web/Dockerfile services/casino-web
+
+      - name: Verify rendered unauthenticated Mini App
+        run: |
+          set -euo pipefail
+          docker run -d --name casino-web-ci -p 127.0.0.1:3000:3000 \
+            -e PORT=3000 -e HOSTNAME=0.0.0.0 mudro-casino-web:ci
+          trap 'docker logs casino-web-ci; docker rm -f casino-web-ci' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3000/ | grep -Fq 'Login with Telegram'
+
   contracts:
     name: Contracts
     runs-on: ubuntu-latest
