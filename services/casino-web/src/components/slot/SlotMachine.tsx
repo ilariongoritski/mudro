@@ -1,30 +1,33 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { getBalance } from "@/lib/casino-api";
 import { TopBar } from "./TopBar";
 import { TumbleGrid } from "./TumbleGrid";
+import { ServerReels } from "./ServerReels";
 import { ControlPanel } from "./ControlPanel";
 import { WinDisplay } from "./WinDisplay";
 import { Banners } from "./Banners";
 import { Particles } from "./Particles";
-import { WinBar } from "./WinBar";
+import { TelegramLoginButton } from "@/components/TelegramLogin";
 import { useSlot } from "@/lib/slot/store";
 
-export default function SlotMachine() {
+export function SlotMachine() {
+  const phase = useSlot((s) => s.phase);
   const spinKey = useSlot((s) => s.spinKey);
   const winTier = useSlot((s) => s.winTier);
   const inFreeSpins = useSlot((s) => s.inFreeSpins);
   const freeSpins = useSlot((s) => s.freeSpins);
   const freeSpinsTotal = useSlot((s) => s.freeSpinsTotal);
-  const phase = useSlot((s) => s.phase);
   const freeSpinsWin = useSlot((s) => s.freeSpinsWin);
   const balance = useSlot((s) => s.balance);
   const bet = useSlot((s) => s.bet);
-  const spin = useSlot((s) => s.spin);
   const cascade = useSlot((s) => s.cascade);
   const activeBombs = useSlot((s) => s.activeBombs);
   const seedBoard = useSlot((s) => s.seedBoard);
   const hydrate = useSlot((s) => s.hydrate);
+  const setServerBalance = useSlot((s) => s.setServerBalance);
+  const isLoggedIn = useSlot((s) => s.isLoggedIn);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const busy = phase !== "idle" && phase !== "ended";
@@ -35,30 +38,32 @@ export default function SlotMachine() {
   }, [hydrate, seedBoard]);
 
   useEffect(() => {
-    if (winTier !== "mega" && winTier !== "epic") return;
-    const el = panelRef.current;
-    if (!el) return;
-    el.classList.remove("slot-shake");
-    void el.offsetWidth;
-    el.classList.add("slot-shake");
-    const t = setTimeout(() => el.classList.remove("slot-shake"), 650);
-    return () => clearTimeout(t);
-  }, [winTier, spinKey]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
-        const target = e.target as HTMLElement;
-        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
-        e.preventDefault();
-        if (!busy && !inFreeSpins && balance >= bet) spin();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, inFreeSpins, balance, bet, spin]);
+    if (!isLoggedIn) return;
+    void getBalance().then(setServerBalance).catch(() => undefined);
+  }, [isLoggedIn, setServerBalance]);
 
   const used = freeSpinsTotal - freeSpins;
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen flex flex-col text-white">
+        <div className="fixed inset-0 z-0 slot-ambient" aria-hidden />
+        <div className="relative z-10 flex flex-col min-h-screen items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <div className="text-7xl mb-6">🍭</div>
+            <h1 className="text-4xl font-black tracking-[-2px] mb-3">Sweet Bonanza</h1>
+            <p className="text-xl text-slate-300 mb-8">Login with Telegram to play with real balance</p>
+
+            <div className="bg-zinc-950 border border-white/10 rounded-3xl p-8">
+              <p className="text-sm text-slate-400 mb-4">Fast & secure login via Telegram</p>
+              <TelegramLoginButton />
+            </div>
+          </div>
+        </div>
+        <Particles />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col text-white">
@@ -81,13 +86,9 @@ export default function SlotMachine() {
                       <span>💣</span>×{activeBombs}
                     </span>
                   )}
-                  <span className="text-yellow-300 font-black text-xs">WIN {(freeSpinsWin ?? 0).toFixed(2)}</span>
+                  <span className="text-yellow-300 font-black text-xs">WIN {freeSpinsWin.toFixed(2)}</span>
                 </div>
               </div>
-            )}
-
-            {!inFreeSpins && (
-              <WinBar />
             )}
 
             {cascade >= 2 && !inFreeSpins && busy && (
@@ -101,6 +102,7 @@ export default function SlotMachine() {
             <div ref={panelRef} className="relative rounded-3xl p-2.5 sm:p-4 slot-panel">
               <div className="relative">
                 <TumbleGrid />
+                <ServerReels />
                 <WinDisplay />
                 <Banners />
               </div>
@@ -108,7 +110,7 @@ export default function SlotMachine() {
             </div>
 
             <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 px-1">
-              <span className="font-bold tracking-widest">5×5 • PAY ANYWHERE • BET {(bet ?? 1).toFixed(2)}</span>
+              <span className="font-bold tracking-widest">5×5 • PAY ANYWHERE • BET {bet.toFixed(2)}</span>
               <span className="tracking-wide">SPACE = SPIN</span>
             </div>
           </div>
@@ -116,8 +118,7 @@ export default function SlotMachine() {
 
         <footer className="mt-auto border-t border-white/5 px-4 py-3 text-center">
           <p className="text-[11px] text-slate-500 tracking-wide">
-            🍭 Sweet Bonanza — a demo slot for entertainment only. No real money.
-            Play responsibly.
+            🍭 Sweet Bonanza — play responsibly. Real money gambling.
           </p>
         </footer>
       </div>

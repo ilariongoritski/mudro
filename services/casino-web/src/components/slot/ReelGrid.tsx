@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Reel } from "./Reel";
 import { WinLineOverlay } from "./WinLineOverlay";
 import { useSlot } from "@/lib/slot/store";
-import { anticipationReel, type Grid } from "@/lib/slot/engine";
+import { anticipationReel, type Grid, countScatters } from "@/lib/slot/engine";
 import { REELS } from "@/lib/slot/config";
 import { sound } from "@/lib/slot/sound";
 
@@ -37,7 +37,11 @@ export function ReelGrid() {
 
   const activeGrid: Grid = pendingResult?.grid ?? grid;
   const anticipateFrom =
-    spinning && pendingResult ? anticipationReel(pendingResult.grid) : -1;
+    spinning && pendingResult ? anticipationReel(countScatters(pendingResult.grid)) : -1;
+
+  // Extract symbols from grid cells for Reel component
+  const prevGrid = useMemo(() => grid.map(col => col.map(c => c.symbol)), [grid]);
+  const resultGrid = useMemo(() => activeGrid.map(col => col.map(c => c.symbol)), [activeGrid]);
 
   // winning positions (stabilized)
   const winningSet = useMemo(() => {
@@ -55,17 +59,15 @@ export function ReelGrid() {
   return (
     <div
       className="relative slot-grid rounded-2xl p-2 sm:p-3"
-      style={
-        {
-          "--cell": "clamp(58px, 15.5vw, 96px)",
-        } as React.CSSProperties
-      }
+      style={{
+        "--cell": "clamp(58px, 15.5vw, 96px)",
+      } as React.CSSProperties}
     >
       <div className="relative">
         <div className="flex gap-1.5 sm:gap-2">
           {Array.from({ length: REELS }).map((_, i) => {
-            const prev = grid[i] ?? ["seven", "diamond", "crown"];
-            const result = activeGrid[i] ?? prev;
+            const prev = prevGrid[i] ?? ["seven", "diamond", "crown"];
+            const result = resultGrid[i] ?? prev;
             const anticipate = anticipateFrom >= 0 && i >= anticipateFrom;
             const dur = BASE_DURATION[i] * (turbo ? 0.5 : 1) + (anticipate ? 480 : 0);
             const delay = BASE_DELAY[i] * (turbo ? 0.5 : 1) + (anticipate ? 150 : 0);

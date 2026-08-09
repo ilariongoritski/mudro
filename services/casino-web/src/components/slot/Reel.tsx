@@ -3,7 +3,8 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { SymbolTile } from "./SymbolTile";
-import { randomSymbol, type SymbolId } from "@/lib/slot/engine";
+import { randomSymbol } from "@/lib/slot/engine";
+import type { SymbolId } from "@/lib/slot/config";
 
 interface ReelProps {
   reelIndex: number;

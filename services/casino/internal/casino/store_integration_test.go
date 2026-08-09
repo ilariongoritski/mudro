@@ -85,8 +85,11 @@ func TestCasinoSmokeIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Spin() error = %v", err)
 	}
-	if len(spinResult.Symbols) != 3 {
-		t.Fatalf("spin symbols len = %d, want 3", len(spinResult.Symbols))
+	if spinResult.SweetBonanza == nil {
+		t.Fatal("Spin() returned no server-authoritative Sweet Bonanza timeline")
+	}
+	if len(spinResult.SweetBonanza.InitialBoard) != sweetReels {
+		t.Fatalf("Sweet Bonanza board reels = %d, want %d", len(spinResult.SweetBonanza.InitialBoard), sweetReels)
 	}
 
 	rouletteResult, err := store.InstantRouletteSpin(ctx, actor, []RouletteBetInput{{

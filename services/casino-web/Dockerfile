@@ -20,10 +20,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY --from=base /app/.next/standalone ./
-COPY --from=base /app/.next/static ./.next/static
-COPY --from=base /app/public ./public
+COPY --from=base --chown=bun:bun /app/.next/standalone ./
+COPY --from=base --chown=bun:bun /app/.next/static ./.next/static
+COPY --from=base --chown=bun:bun /app/public ./public
 
 EXPOSE 3000
 
+USER bun
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD bun -e "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["bun", "server.js"]

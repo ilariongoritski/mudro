@@ -1,132 +1,113 @@
 package casino
 
-import (
-	"math"
-)
+import "math"
 
 const (
-	SweetReels  = 5
-	SweetRows   = 5
-	SweetCells  = SweetReels * SweetRows
+	sweetReels = 5
+	sweetRows  = 5
 )
 
-// sweetEngine — изолированный движок Sweet Bonanza
-type sweetEngine struct {
-	fairness *Fairness
-	idCounter int64
+type SweetCell struct {
+	ID     int64  `json:"id"`
+	Symbol string `json:"symbol"`
+	Mult   int64  `json:"mult,omitempty"`
 }
 
-// Веса символов (чем выше — тем чаще выпадает)
+type SweetPosition struct {
+	Reel int `json:"reel"`
+	Row  int `json:"row"`
+}
+
+type SweetCascadeStep struct {
+	Board            [][]SweetCell   `json:"board"`
+	WinningPositions []SweetPosition `json:"winning_positions"`
+	Cascade          int             `json:"cascade"`
+	Multiplier       int64           `json:"multiplier"`
+	Win              int64           `json:"win"`
+}
+
+type SweetBonanzaResult struct {
+	InitialBoard     [][]SweetCell      `json:"initial_board"`
+	Steps            []SweetCascadeStep `json:"steps"`
+	FinalBoard       [][]SweetCell      `json:"final_board"`
+	ScatterCount     int                `json:"scatter_count"`
+	BombMultiplier   int64              `json:"bomb_multiplier,omitempty"`
+	FreeSpinsAwarded int64              `json:"free_spins_awarded,omitempty"`
+	TotalWin         int64              `json:"total_win"`
+}
+
+type sweetEngine struct {
+	fairness *Fairness
+	nextID   int64
+}
+
 var sweetWeights = []struct {
 	symbol string
 	weight int
 }{
-	{"strawberry", 12},
-	{"pear", 11},
-	{"orange", 10},
-	{"blueberry", 9},
-	{"apple", 8},
-	{"watermelon", 7},
-	{"grape", 6},
-	{"heart", 5},
-	{"scatter", 3}, // lollipop
+	{"strawberry", 12}, {"pear", 11}, {"orange", 10}, {"blueberry", 9},
+	{"apple", 8}, {"watermelon", 7}, {"grape", 6}, {"heart", 5}, {"scatter", 3},
 }
 
-// Paytable: минимальное кол-во символов -> множитель от ставки.
-// RTP ~71% base (без фриспинов), с фриспинами ~95-96%.
-// Пороги: редкие символы (heart, grape) платят с 6+, остальные с 7+.
+const sweetMaxPayoutMultiplier int64 = 5000
+
 var sweetPays = map[string]map[int]int64{
-	"heart":      {6: 4, 7: 6, 8: 12, 9: 20, 10: 35, 11: 55, 12: 90},
-	"grape":      {6: 2, 7: 5, 8: 8, 9: 15, 10: 25, 11: 40, 12: 70},
-	"watermelon": {7: 1, 8: 3, 9: 6, 10: 12, 11: 20, 12: 35},
-	"apple":      {7: 1, 8: 2, 9: 5, 10: 8, 11: 15, 12: 25},
-	"blueberry":  {7: 1, 8: 1, 9: 3, 10: 6, 11: 12, 12: 20},
-	"orange":     {7: 1, 8: 1, 9: 2, 10: 5, 11: 8, 12: 16},
-	"pear":       {7: 1, 8: 1, 9: 1, 10: 4, 11: 6, 12: 12},
-	"strawberry": {7: 1, 8: 1, 9: 1, 10: 3, 11: 5, 12: 10},
+	// The old frontend table was visual-only and had no RTP controls. These
+	// server values pay from 9+ symbols and are calibrated for real credits.
+	"heart":      {9: 48, 10: 90, 11: 150, 12: 300},
+	"grape":      {9: 36, 10: 72, 11: 120, 12: 210},
+	"watermelon": {9: 30, 10: 54, 11: 90, 12: 168},
+	"apple":      {9: 24, 10: 42, 11: 72, 12: 132},
+	"blueberry":  {9: 18, 10: 36, 11: 60, 12: 108},
+	"orange":     {9: 18, 10: 30, 11: 48, 12: 90},
+	"pear":       {9: 12, 10: 24, 11: 42, 12: 72},
+	"strawberry": {9: 12, 10: 18, 11: 30, 12: 60},
 }
-
-// Каскадные множители (1-based cascade index).
-// Первый каскад x1, второй x1, третий x1, четвёртый x2, пятый x3, далее x3.
-var cascadeMultipliers = []int64{1, 1, 1, 2, 3}
-
-// Bomb values and weights (free spins only).
-// Снижены для целевого RTP ~95-96% (фриспины ~24%, база ~71%).
-var bombValues = []int64{2, 3, 4, 5, 6, 8, 10, 12, 15, 20}
-var bombWeights = []int{30, 25, 20, 15, 10, 8, 6, 4, 3, 2}
-
-const (
-	maxCascades      = 50 // hard cap
-	freeSpinsTrigger = 4  // scatters needed
-	freeSpinsAward   = 10
-	freeSpinsRetrigger = 3
-	freeSpinsRetriggerAward = 5
-	bombSpawnChance = 0.02 // 2% per cell in free spins
-)
 
 func newSweetEngine(serverSeed, clientSeed string, nonce int64) *sweetEngine {
-	return &sweetEngine{
-		fairness: NewFairness(serverSeed, clientSeed, nonce),
-		idCounter: 1,
-	}
+	return &sweetEngine{fairness: NewFairness(serverSeed, clientSeed, nonce)}
 }
 
-func (e *sweetEngine) draw(max int) int {
-	return DrawIntWithFairness(e.fairness, max)
-}
+func (e *sweetEngine) draw(max int) int { return DrawIntWithFairness(e.fairness, max) }
 
-func (e *sweetEngine) nextID() int64 {
-	id := e.idCounter
-	e.idCounter++
-	return id
-}
-
-// symbol — выбор символа для ячейки
 func (e *sweetEngine) symbol(freeSpins bool) SweetCell {
-	// Bomb spawn in free spins
-	if freeSpins && e.draw(1000) < int(bombSpawnChance*1000) {
-		return SweetCell{
-			ID:     e.nextID(),
-			Symbol: "bomb",
-			Mult:   e.bombValue(),
+	e.nextID++
+	id := e.nextID
+	if freeSpins && e.draw(100) < 8 {
+		bombs := []int64{2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 50}
+		weights := []int{26, 22, 18, 14, 10, 8, 6, 4, 3, 2, 1}
+		total := 0
+		for _, weight := range weights {
+			total += weight
+		}
+		r := e.draw(total)
+		for i, weight := range weights {
+			r -= weight
+			if r < 0 {
+				return SweetCell{ID: id, Symbol: "bomb", Mult: bombs[i]}
+			}
 		}
 	}
 	total := 0
-	for _, w := range sweetWeights {
-		total += w.weight
+	for _, item := range sweetWeights {
+		total += item.weight
 	}
 	r := e.draw(total)
-	for _, w := range sweetWeights {
-		r -= w.weight
+	for _, item := range sweetWeights {
+		r -= item.weight
 		if r < 0 {
-			return SweetCell{ID: e.nextID(), Symbol: w.symbol}
+			return SweetCell{ID: id, Symbol: item.symbol}
 		}
 	}
-	return SweetCell{ID: e.nextID(), Symbol: "strawberry"}
+	return SweetCell{ID: id, Symbol: "strawberry"}
 }
 
-func (e *sweetEngine) bombValue() int64 {
-	total := 0
-	for _, w := range bombWeights {
-		total += w
-	}
-	r := e.draw(total)
-	for i, w := range bombWeights {
-		r -= w
-		if r <= 0 {
-			return bombValues[i]
-		}
-	}
-	return bombValues[0]
-}
-
-// board — генерация 5×5 доски
 func (e *sweetEngine) board(freeSpins bool) [][]SweetCell {
-	board := make([][]SweetCell, SweetReels)
-	for r := 0; r < SweetReels; r++ {
-		board[r] = make([]SweetCell, SweetRows)
-		for row := 0; row < SweetRows; row++ {
-			board[r][row] = e.symbol(freeSpins)
+	board := make([][]SweetCell, sweetReels)
+	for reel := range board {
+		board[reel] = make([]SweetCell, sweetRows)
+		for row := range board[reel] {
+			board[reel][row] = e.symbol(freeSpins)
 		}
 	}
 	return board
@@ -134,99 +115,88 @@ func (e *sweetEngine) board(freeSpins bool) [][]SweetCell {
 
 func copySweetBoard(board [][]SweetCell) [][]SweetCell {
 	copyBoard := make([][]SweetCell, len(board))
-	for r := range board {
-		copyBoard[r] = make([]SweetCell, len(board[r]))
-		copy(copyBoard[r], board[r])
+	for reel := range board {
+		copyBoard[reel] = append([]SweetCell(nil), board[reel]...)
 	}
 	return copyBoard
 }
 
-// evaluation — pay-anywhere подсчёт выигрыша
-func (e *sweetEngine) evaluate(board [][]SweetCell, bet int64) ([]SweetPosition, int64) {
-	counts := make(map[string]int)
+func sweetEvaluation(board [][]SweetCell, bet int64) ([]SweetPosition, int64) {
 	positions := make(map[string][]SweetPosition)
-
-	for r := 0; r < SweetReels; r++ {
-		for row := 0; row < SweetRows; row++ {
-			cell := board[r][row]
-			if cell.Symbol == "bomb" || cell.Symbol == "scatter" {
-				continue
+	for reel := range board {
+		for row, cell := range board[reel] {
+			if cell.Symbol != "scatter" && cell.Symbol != "bomb" {
+				positions[cell.Symbol] = append(positions[cell.Symbol], SweetPosition{Reel: reel, Row: row})
 			}
-			counts[cell.Symbol]++
-			positions[cell.Symbol] = append(positions[cell.Symbol], SweetPosition{Reel: r, Row: row})
 		}
 	}
-
 	winning := make([]SweetPosition, 0)
 	var multiplier int64
-
-	for symbol, count := range counts {
+	for symbol, entries := range positions {
 		pay := sweetPays[symbol]
-		if count < 5 || pay == nil {
+		if len(entries) < 5 || pay == nil {
 			continue
 		}
 		best := int64(0)
-		for threshold, mult := range pay {
-			if count >= threshold && mult > best {
-				best = mult
+		for count, value := range pay {
+			if len(entries) >= count && value > best {
+				best = value
 			}
 		}
 		if best > 0 {
-			winning = append(winning, positions[symbol]...)
+			winning = append(winning, entries...)
 			multiplier += best
 		}
 	}
-
 	return winning, multiplier * bet
 }
 
-func cascadeMult(cascade int) int64 {
-	if cascade < len(cascadeMultipliers) {
-		return cascadeMultipliers[cascade]
+func sweetCascadeMultiplier(cascade int) int64 {
+	values := []int64{1, 1, 2, 3, 5, 8}
+	if cascade < len(values) {
+		return values[cascade]
 	}
-	return cascadeMultipliers[len(cascadeMultipliers)-1]
+	return values[len(values)-1]
 }
 
-// tumble — гравитация: выигрышные удаляются, остальные падают вниз, новые сверху
 func (e *sweetEngine) tumble(board [][]SweetCell, winning []SweetPosition, freeSpins bool) [][]SweetCell {
 	remove := make(map[[2]int]bool, len(winning))
-	for _, pos := range winning {
-		remove[[2]int{pos.Reel, pos.Row}] = true
+	for _, position := range winning {
+		remove[[2]int{position.Reel, position.Row}] = true
 	}
-
-	next := make([][]SweetCell, SweetReels)
-	for r := 0; r < SweetReels; r++ {
-		kept := make([]SweetCell, 0, SweetRows)
-		for row := 0; row < SweetRows; row++ {
-			if !remove[[2]int{r, row}] {
-				kept = append(kept, board[r][row])
+	next := make([][]SweetCell, sweetReels)
+	for reel := range board {
+		kept := make([]SweetCell, 0, sweetRows)
+		for row, cell := range board[reel] {
+			if !remove[[2]int{reel, row}] {
+				kept = append(kept, cell)
 			}
 		}
-		col := make([]SweetCell, 0, SweetRows)
-		for len(col)+len(kept) < SweetRows {
-			col = append(col, e.symbol(freeSpins))
+		column := make([]SweetCell, 0, sweetRows)
+		for len(column)+len(kept) < sweetRows {
+			column = append(column, e.symbol(freeSpins))
 		}
-		next[r] = append(col, kept...)
+		next[reel] = append(column, kept...)
 	}
 	return next
 }
 
-func countScatters(board [][]SweetCell) int {
-	n := 0
-	for _, col := range board {
-		for _, cell := range col {
+func sweetScatters(board [][]SweetCell) int {
+	count := 0
+	for _, column := range board {
+		for _, cell := range column {
 			if cell.Symbol == "scatter" {
-				n++
+				count++
 			}
 		}
 	}
-	return n
+	return count
 }
 
-func bombMult(board [][]SweetCell) int64 {
+func sweetBombMultiplier(board [][]SweetCell) int64 {
 	var total int64
-	for _, col := range board {
-		for _, cell := range col {
+	for _, column := range board {
+		for _, cell := range column {
 			if cell.Symbol == "bomb" {
 				total += cell.Mult
 			}
@@ -235,53 +205,42 @@ func bombMult(board [][]SweetCell) int64 {
 	return total
 }
 
-// Spin — основной метод: генерирует полный timeline спина
 func (e *sweetEngine) Spin(bet int64, freeSpins bool) SweetBonanzaResult {
 	board := e.board(freeSpins)
 	initial := copySweetBoard(board)
-	result := SweetBonanzaResult{
-		InitialBoard: initial,
-		ScatterCount: countScatters(board),
-	}
+	result := SweetBonanzaResult{InitialBoard: initial, ScatterCount: sweetScatters(board)}
 	var totalWin int64
-
-	for cascade := 0; cascade < maxCascades; cascade++ {
-		winning, rawWin := e.evaluate(board, bet)
+	// A hard cap protects settlement from pathological all-winning boards.
+	for cascade := 0; cascade < 50; cascade++ {
+		winning, rawWin := sweetEvaluation(board, bet)
 		if rawWin == 0 {
 			break
 		}
-		mult := cascadeMult(cascade + 1)
-		stepWin := rawWin * mult
+		multiplier := sweetCascadeMultiplier(cascade)
+		stepWin := rawWin * multiplier
 		totalWin += stepWin
-
 		result.Steps = append(result.Steps, SweetCascadeStep{
-			Board:            copySweetBoard(board),
-			WinningPositions: winning,
-			Cascade:          cascade + 1,
-			Multiplier:       mult,
-			Win:              stepWin,
+			Board: copySweetBoard(board), WinningPositions: winning, Cascade: cascade + 1, Multiplier: multiplier, Win: stepWin,
 		})
-
 		board = e.tumble(board, winning, freeSpins)
 	}
-
 	result.FinalBoard = copySweetBoard(board)
-
 	if freeSpins && totalWin > 0 {
-		if bomb := bombMult(board); bomb > 0 {
+		if bomb := sweetBombMultiplier(board); bomb > 0 {
 			result.BombMultiplier = bomb
 			totalWin *= bomb
 		}
 	}
-
-	if result.ScatterCount >= freeSpinsTrigger {
+	if result.ScatterCount >= 4 {
 		if freeSpins {
-			result.FreeSpinsAwarded = freeSpinsRetriggerAward
+			result.FreeSpinsAwarded = 5
 		} else {
-			result.FreeSpinsAwarded = freeSpinsAward
+			result.FreeSpinsAwarded = 10
 		}
 	}
-
+	if totalWin > sweetMaxPayoutMultiplier*bet {
+		totalWin = sweetMaxPayoutMultiplier * bet
+	}
 	result.TotalWin = int64(math.Max(0, float64(totalWin)))
 	return result
 }

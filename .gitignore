@@ -16,6 +16,7 @@ var/log/
 # generated outputs
 out/
 output/
+go.work.sum
 /bot
 .bin/
 .codex/logs/
@@ -70,6 +71,11 @@ pixel-agents/
 .npm-cache/
 frontend/npm-cache/
 frontend/.npm-cache/
+
+# generated JavaScript/TypeScript artifacts
+**/node_modules/
+**/.next/
+*.tsbuildinfo
 
 # AI Agents and IDEs
 .agents/

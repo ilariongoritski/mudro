@@ -3,7 +3,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -126,7 +125,7 @@ func TestCmdAPISmokeHealthz(t *testing.T) {
 	if err := cmd.Wait(); err != nil && !isExpectedKilledErr(err) {
 		t.Fatalf("wait api: %v\noutput:\n%s", err, out.String())
 	}
-	if !strings.Contains(out.String(), fmt.Sprintf("api listening on %s", addr)) {
+	if !strings.Contains(out.String(), "msg=\"api listening\"") || !strings.Contains(out.String(), "addr="+addr) {
 		t.Fatalf("missing listen log, output:\n%s", out.String())
 	}
 }

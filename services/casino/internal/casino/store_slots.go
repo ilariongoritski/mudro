@@ -85,10 +85,13 @@ func (s *Store) Spin(ctx context.Context, actor ParticipantInput, bet int64) (*S
 		return nil, ErrInsufficientBalance
 	}
 
-	// Sweet Bonanza outcome generated entirely on the server from the existing
-	// provably-fair server seed, client seed and nonce.
+	// Sweet Bonanza outcomes are generated entirely on the server from the
+	// existing provably-fair server seed, client seed and nonce.
 	sweet := newSweetEngine(serverSeed, clientSeed, int64(nonce)).Spin(bet, freeSpinUsed)
 	win := sweet.TotalWin
+	if sweet.FreeSpinsAwarded > 0 {
+		freeSpins += sweet.FreeSpinsAwarded
+	}
 	// Preserve the legacy history shape while the client consumes the richer
 	// sweet_bonanza timeline from the response.
 	symbols := []string{"sweet_bonanza"}

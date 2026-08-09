@@ -1,0 +1,23 @@
+workflow: mudro-observe
+version: 1
+inputs:
+  - compose_status
+  - healthz_status
+  - git_state
+  - backup_verification
+  - disk_usage
+outputs:
+  health: healthy|degraded|unknown
+  observations: list
+  recommended_action: string|null
+safety:
+  mode: observe_only
+  forbidden:
+    - deploy
+    - restart
+    - database_write
+    - git_write
+    - filesystem_write
+    - secret_read
+approval:
+  required_for_any_future_write: true
