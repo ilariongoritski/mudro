@@ -1,68 +1,39 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { loginWithTelegram } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 
-declare global {
-  interface Window {
-    onTelegramAuth?: (user: any) => void;
-  }
-}
+type LoginState = "loading" | "outside-telegram" | "error";
 
 export function TelegramLoginButton() {
+  const [state, setState] = useState<LoginState>("loading");
+  const [message, setMessage] = useState("");
+
   useEffect(() => {
-    // Load Telegram widget script
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    document.body.appendChild(script);
+    const telegram = window.Telegram?.WebApp;
+    const initData = telegram?.initData?.trim();
+    if (!initData) {
+      setState("outside-telegram");
+      return;
+    }
 
-    // Global callback
-    window.onTelegramAuth = async (telegramUser: any) => {
-      try {
-        // In real implementation we would send initData
-        // For now we simulate with user data
-        console.log("Telegram auth:", telegramUser);
-        
-        // TODO: Replace with real initData from Telegram WebApp
-        const fakeInitData = JSON.stringify(telegramUser);
-        await loginWithTelegram(fakeInitData);
-        window.location.reload();
-      } catch (e) {
-        alert("Telegram login failed: " + (e as Error).message);
-      }
-    };
-
-    return () => {
-      document.body.removeChild(script);
-      delete window.onTelegramAuth;
-    };
+    telegram.ready();
+    telegram.expand();
+    void loginWithTelegram(initData)
+      .then(() => window.location.reload())
+      .catch((error: unknown) => {
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "Telegram login failed");
+      });
   }, []);
 
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div 
-        id="telegram-login-container"
-        className="telegram-login"
-      >
-        {/* Telegram will inject the button here */}
-        <a 
-          href="#"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[#54a9eb] hover:bg-[#4a9ad6] text-white rounded-xl font-medium transition-colors"
-          onClick={(e) => {
-            e.preventDefault();
-            // Fallback for demo
-            alert("Telegram Login Widget would open here. In production it uses real Telegram auth.");
-          }}
-        >
-          <span>📱</span>
-          Login with Telegram
-        </a>
-      </div>
-      <p className="text-xs text-slate-400 text-center max-w-[220px]">
-        Fast & secure login. We only receive your Telegram ID and name.
-      </p>
-    </div>
-  );
+  if (state === "loading") {
+    return <p className="text-sm text-slate-300">Connecting your Telegram account…</p>;
+  }
+
+  if (state === "outside-telegram") {
+    return <p className="text-sm text-slate-300">Open this game from the MUDRO Telegram bot to sign in securely.</p>;
+  }
+
+  return <p className="text-sm text-rose-300">{message}</p>;
 }
