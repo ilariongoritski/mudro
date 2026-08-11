@@ -1,6 +1,6 @@
 import { useSlot } from "./slot/store";
 
-const CASINO_API = "/api/casino";
+const CASINO_API = "/api/v1/casino";
 
 type APIError = { error?: string };
 
@@ -85,6 +85,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${CASINO_API}${path}`, { ...init, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({} as APIError));
+    if (res.status === 401 || res.status === 403) {
+      useSlot.getState().clearAuth();
+      throw new Error("Session expired. Please reopen the Mini App from Telegram.");
+    }
     throw new Error((body as APIError).error || `Casino request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
