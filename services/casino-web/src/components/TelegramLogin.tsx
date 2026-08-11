@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loginWithTelegram } from "@/lib/auth";
 
 type LoginState = "loading" | "outside-telegram" | "error";
@@ -8,8 +8,12 @@ type LoginState = "loading" | "outside-telegram" | "error";
 export function TelegramLoginButton() {
   const [state, setState] = useState<LoginState>("loading");
   const [message, setMessage] = useState("");
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const telegram = window.Telegram?.WebApp;
     const initData = telegram?.initData?.trim();
     if (!initData) {
@@ -20,7 +24,6 @@ export function TelegramLoginButton() {
     telegram.ready();
     telegram.expand();
     void loginWithTelegram(initData)
-      .then(() => window.location.reload())
       .catch((error: unknown) => {
         setState("error");
         setMessage(error instanceof Error ? error.message : "Telegram login failed");
