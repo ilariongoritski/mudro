@@ -16,7 +16,10 @@ export function ServerReels() {
 
   return (
     <div className="absolute inset-0 z-20 grid grid-cols-5 gap-1.5 rounded-2xl bg-[#180d30]/94 p-2 sm:gap-2 sm:p-2.5" aria-label="Slot reels are spinning" aria-live="polite">
-      {Array.from({ length: 5 }).map((_, reel) => (
+      {Array.from({ length: 5 }).map((_, reel) => {
+        // Offset every reel so the visible symbols never form artificial horizontal rows.
+        const strip = [...REEL_STRIP.slice(reel * 2), ...REEL_STRIP.slice(0, reel * 2)];
+        return (
         <div key={reel} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25">
           <motion.div
             className="absolute inset-x-0 flex flex-col items-center gap-1.5 py-1.5"
@@ -24,7 +27,7 @@ export function ServerReels() {
             animate={reduceMotion ? { opacity: 0.72 } : { y: [0, -392] }}
             transition={reduceMotion ? { duration: 0.15 } : { duration: 0.52 + reel * 0.045, repeat: Infinity, ease: "linear" }}
           >
-            {[...REEL_STRIP, ...REEL_STRIP, ...REEL_STRIP].map(([symbol, color, glow], index) => (
+            {[...strip, ...strip, ...strip].map(([symbol, color, glow], index) => (
               <span
                 key={`${reel}-${index}`}
                 className="flex items-center justify-center rounded-[26%] border border-white/25 leading-none shadow-[inset_0_-5px_10px_rgba(0,0,0,.3),inset_0_4px_8px_rgba(255,255,255,.22)]"
@@ -38,8 +41,8 @@ export function ServerReels() {
             ))}
           </motion.div>
         </div>
-      ))}
-      <div className="pointer-events-none absolute inset-x-4 top-1/2 h-px bg-white/55 shadow-[0_0_18px_4px_rgba(255,255,255,.22)]" />
+        );
+      })}
       <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[9px] font-bold tracking-[0.18em] text-white/65">SERVER SPIN IN PROGRESS</p>
     </div>
   );
