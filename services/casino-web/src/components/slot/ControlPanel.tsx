@@ -43,7 +43,8 @@ export function ControlPanel() {
     setError(null);
     try {
       const result = await realSpin(bet);
-      const minimumSpinMs = turbo ? 650 : 1_100;
+      // Keep a short visual response window without making a fast server spin feel stalled.
+      const minimumSpinMs = turbo ? 250 : 450;
       const elapsed = performance.now() - startedAt;
       if (elapsed < minimumSpinMs) {
         await new Promise((resolve) => window.setTimeout(resolve, minimumSpinMs - elapsed));
