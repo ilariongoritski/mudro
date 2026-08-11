@@ -799,7 +799,8 @@ export const useSlot = create<SlotState>((set, get) => ({
       activeBombs: 0,
     });
     if (s.soundOn) sound.spinStart();
-    const dropTimer = setTimeout(() => playStep(0), delayMs(820, s.turbo));
+    // Keep the server-reel overlay visible until the fifth reel reaches initial_board.
+    const dropTimer = setTimeout(() => playStep(0), s.turbo ? 680 : 1_200);
     set({ _timer: dropTimer });
   },
 }));

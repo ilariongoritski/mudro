@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useRef } from "react";
 import { useSlot } from "@/lib/slot/store";
 
 const REEL_STRIP = [
@@ -9,41 +10,80 @@ const REEL_STRIP = [
   ["🍇", "#8b5cf6", "#c4b5fd"], ["❤️", "#e11d48", "#fda4af"], ["🍭", "#f472b6", "#f9a8d4"],
 ] as const;
 
+const SYMBOL_TILE: Record<string, (typeof REEL_STRIP)[number]> = {
+  strawberry: REEL_STRIP[0], orange: REEL_STRIP[1], blueberry: REEL_STRIP[2],
+  pear: REEL_STRIP[3], watermelon: REEL_STRIP[4], apple: REEL_STRIP[5],
+  grape: REEL_STRIP[6], heart: REEL_STRIP[7], scatter: REEL_STRIP[8],
+  bomb: ["💣", "#f59e0b", "#fde68a"],
+};
+
+const FILLER_ROWS = 9;
+
 export function ServerReels() {
   const phase = useSlot((s) => s.phase);
+  const board = useSlot((s) => s.board);
+  const spinKey = useSlot((s) => s.spinKey);
+  const turbo = useSlot((s) => s.turbo);
   const reduceMotion = useReducedMotion();
-  if (phase !== "dropping") return null;
+  const startSpinKey = useRef<number | null>(null);
+
+  if (phase !== "dropping") {
+    startSpinKey.current = null;
+    return null;
+  }
+
+  if (startSpinKey.current === null) startSpinKey.current = spinKey;
+  const hasServerResult = spinKey !== startSpinKey.current;
+  const speed = turbo ? 0.5 : 1;
 
   return (
     <div className="absolute inset-0 z-20 grid grid-cols-5 gap-1.5 rounded-2xl bg-[#180d30]/94 p-2 sm:gap-2 sm:p-2.5" aria-label="Slot reels are spinning" aria-live="polite">
       {Array.from({ length: 5 }).map((_, reel) => {
-        // Offset every reel so the visible symbols never form artificial horizontal rows.
-        const strip = [...REEL_STRIP.slice(reel * 2), ...REEL_STRIP.slice(0, reel * 2)];
+        const filler = Array.from({ length: FILLER_ROWS }, (_, row) => REEL_STRIP[(reel * 2 + row) % REEL_STRIP.length]);
+        const result = (board[reel] ?? []).map((cell) => SYMBOL_TILE[cell.symbol] ?? REEL_STRIP[0]);
+        const strip = hasServerResult ? [...filler, ...result] : [...filler, ...filler, ...filler];
+        const stopDuration = (0.72 + reel * 0.095) * speed;
+
         return (
-        <div key={reel} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25">
-          <motion.div
-            className="absolute inset-x-0 flex flex-col items-center gap-1.5 py-1.5"
-            initial={{ y: 0 }}
-            animate={reduceMotion ? { opacity: 0.72 } : { y: [0, -392] }}
-            transition={reduceMotion ? { duration: 0.15 } : { duration: 0.52 + reel * 0.045, repeat: Infinity, ease: "linear" }}
-          >
-            {[...strip, ...strip, ...strip].map(([symbol, color, glow], index) => (
-              <span
-                key={`${reel}-${index}`}
-                className="flex items-center justify-center rounded-[26%] border border-white/25 leading-none shadow-[inset_0_-5px_10px_rgba(0,0,0,.3),inset_0_4px_8px_rgba(255,255,255,.22)]"
-                style={{
-                  width: "calc(var(--cell, 64px) * .88)", height: "calc(var(--cell, 64px) * .88)",
-                  fontSize: "calc(var(--cell, 64px) * .49)",
-                  background: `radial-gradient(120% 120% at 50% 14%, ${glow}88 0%, ${color} 48%, #1a0f2e 140%)`,
-                  filter: `drop-shadow(0 0 7px ${glow}aa)`,
-                }}
-              >{symbol}</span>
-            ))}
-          </motion.div>
-        </div>
+          <div key={reel} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25">
+            <motion.div
+              className="absolute inset-x-0 flex flex-col"
+              initial={{ y: 0 }}
+              animate={
+                reduceMotion
+                  ? { opacity: hasServerResult ? 1 : 0.72 }
+                  : hasServerResult
+                    ? { y: `calc(var(--cell, 64px) * -${FILLER_ROWS})`, filter: "blur(0px)" }
+                    : { y: [0, "calc(var(--cell, 64px) * -9)"], filter: ["blur(1px)", "blur(1.5px)"] }
+              }
+              transition={
+                reduceMotion
+                  ? { duration: 0.1 }
+                  : hasServerResult
+                    ? { duration: stopDuration, ease: [0.12, 0.76, 0.2, 1] }
+                    : { duration: (0.42 + reel * 0.035) * speed, repeat: Infinity, ease: "linear" }
+              }
+            >
+              {strip.map(([symbol, color, glow], index) => (
+                <div key={`${reel}-${index}`} className="flex h-[var(--cell,64px)] items-center justify-center">
+                  <span
+                    className="flex items-center justify-center rounded-[26%] border border-white/25 leading-none shadow-[inset_0_-5px_10px_rgba(0,0,0,.3),inset_0_4px_8px_rgba(255,255,255,.22)]"
+                    style={{
+                      width: "calc(var(--cell, 64px) * .88)", height: "calc(var(--cell, 64px) * .88)",
+                      fontSize: "calc(var(--cell, 64px) * .49)",
+                      background: `radial-gradient(120% 120% at 50% 14%, ${glow}88 0%, ${color} 48%, #1a0f2e 140%)`,
+                      filter: `drop-shadow(0 0 7px ${glow}aa)`,
+                    }}
+                  >{symbol}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
         );
       })}
-      <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[9px] font-bold tracking-[0.18em] text-white/65">SERVER SPIN IN PROGRESS</p>
+      <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[9px] font-bold tracking-[0.18em] text-white/65">
+        {hasServerResult ? "REELS STOPPING" : "SERVER SPIN IN PROGRESS"}
+      </p>
     </div>
   );
 }
