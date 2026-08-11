@@ -26,7 +26,8 @@ export function TumbleGrid() {
 
   const dropDuration = turbo || reduceMotion ? 0.26 : 0.54;
   const tumbleDuration = turbo || reduceMotion ? 0.22 : 0.38;
-  const isInitialDrop = phase === "dropping" && tumbleKey === spinKey + 1;
+  // A new spin increments both keys together; tumbles advance only tumbleKey.
+  const isInitialDrop = phase === "dropping" && tumbleKey === spinKey;
   const columns = useMemo(() => board, [board]);
 
   return (
