@@ -22,23 +22,14 @@ export interface AuthResponse {
 
 // Real Telegram WebApp login
 export async function loginWithTelegram(initData?: string): Promise<AuthResponse> {
-  let dataToSend = initData;
-
-  // If running inside Telegram WebApp, get real initData
-  if (typeof window !== "undefined" && (window as any).Telegram?.WebApp) {
-    const tg = (window as any).Telegram.WebApp;
-    dataToSend = tg.initData;
-    console.log("[Telegram] Using real initData from WebApp");
-  }
-
-  if (!dataToSend) {
+  if (!initData) {
     throw new Error("No Telegram initData available");
   }
 
   const res = await fetch(`/api/auth/telegram`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ initData: dataToSend }),
+    body: JSON.stringify({ initData }),
   });
 
   if (!res.ok) {
