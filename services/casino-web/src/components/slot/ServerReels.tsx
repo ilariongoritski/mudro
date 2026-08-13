@@ -53,8 +53,8 @@ export function ServerReels() {
                 reduceMotion
                   ? { opacity: hasServerResult ? 1 : 0.72 }
                   : hasServerResult
-                    ? { y: `calc(var(--cell, 64px) * -${FILLER_ROWS})`, filter: "blur(0px)" }
-                    : { y: [0, "calc(var(--cell, 64px) * -9)"], filter: ["blur(1px)", "blur(1.5px)"] }
+                    ? { y: `calc(var(--cell, 64px) * -${FILLER_ROWS})` }
+                    : { y: [0, "calc(var(--cell, 64px) * -9)"] }
               }
               transition={
                 reduceMotion
