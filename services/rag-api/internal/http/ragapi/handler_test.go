@@ -2,6 +2,7 @@ package ragapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,9 +14,11 @@ import (
 type stubAsker struct {
 	answer rag.Answer
 	err    error
+	ready  error
 }
 
 func (s stubAsker) Ask(context.Context, string) (rag.Answer, error) { return s.answer, s.err }
+func (s stubAsker) Ready(context.Context) error                     { return s.ready }
 
 func TestHealth(t *testing.T) {
 	recorder := httptest.NewRecorder()
@@ -24,6 +27,24 @@ func TestHealth(t *testing.T) {
 		t.Fatalf("response = %d %s", recorder.Code, recorder.Body.String())
 	}
 }
+
+func TestReady(t *testing.T) {
+	t.Run("ready", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		NewHandler(stubAsker{}).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d", recorder.Code)
+		}
+	})
+	t.Run("unavailable", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		NewHandler(stubAsker{ready: errors.New("collection unavailable")}).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+		if recorder.Code != http.StatusServiceUnavailable {
+			t.Fatalf("status = %d", recorder.Code)
+		}
+	})
+}
+
 func TestAskRejectsEmptyQuestion(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	NewHandler(stubAsker{}).ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/internal/rag/ask", strings.NewReader(`{"question":" "}`)))
@@ -31,6 +52,7 @@ func TestAskRejectsEmptyQuestion(t *testing.T) {
 		t.Fatalf("status = %d", recorder.Code)
 	}
 }
+
 func TestAskReturnsSources(t *testing.T) {
 	service := stubAsker{answer: rag.Answer{Answer: "Ответ [docs/rag-mvp.md]", Grounded: true, Sources: []rag.Source{{Path: "docs/rag-mvp.md", Excerpt: "source"}}}}
 	recorder := httptest.NewRecorder()
@@ -39,6 +61,7 @@ func TestAskReturnsSources(t *testing.T) {
 		t.Fatalf("response = %d %s", recorder.Code, recorder.Body.String())
 	}
 }
+
 func TestAskReportsInsufficientContext(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	NewHandler(stubAsker{answer: rag.Answer{Sources: []rag.Source{}}, err: rag.ErrInsufficientContext}).ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/internal/rag/ask", strings.NewReader(`{"question":"нет в документации"}`)))
