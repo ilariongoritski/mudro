@@ -257,7 +257,8 @@ services:
     environment:
       RAG_ADDR: ":8092"
       QDRANT_URL: "http://qdrant:6333"
-      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs}"
+      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs_current}"
+      RAG_MIN_SCORE: "${RAG_MIN_SCORE:-0.65}"
       RAG_LLM_API_KEY: "${RAG_LLM_API_KEY:-}"
       RAG_LLM_BASE_URL: "${RAG_LLM_BASE_URL:-${LLM_BASE_URL:-https://openrouter.ai/api/v1}}"
       RAG_LLM_MODEL: "${RAG_LLM_MODEL:-${LLM_MODEL:-openai/gpt-4.1-mini}}"
@@ -268,7 +269,7 @@ services:
     ports:
       - "127.0.0.1:${RAG_API_PORT:-8092}:8092"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8092/healthz | grep -q '\"status\":\"ok\"'"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8092/readyz | grep -q '\"status\":\"ok\"'"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -282,7 +283,8 @@ services:
     environment:
       MUDRO_ROOT: "/app"
       QDRANT_URL: "http://qdrant:6333"
-      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs}"
+      RAG_QDRANT_COLLECTION: "${RAG_QDRANT_COLLECTION:-mudro_docs_current}"
+      RAG_MIN_SCORE: "${RAG_MIN_SCORE:-0.65}"
       RAG_LLM_API_KEY: "${RAG_LLM_API_KEY:-}"
       RAG_LLM_BASE_URL: "${RAG_LLM_BASE_URL:-${LLM_BASE_URL:-https://openrouter.ai/api/v1}}"
       RAG_EMBEDDING_MODEL: "${RAG_EMBEDDING_MODEL:-openai/text-embedding-3-small}"

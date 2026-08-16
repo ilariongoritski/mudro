@@ -3,6 +3,9 @@ package rag
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -32,6 +35,7 @@ func (s *Service) Ask(ctx context.Context, question string) (Answer, error) {
 	if err != nil {
 		return Answer{}, err
 	}
+	sources = relevantSources(sources, minimumScore())
 	if len(sources) == 0 {
 		return Answer{Sources: []Source{}}, ErrInsufficientContext
 	}
@@ -41,4 +45,33 @@ func (s *Service) Ask(ctx context.Context, question string) (Answer, error) {
 		return Answer{}, err
 	}
 	return Answer{Answer: answer, Sources: sources, Grounded: true}, nil
+}
+
+func (s *Service) Ready(ctx context.Context) error {
+	if err := s.retriever.Ready(ctx); err != nil {
+		return fmt.Errorf("RAG retriever unavailable: %w", err)
+	}
+	return nil
+}
+
+func relevantSources(sources []Source, minScore float64) []Source {
+	filtered := make([]Source, 0, len(sources))
+	for _, source := range sources {
+		if source.Score >= minScore {
+			filtered = append(filtered, source)
+		}
+	}
+	return filtered
+}
+
+func minimumScore() float64 {
+	value := strings.TrimSpace(os.Getenv("RAG_MIN_SCORE"))
+	if value == "" {
+		return 0.65
+	}
+	score, err := strconv.ParseFloat(value, 64)
+	if err != nil || score < 0 || score > 1 {
+		return 0.65
+	}
+	return score
 }

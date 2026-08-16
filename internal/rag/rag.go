@@ -10,6 +10,7 @@ type Embedder interface {
 // Retriever returns the most relevant indexed documentation chunks.
 type Retriever interface {
 	Search(context.Context, []float64, int) ([]Source, error)
+	Ready(context.Context) error
 }
 
 // Generator creates an answer using only supplied documentation excerpts.

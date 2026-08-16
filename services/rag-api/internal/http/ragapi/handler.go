@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/goritskimihail/mudro/internal/rag"
 	"github.com/goritskimihail/mudro/pkg/httputil"
@@ -13,6 +14,7 @@ import (
 
 type asker interface {
 	Ask(context.Context, string) (rag.Answer, error)
+	Ready(context.Context) error
 }
 
 type Handler struct{ service asker }
@@ -21,11 +23,22 @@ func NewHandler(service asker) http.Handler {
 	h := &Handler{service: service}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", h.health)
+	mux.HandleFunc("GET /readyz", h.ready)
 	mux.HandleFunc("POST /internal/rag/ask", h.ask)
 	return mux
 }
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "rag-api"})
+}
+
+func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	if err := h.service.Ready(ctx); err != nil {
+		httputil.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+		return
+	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "rag-api"})
 }
 

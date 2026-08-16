@@ -18,7 +18,7 @@ type qdrantRetriever struct {
 
 func NewQdrantRetrieverFromEnv() (Retriever, error) {
 	baseURL := strings.TrimRight(env("QDRANT_URL", "http://qdrant:6333"), "/")
-	collection := env("RAG_QDRANT_COLLECTION", "mudro_docs")
+	collection := env("RAG_QDRANT_COLLECTION", "mudro_docs_current")
 	if collection == "" {
 		return nil, fmt.Errorf("RAG_QDRANT_COLLECTION is required")
 	}
@@ -63,6 +63,22 @@ func (r *qdrantRetriever) Search(ctx context.Context, vector []float64, limit in
 		}
 	}
 	return sources, nil
+}
+
+func (r *qdrantRetriever) Ready(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.baseURL+"/collections/"+r.collection, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("check Qdrant collection: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("check Qdrant collection: %s", resp.Status)
+	}
+	return nil
 }
 
 func qdrantURL() string { return strings.TrimRight(os.Getenv("QDRANT_URL"), "/") }
