@@ -17,7 +17,8 @@ export function TelegramLoginButton() {
     const telegram = window.Telegram?.WebApp;
     const initData = telegram?.initData?.trim();
     if (!initData) {
-      setState("outside-telegram");
+      // Schedule the render-state transition after the effect completes.
+      window.setTimeout(() => setState("outside-telegram"), 0);
       return;
     }
 

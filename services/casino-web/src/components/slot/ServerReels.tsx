@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { useRef } from "react";
 import { useSlot } from "@/lib/slot/store";
 
 const REEL_STRIP = [
@@ -23,17 +22,13 @@ export function ServerReels() {
   const phase = useSlot((s) => s.phase);
   const board = useSlot((s) => s.board);
   const spinKey = useSlot((s) => s.spinKey);
+  const serverReelsReady = useSlot((s) => s.serverReelsReady);
   const turbo = useSlot((s) => s.turbo);
   const reduceMotion = useReducedMotion();
-  const startSpinKey = useRef<number | null>(null);
 
-  if (phase !== "dropping") {
-    startSpinKey.current = null;
-    return null;
-  }
+  if (phase !== "dropping") return null;
 
-  if (startSpinKey.current === null) startSpinKey.current = spinKey;
-  const hasServerResult = spinKey !== startSpinKey.current;
+  const hasServerResult = serverReelsReady;
   const speed = turbo ? 0.5 : 1;
 
   return (

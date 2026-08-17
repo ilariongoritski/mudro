@@ -19,6 +19,7 @@ export function ControlPanel() {
   const isLoggedIn = useSlot((s) => s.isLoggedIn);
   const turbo = useSlot((s) => s.turbo);
   const freeSpins = useSlot((s) => s.freeSpins);
+  const serverResultKey = useSlot((s) => s.serverResultKey);
   const setBet = useSlot((s) => s.setBet);
   const incBet = useSlot((s) => s.incBet);
   const decBet = useSlot((s) => s.decBet);
@@ -32,6 +33,7 @@ export function ControlPanel() {
   const [autoInfinite, setAutoInfinite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoRef = useRef({ remaining: 0, infinite: false, stopped: false });
+  const bonusResultRef = useRef(0);
 
   const busy = phase !== "idle" && phase !== "ended";
   const canSpin = isLoggedIn && (freeSpins > 0 || balance >= bet) && !busy && !requestInFlight;
@@ -70,6 +72,22 @@ export function ControlPanel() {
   };
 
   const handleSpin = () => void runSpin();
+
+  // Bonus spins are a server-authoritative chain: each iteration makes a fresh
+  // POST /spin request, and the API decides whether a free spin remains and
+  // whether another one is awarded. Normal AUTO uses its own loop below, so it
+  // never shares this trigger or creates duplicate requests.
+  useEffect(() => {
+    if (autoRef.current.remaining > 0 || autoRef.current.infinite) return;
+    if (serverResultKey <= bonusResultRef.current || freeSpins <= 0 || phase !== "ended" || requestInFlight) return;
+
+    bonusResultRef.current = serverResultKey;
+    const timer = window.setTimeout(() => {
+      const current = useSlot.getState();
+      if (current.freeSpins > 0 && current.phase === "ended") void runSpin();
+    }, turbo ? 380 : 750);
+    return () => window.clearTimeout(timer);
+  }, [freeSpins, phase, requestInFlight, runSpin, serverResultKey, turbo]);
 
   const stopAuto = () => {
     autoRef.current = { remaining: 0, infinite: false, stopped: true };
