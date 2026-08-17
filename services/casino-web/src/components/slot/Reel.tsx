@@ -63,14 +63,11 @@ function ReelSpin({
   return (
     <motion.div
       className="flex flex-col will-change-transform"
-      initial={{ y: 0, filter: "blur(0px)" }}
+      initial={{ y: 0 }}
       animate={
         animating
-          ? {
-              y: -target,
-              filter: ["blur(0px)", "blur(1.4px)", "blur(1.4px)", "blur(0px)"],
-            }
-          : { y: 0, filter: "blur(0px)" }
+          ? { y: -target }
+          : { y: 0 }
       }
       transition={
         animating

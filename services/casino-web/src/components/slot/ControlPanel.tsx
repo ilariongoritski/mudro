@@ -73,9 +73,13 @@ export function ControlPanel() {
 
   const handleSpin = () => void runSpin();
 
+  const BONUS_SPIN_MIN_INTERVAL_MS = 7_000;
+
   // Bonus spins are a server-authoritative chain: each iteration makes a fresh
   // POST /spin request, and the API decides whether a free spin remains and
-  // whether another one is awarded. Normal AUTO uses its own loop below, so it
+  // whether another one is awarded. The server accepts at most 10 requests per
+  // rolling minute per player, so bonus autoplay intentionally stays below that
+  // threshold even in Turbo mode. Normal AUTO uses its own loop below, so it
   // never shares this trigger or creates duplicate requests.
   useEffect(() => {
     if (autoRef.current.remaining > 0 || autoRef.current.infinite) return;
@@ -85,9 +89,9 @@ export function ControlPanel() {
     const timer = window.setTimeout(() => {
       const current = useSlot.getState();
       if (current.freeSpins > 0 && current.phase === "ended") void runSpin();
-    }, turbo ? 380 : 750);
+    }, BONUS_SPIN_MIN_INTERVAL_MS);
     return () => window.clearTimeout(timer);
-  }, [freeSpins, phase, requestInFlight, runSpin, serverResultKey, turbo]);
+  }, [freeSpins, phase, requestInFlight, runSpin, serverResultKey]);
 
   const stopAuto = () => {
     autoRef.current = { remaining: 0, infinite: false, stopped: true };
