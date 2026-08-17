@@ -169,6 +169,8 @@ export interface SlotState {
   serverSymbols: string[];
   /** Changes on every settled server response to replay reel-stop motion. */
   serverResultKey: number;
+  /** True only after the current spin received a server-authoritative board. */
+  serverReelsReady: boolean;
 
   _timer: Timer;
 
@@ -250,6 +252,7 @@ export const useSlot = create<SlotState>((set, get) => ({
   fairness: null,
   serverSymbols: [],
   serverResultKey: 0,
+  serverReelsReady: false,
 
   _timer: null,
 
@@ -695,12 +698,12 @@ export const useSlot = create<SlotState>((set, get) => ({
   beginServerSpin: () => {
     const s = get();
     if (!s.isLoggedIn || (s.phase !== "idle" && s.phase !== "ended") || (s.freeSpins <= 0 && s.balance < s.bet)) return false;
-    set({ phase: "dropping" });
+    set({ phase: "dropping", serverReelsReady: false });
     return true;
   },
 
   failServerSpin: () => {
-    set({ phase: "ended" });
+    set({ phase: "ended", serverReelsReady: false });
   },
 
   applyServerSpin: (result) => {
@@ -797,6 +800,7 @@ export const useSlot = create<SlotState>((set, get) => ({
       cascadeMult: 1,
       scatterCount: sweet.scatter_count,
       activeBombs: 0,
+      serverReelsReady: true,
     });
     if (s.soundOn) sound.spinStart();
     // Keep the server-reel overlay visible until the fifth reel reaches initial_board.
