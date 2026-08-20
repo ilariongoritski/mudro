@@ -5,6 +5,18 @@ import { loginWithTelegram } from "@/lib/auth";
 
 type LoginState = "loading" | "outside-telegram" | "error";
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initData?: string;
+        ready: () => void;
+        expand: () => void;
+      };
+    };
+  }
+}
+
 export function TelegramLoginButton() {
   const [state, setState] = useState<LoginState>("loading");
   const [message, setMessage] = useState("");
@@ -16,7 +28,7 @@ export function TelegramLoginButton() {
 
     const telegram = window.Telegram?.WebApp;
     const initData = telegram?.initData?.trim();
-    if (!initData) {
+    if (!telegram || !initData) {
       // Schedule the render-state transition after the effect completes.
       window.setTimeout(() => setState("outside-telegram"), 0);
       return;

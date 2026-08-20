@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, RotateCw, Zap } from "lucide-react";
 import { useSlot } from "@/lib/slot/store";
 import { spin as realSpin } from "@/lib/casino-api";
-import { BET_PRESETS } from "@/lib/slot/config";
+import { BET_PRESETS, BONUS_BUY_MULT } from "@/lib/slot/config";
 import { cn } from "@/lib/utils";
 
 function fmt(value: number) {
@@ -27,6 +27,8 @@ export function ControlPanel() {
   const beginServerSpin = useSlot((s) => s.beginServerSpin);
   const applyServerSpin = useSlot((s) => s.applyServerSpin);
   const failServerSpin = useSlot((s) => s.failServerSpin);
+  const buyBonus = useSlot((s) => s.buyBonus);
+  const inFreeSpins = useSlot((s) => s.inFreeSpins);
 
   const [requestInFlight, setRequestInFlight] = useState(false);
   const [autoRemaining, setAutoRemaining] = useState(0);
@@ -133,9 +135,15 @@ export function ControlPanel() {
   return (
     <div className="mt-4 flex flex-col items-center gap-3">
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={decBet} disabled={busy || requestInFlight || bet === BET_PRESETS[0]} className="h-10 w-10 rounded-xl border-white/20"><Minus className="h-4 w-4" /></Button>
+        <button type="button" onClick={decBet} disabled={busy || requestInFlight || bet === BET_PRESETS[0]} aria-label="Decrease bet"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-pink-400/40 bg-gradient-to-b from-[#2a1042] to-[#1a0a2e] text-pink-200 shadow-[inset_0_1px_0_rgba(255,255,255,.15),0_2px_8px_rgba(0,0,0,.4)] transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed hover:border-pink-300/70">
+          <Minus className="h-4 w-4" />
+        </button>
         <div className="min-w-[132px] rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-center font-mono text-lg font-bold">BET {fmt(bet)}</div>
-        <Button variant="outline" size="icon" onClick={incBet} disabled={busy || requestInFlight || bet === BET_PRESETS[BET_PRESETS.length - 1]} className="h-10 w-10 rounded-xl border-white/20"><Plus className="h-4 w-4" /></Button>
+        <button type="button" onClick={incBet} disabled={busy || requestInFlight || bet === BET_PRESETS[BET_PRESETS.length - 1]} aria-label="Increase bet"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-pink-400/40 bg-gradient-to-b from-[#2a1042] to-[#1a0a2e] text-pink-200 shadow-[inset_0_1px_0_rgba(255,255,255,.15),0_2px_8px_rgba(0,0,0,.4)] transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed hover:border-pink-300/70">
+          <Plus className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="flex max-w-full flex-wrap justify-center gap-1.5 px-2">
@@ -156,6 +164,20 @@ export function ControlPanel() {
           <button type="button" disabled={!canSpin} onClick={() => void startAuto("infinite")} className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold">AUTO ∞</button>
         </>}
       </div>
+      <button
+        type="button"
+        onClick={buyBonus}
+        disabled={!isLoggedIn || busy || requestInFlight || inFreeSpins || balance < BONUS_BUY_MULT * bet}
+        className={cn(
+          "flex items-center gap-2 rounded-full border px-5 py-2 text-xs font-black tracking-widest transition",
+          !isLoggedIn || busy || requestInFlight || inFreeSpins || balance < BONUS_BUY_MULT * bet
+            ? "border-white/10 bg-white/5 text-slate-500 opacity-60 cursor-not-allowed"
+            : "border-amber-300/60 bg-gradient-to-b from-amber-400/25 to-pink-500/20 text-amber-200 hover:from-amber-400/40 hover:to-pink-500/30 active:scale-95 shadow-[0_0_16px_rgba(251,191,36,.25)]"
+        )}
+      >
+        <span className="text-base">🍭</span> BUY BONUS · {fmt(BONUS_BUY_MULT * bet)}
+      </button>
+
       <div className="text-[11px] tracking-widest text-slate-500">{autoInfinite ? "AUTO ∞ ACTIVE" : autoRemaining > 0 ? `AUTO ${autoRemaining} LEFT` : turbo ? "TURBO ON" : "SERVER-VERIFIED SPINS"}</div>
       {error && <p role="alert" className="max-w-sm text-center text-xs text-rose-300">{error}</p>}
     </div>

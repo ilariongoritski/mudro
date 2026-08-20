@@ -170,3 +170,76 @@ func slotStatus(win, bet int64) string {
 		return "LOST"
 	}
 }
+
+// BuyBonus charges bonusBuyPrice(bet) from the player's real balance and
+// credits BonusFreeSpins() free spins in one transaction. Server-authoritative:
+// the client never mints free spins locally.
+func (s *Store) BuyBonus(ctx context.Context, actor ParticipantInput, bet int64) (*SpinResult, error) {
+	if bet <= 0 {
+		return nil, fmt.Errorf("bet must be positive")
+	}
+	price := bonusBuyPrice(bet)
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	cfg, err := s.getConfigTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensurePlayer(ctx, tx, actor, cfg); err != nil {
+		return nil, err
+	}
+
+	balance, freeSpins, _, _, _, _, err := s.getWalletStateForUpdate(ctx, tx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if freeSpins > 0 {
+		return nil, fmt.Errorf("bonus already in progress")
+	}
+	if balance < price {
+		return nil, ErrInsufficientBalance
+	}
+
+	newBalance := balance - price
+	freeSpins += BonusFreeSpins()
+	if err := s.setWalletStateTx(ctx, tx, actor.UserID, newBalance, &freeSpins); err != nil {
+		return nil, err
+	}
+	if err := s.recordTransferTx(ctx, tx, "bonus_buy", actor.UserID, price, map[string]any{"bet": bet}); err != nil {
+		return nil, err
+	}
+	if err := s.insertActivityTx(ctx, tx, actor.UserID, "slots", "bonus_buy", price, 0, -price, "BONUS BUY", map[string]any{
+		"bet":                bet,
+		"free_spins_balance": freeSpins,
+	}); err != nil {
+		return nil, err
+	}
+	if err := s.enqueueBalanceSyncTx(ctx, tx, actor.UserID, "bonus_buy", &newBalance); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	committed = true
+
+	return &SpinResult{
+		Balance:          newBalance,
+		FreeSpinsBalance: freeSpins,
+		Config:           cfg,
+	}, nil
+}
+
+// bonusBuyPrice mirrors the client's BONUS_BUY_MULT (100x bet).
+func bonusBuyPrice(bet int64) int64 {
+	return bet * 100
+}

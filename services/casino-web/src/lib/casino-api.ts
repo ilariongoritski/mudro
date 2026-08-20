@@ -113,6 +113,19 @@ export async function spin(bet: number): Promise<SpinResult> {
   };
 }
 
+export interface BonusBuyResult {
+  balance: number;
+  free_spins_balance?: number;
+}
+
+export async function buyBonus(bet: number): Promise<BonusBuyResult> {
+  const result = await request<Partial<BonusBuyResult>>("/bonus/buy", { method: "POST", body: JSON.stringify({ bet }) });
+  return {
+    balance: Number(result.balance ?? 0),
+    free_spins_balance: result.free_spins_balance,
+  };
+}
+
 export async function getHistory(limit = 20): Promise<SpinHistoryItem[]> {
   const data = await request<{ items: SpinHistoryWireItem[] }>(`/history?limit=${limit}`);
   return data.items.map((item) => ({ ...item, createdAt: item.createdAt ?? item.created_at ?? new Date(0).toISOString() }));

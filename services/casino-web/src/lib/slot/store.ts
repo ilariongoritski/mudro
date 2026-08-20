@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import {
   BET_PRESETS,
-  BONUS_BUY_MULT,
   DEFAULT_BET,
   FREE_SPINS_AWARD,
   FREE_SPINS_RETRIGGER,
@@ -616,49 +615,31 @@ export const useSlot = create<SlotState>((set, get) => ({
   },
 
   buyBonus: () => {
+    // Server-authoritative bonus buy: the API debits the price and credits
+    // free spins in one transaction; the client only applies the response.
     const s = get();
     if (s.phase !== "idle" && s.phase !== "ended") return;
     if (s.inFreeSpins) return;
-    const price = round2(BONUS_BUY_MULT * s.bet);
-    if (s.balance < price) return;
-    clearTimer(s);
-
-    const nb = round2(s.balance - price);
-    set({ balance: nb });
-    saveBalance(nb);
-
-    const board = generateBoard(true); // free-spins board (bombs can spawn)
-    const scatters = countScatters(board);
-    const bombs = collectBombs(board);
-
-    if (s.soundOn) sound.freeSpinsTrigger();
-
-    set({
-      board,
-      phase: "dropping",
-      spinKey: s.spinKey + 1,
-      tumbleKey: s.tumbleKey + 1,
-      winningPositions: new Set(),
-      cascade: 0,
-      cascadeMult: 1,
-      lastCascadeWin: 0,
-      spinWin: 0,
-      displayWin: 0,
-      winTier: "none",
-      lastWins: [],
-      scatterCount: scatters,
-      bombsTotal: bombs.total,
-      activeBombs: bombs.total,
-      showFreeSpinsBanner: true,
-      showFreeSpinsEnd: false,
-      freeSpins: FREE_SPINS_AWARD,
-      freeSpinsTotal: FREE_SPINS_AWARD,
-      freeSpinsWin: 0,
-      inFreeSpins: true,
+    if (!s.isLoggedIn) return;
+    void import("../casino-api").then(async ({ buyBonus: apiBuyBonus }) => {
+      try {
+        const result = await apiBuyBonus(s.bet);
+        const current = get();
+        set({
+          balance: round2(result.balance),
+          freeSpins: Math.max(0, result.free_spins_balance ?? 0),
+          freeSpinsTotal: Math.max(0, result.free_spins_balance ?? 0),
+          freeSpinsWin: 0,
+          inFreeSpins: (result.free_spins_balance ?? 0) > 0,
+          showFreeSpinsBanner: true,
+          balancePulse: result.balance > current.balance ? current.balancePulse + 1 : current.balancePulse,
+        });
+        if (current.soundOn) sound.freeSpinsTrigger();
+      } catch {
+        // Domain/network errors surface through the control panel state;
+        // without a hook here the UI simply stays unchanged.
+      }
     });
-
-    const t = setTimeout(() => get().commitDrop(), delayMs(1400, s.turbo));
-    set({ _timer: t });
   },
 
   hydrate: () => {
