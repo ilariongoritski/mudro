@@ -42,10 +42,12 @@ export function ServerReels() {
         // server-authoritative initial_board at handoff.
         const strip = hasServerResult ? [...filler, ...filler, ...result] : [...filler, ...filler, ...filler];
         const landingOffset = FILLER_ROWS * 2;
+        const stopDuration = (0.72 + reel * 0.095) * speed;
 
         return (
           <div key={reel} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25">
             <motion.div
+              key={`${spinKey}-${reel}-${hasServerResult ? "landing" : "spinning"}`}
               className="absolute inset-x-0 flex flex-col"
               initial={{ y: 0 }}
               animate={
