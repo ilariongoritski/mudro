@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSlot } from "@/lib/slot/store";
 import { TumbleTile } from "./TumbleTile";
 import type { SymbolId } from "@/lib/slot/config";
@@ -37,13 +37,17 @@ export function ServerReels() {
   const turbo = useSlot((s) => s.turbo);
   const reduceMotion = useReducedMotion();
 
-  if (phase !== "dropping") return null;
-
   const hasServerResult = serverReelsReady;
   const speed = turbo ? 0.5 : 1;
 
   return (
-    <div className="absolute inset-0 z-20 grid grid-cols-5 gap-1.5 rounded-2xl bg-[#180d30]/94 p-2 sm:gap-2 sm:p-2.5" aria-label="Slot reels are spinning" aria-live="polite">
+    <AnimatePresence>
+      {phase === "dropping" && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.25, ease: "easeOut" } }}
+        className="absolute inset-0 z-20 grid grid-cols-5 gap-1.5 rounded-2xl bg-[#180d30]/94 p-2 sm:gap-2 sm:p-2.5" aria-label="Slot reels are spinning" aria-live="polite">
       {Array.from({ length: 5 }).map((_, reel) => {
         const filler = Array.from({ length: FILLER_ROWS }, (_, row) => REEL_STRIP[(reel * 2 + row) % REEL_STRIP.length]);
         // Landing cells reuse TumbleTile — the exact component the settled
@@ -91,6 +95,8 @@ export function ServerReels() {
       <p className="pointer-events-none absolute bottom-2 left-0 right-0 text-center text-[9px] font-bold tracking-[0.18em] text-white/65">
         {hasServerResult ? "REELS STOPPING" : "SERVER SPIN IN PROGRESS"}
       </p>
-    </div>
+      </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

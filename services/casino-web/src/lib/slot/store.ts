@@ -170,6 +170,8 @@ export interface SlotState {
   serverResultKey: number;
   /** True only after the current spin received a server-authoritative board. */
   serverReelsReady: boolean;
+  /** True while the settled board underneath was landed by the reel overlay — suppress tile drop-in. */
+  serverLanded: boolean;
 
   _timer: Timer;
 
@@ -252,6 +254,7 @@ export const useSlot = create<SlotState>((set, get) => ({
   serverSymbols: [],
   serverResultKey: 0,
   serverReelsReady: false,
+  serverLanded: false,
 
   _timer: null,
 
@@ -715,6 +718,7 @@ export const useSlot = create<SlotState>((set, get) => ({
         freeSpinsTotal: Math.max(current.freeSpinsTotal, result.freeSpinsBalance ?? 0),
         inFreeSpins: (result.freeSpinsBalance ?? 0) > 0,
         balancePulse: win > 0 ? current.balancePulse + 1 : current.balancePulse,
+        serverLanded: false,
         _timer: null,
       });
       if (win > 0 && current.soundOn) {
@@ -741,6 +745,7 @@ export const useSlot = create<SlotState>((set, get) => ({
         phase: "celebrating",
         spinKey: index === 0 ? current.spinKey + 1 : current.spinKey,
         tumbleKey: current.tumbleKey + 1,
+        serverLanded: false,
         winningPositions: positionsFromServer(step.winning_positions),
         cascade: step.cascade,
         cascadeMult: step.multiplier,
@@ -782,10 +787,12 @@ export const useSlot = create<SlotState>((set, get) => ({
       scatterCount: sweet.scatter_count,
       activeBombs: 0,
       serverReelsReady: true,
+      serverLanded: true,
     });
     if (s.soundOn) sound.spinStart();
-    // Keep the server-reel overlay visible until the fifth reel reaches initial_board.
-    const dropTimer = setTimeout(() => playStep(0), s.turbo ? 680 : 1_200);
+    // Keep the overlay mounted until the slowest (fifth) reel lands on the
+    // server board (~1.10s) plus the cross-fade window; only then start cascades.
+    const dropTimer = setTimeout(() => playStep(0), s.turbo ? 900 : 1_400);
     set({ _timer: dropTimer });
   },
 }));
