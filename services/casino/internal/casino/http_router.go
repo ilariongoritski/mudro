@@ -31,6 +31,7 @@ func (h *Handler) Router() http.Handler {
 	mux.Handle("/spin", internal(h.handleSpin))
 	mux.Handle("/config", internal(h.handleConfig))
 	mux.Handle("/bonus/state", internal(h.handleBonusState))
+	mux.Handle("/bonus/buy", internal(h.handleBonusBuy))
 	mux.Handle("/bonus/claim-subscription", internal(h.handleBonusClaimSubscription))
 	mux.Handle("/bonus/history", internal(h.handleBonusHistory))
 

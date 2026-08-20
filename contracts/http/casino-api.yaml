@@ -112,6 +112,26 @@ paths:
         "401":
           description: Unauthorized
 
+  /bonus/buy:
+    post:
+      summary: Buy bonus free spins (server-authoritative debit + credit)
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bet'
+      responses:
+        "200":
+          description: Bonus purchased; new balance and free spins returned
+        "400":
+          description: Invalid bet
+        "401":
+          description: Unauthorized
+        "409":
+          description: Insufficient balance or bonus already in progress
+
   /spin:
     post:
       summary: Place slot bet and spin

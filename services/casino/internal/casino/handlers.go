@@ -456,6 +456,35 @@ func (h *Handler) handlePlinkoState(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, state)
 }
 
+func (h *Handler) handleBonusBuy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	actor, err := authContextFromHeaders(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err)
+		return
+	}
+	if h.rateLimited(actor) {
+		writeError(w, http.StatusTooManyRequests, errors.New("rate limit exceeded"))
+		return
+	}
+	var req struct {
+		Bet int64 `json:"bet"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	result, err := h.store.BuyBonus(r.Context(), actor, req.Bet)
+	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
 func (h *Handler) handlePlinkoDrop(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
