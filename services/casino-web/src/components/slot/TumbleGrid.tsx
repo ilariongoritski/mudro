@@ -16,6 +16,7 @@ export function TumbleGrid() {
   const scatterCount = useSlot((s) => s.scatterCount);
   const inFreeSpins = useSlot((s) => s.inFreeSpins);
   const turbo = useSlot((s) => s.turbo);
+  const serverLanded = useSlot((s) => s.serverLanded);
   const reduceMotion = useReducedMotion();
 
   const showWins = phase === "celebrating" && winningPositions.size > 0;
@@ -57,14 +58,14 @@ export function TumbleGrid() {
                     const key = cell.id;
                     const winning = showWins && winningPositions.has(`${reelIdx}-${rowIdx}`);
                     const dim = showWins && !winning;
-                    const landingDelay = isInitialDrop ? reelIdx * (turbo ? 0.025 : 0.075) + rowIdx * (turbo ? 0.008 : 0.018) : 0;
+                    const landingDelay = isInitialDrop && !serverLanded ? reelIdx * (turbo ? 0.025 : 0.075) + rowIdx * (turbo ? 0.008 : 0.018) : 0;
                     return (
                       <motion.div
                         key={key}
                         layout={!reduceMotion}
                         className="w-full flex items-center justify-center will-change-transform"
                         style={{ height: "var(--cell, 64px)", flexShrink: 0 }}
-                        initial={reduceMotion ? { opacity: 0 } : { y: -220 - rowIdx * 26, opacity: 0, scale: 0.92 }}
+                        initial={serverLanded ? false : reduceMotion ? { opacity: 0 } : { y: -220 - rowIdx * 26, opacity: 0, scale: 0.92 }}
                         animate={reduceMotion ? { opacity: 1 } : { y: [null, 8, -3, 0], opacity: 1, scale: [null, 1.015, 0.995, 1] }}
                         exit={{
                           scale: reduceMotion ? 1 : 0.72,
