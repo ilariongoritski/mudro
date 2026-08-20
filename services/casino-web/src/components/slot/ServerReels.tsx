@@ -36,8 +36,12 @@ export function ServerReels() {
       {Array.from({ length: 5 }).map((_, reel) => {
         const filler = Array.from({ length: FILLER_ROWS }, (_, row) => REEL_STRIP[(reel * 2 + row) % REEL_STRIP.length]);
         const result = (board[reel] ?? []).map((cell) => SYMBOL_TILE[cell.symbol] ?? REEL_STRIP[0]);
-        const strip = hasServerResult ? [...filler, ...result] : [...filler, ...filler, ...filler];
-        const stopDuration = (0.72 + reel * 0.095) * speed;
+        // Keep the strip length stable while the request is pending. Once the
+        // server board arrives, replace only its final five cells and land on
+        // their boundary; the overlay and TumbleGrid therefore show the same
+        // server-authoritative initial_board at handoff.
+        const strip = hasServerResult ? [...filler, ...filler, ...result] : [...filler, ...filler, ...filler];
+        const landingOffset = FILLER_ROWS * 2;
 
         return (
           <div key={reel} className="relative overflow-hidden rounded-xl border border-white/10 bg-black/25">
@@ -48,7 +52,7 @@ export function ServerReels() {
                 reduceMotion
                   ? { opacity: hasServerResult ? 1 : 0.72 }
                   : hasServerResult
-                    ? { y: `calc(var(--cell, 64px) * -${FILLER_ROWS})` }
+                    ? { y: `calc(var(--cell, 64px) * -${landingOffset})` }
                     : { y: [0, "calc(var(--cell, 64px) * -9)"] }
               }
               transition={
