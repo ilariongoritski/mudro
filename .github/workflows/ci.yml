@@ -167,6 +167,15 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
+      - name: Build casino Mini App quality image
+        run: docker build --target base -t mudro-casino-web:ci-quality -f services/casino-web/Dockerfile services/casino-web
+
+      - name: Lint casino Mini App
+        run: docker run --rm --entrypoint bun mudro-casino-web:ci-quality run lint
+
+      - name: Test casino Mini App
+        run: docker run --rm --entrypoint bun mudro-casino-web:ci-quality test
+
       - name: Build casino Mini App production image
         run: docker build -t mudro-casino-web:ci -f services/casino-web/Dockerfile services/casino-web
 
