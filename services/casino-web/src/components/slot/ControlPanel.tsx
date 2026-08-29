@@ -85,7 +85,12 @@ export function ControlPanel() {
   // never shares this trigger or creates duplicate requests.
   useEffect(() => {
     if (autoRef.current.remaining > 0 || autoRef.current.infinite) return;
-    if (serverResultKey <= bonusResultRef.current || freeSpins <= 0 || phase !== "ended" || requestInFlight) return;
+    // Arm the timer only once per server result AND only when the result has
+    // fully settled (phase "ended") with free spins remaining. Because this
+    // effect re-runs on phase/freeSpins changes, missing the window is not
+    // possible: it retries until conditions are met, then arms once.
+    if (freeSpins <= 0 || phase !== "ended" || requestInFlight) return;
+    if (serverResultKey <= bonusResultRef.current) return;
 
     bonusResultRef.current = serverResultKey;
     const timer = window.setTimeout(() => {
