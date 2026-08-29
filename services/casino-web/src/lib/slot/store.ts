@@ -717,6 +717,9 @@ export const useSlot = create<SlotState>((set, get) => ({
         freeSpins: Math.max(0, result.freeSpinsBalance ?? current.freeSpins),
         freeSpinsTotal: Math.max(current.freeSpinsTotal, result.freeSpinsBalance ?? 0),
         inFreeSpins: (result.freeSpinsBalance ?? 0) > 0,
+        showFreeSpinsEnd: current.inFreeSpins && (result.freeSpinsBalance ?? 0) === 0,
+        freeSpinsEndWin: current.inFreeSpins && (result.freeSpinsBalance ?? 0) === 0 ? round2(current.freeSpinsWin + win) : current.freeSpinsEndWin,
+        freeSpinsWin: current.inFreeSpins ? round2(current.freeSpinsWin + win) : current.freeSpinsWin,
         balancePulse: win > 0 ? current.balancePulse + 1 : current.balancePulse,
         serverLanded: false,
         _timer: null,
@@ -725,6 +728,11 @@ export const useSlot = create<SlotState>((set, get) => ({
         if (tier === "epic" || tier === "mega") sound.jackpot();
         else if (tier === "big") sound.winBig();
         else sound.winSmall();
+      }
+      if (current.inFreeSpins && (result.freeSpinsBalance ?? 0) === 0) {
+        // Bonus round finished with this spin: show the end banner, then reset.
+        const endTimer = setTimeout(() => set({ showFreeSpinsEnd: false, freeSpinsTotal: 0, freeSpinsWin: 0 }), 3_000);
+        set({ _timer: endTimer });
       }
     };
 
