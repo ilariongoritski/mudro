@@ -766,9 +766,9 @@ export const useSlot = create<SlotState>((set, get) => ({
           winningPositions: new Set(),
         });
         if (afterCelebrate.soundOn) sound.tumblePop();
-        const tumbleTimer = setTimeout(() => playStep(index + 1), delayMs(320, afterCelebrate.turbo));
+        const tumbleTimer = setTimeout(() => playStep(index + 1), delayMs(420, afterCelebrate.turbo));
         set({ _timer: tumbleTimer });
-      }, delayMs(360, current.turbo));
+      }, delayMs(650, current.turbo));
       set({ _timer: celebrateTimer });
     };
 
