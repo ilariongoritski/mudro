@@ -5,15 +5,17 @@ vk_wall_*.json
 vk-export/
 data/
 tmp/
-# secrets
+
+# local secrets and runtime env files
 .env
 *.env
+.env.loop
 .skaro/secrets.yaml
 .skaro/token_usage.yaml
 .skaro/usage_log.jsonl
+
 # local data and outputs
 var/log/
-# generated outputs
 out/
 output/
 go.work.sum
@@ -38,9 +40,6 @@ output/doc/
 output/playwright/
 output/*.json
 output/db-comment-media-ids.txt
-.skaro/secrets.yaml
-.skaro/token_usage.yaml
-.skaro/usage_log.jsonl
 .skaro/docs/
 .skaro/architecture/last-review.md
 
@@ -57,7 +56,6 @@ testu1.txt
 __pycache__/
 *.pyc
 
-.vercel
 .kilocode/
 
 # compiled binaries
