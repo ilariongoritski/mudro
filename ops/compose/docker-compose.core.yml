@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: gallery
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -67,11 +67,11 @@ services:
     command: sh -lc "/usr/local/go/bin/go run ./services/feed-api/cmd"
     environment:
       API_ADDR: ":8080"
-      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/gallery?sslmode=disable}"
       MUDRO_ROOT: /app
       MEDIA_ROOT: /app/data/nu
       CASINO_SERVICE_URL: "${CASINO_SERVICE_URL:-http://host.docker.internal:8082}"
-      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:-local-casino-internal-secret}"
+      CASINO_INTERNAL_SECRET: "${CASINO_INTERNAL_SECRET:?Set CASINO_INTERNAL_SECRET in .env}"
       API_RATE_LIMIT_RPS: "${API_RATE_LIMIT_RPS:-20}"
       API_RATE_LIMIT_BURST: "${API_RATE_LIMIT_BURST:-40}"
       REDIS_RATE_LIMIT_ENABLED: "${REDIS_RATE_LIMIT_ENABLED:-false}"
@@ -102,7 +102,7 @@ services:
     working_dir: /app
     command: sh -lc "/usr/local/go/bin/go run ./services/agent/cmd --mode worker --interval 15s"
     environment:
-      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/gallery?sslmode=disable}"
       MUDRO_ROOT: /app
       KAFKA_ENABLED: "${KAFKA_ENABLED:-false}"
       KAFKA_BROKERS: "${KAFKA_BROKERS:-kafka:9092}"
@@ -130,7 +130,7 @@ services:
     command: sh -lc "/usr/local/go/bin/go run ./services/movie-catalog/cmd"
     environment:
       MOVIE_CATALOG_ADDR: ":8091"
-      MOVIE_CATALOG_DB_DSN: "postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable&search_path=movie_catalog,public"
+      MOVIE_CATALOG_DB_DSN: "postgres://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/gallery?sslmode=disable&search_path=movie_catalog,public"
     depends_on:
       db:
         condition: service_healthy
@@ -151,7 +151,7 @@ services:
     command: sh -lc "/usr/local/go/bin/go run ./services/bff-web/cmd"
     environment:
       BFF_WEB_ADDR: ":8086"
-      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/gallery?sslmode=disable}"
+      DSN: "${DSN:-postgres://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/gallery?sslmode=disable}"
       MUDRO_ROOT: /app
       BFF_WEB_API_BASE_URL: "${BFF_WEB_API_BASE_URL:-http://api:8080}"
       MOVIE_CATALOG_URL: "http://movie-catalog:8091"

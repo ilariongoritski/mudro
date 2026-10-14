@@ -1,16 +1,14 @@
-# Deprecated local file.
-# Canonical dev stacks live in ops/compose/.
-# Canonical release stack lives in docker-compose.prod.yml.
-version: '3.8'
+# Deprecated local-only compatibility stack.
+# Use ops/compose/docker-compose.core.yml for current development.
 services:
   postgres_main:
     image: postgres:15
     environment:
       POSTGRES_USER: mudro
-      POSTGRES_PASSWORD: mudropass
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}"
       POSTGRES_DB: mudro_main
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ./db/main:/var/lib/postgresql/data
 
@@ -18,9 +16,9 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: mudro
-      POSTGRES_PASSWORD: mudropass
+      POSTGRES_PASSWORD: "${CASINO_POSTGRES_PASSWORD:?Set CASINO_POSTGRES_PASSWORD in the environment}"
       POSTGRES_DB: mudro_casino
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - ./db/casino:/var/lib/postgresql/data

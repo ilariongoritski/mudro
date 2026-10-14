@@ -20,11 +20,11 @@ func Run() {
 	}
 	accessKeyID := os.Getenv("MINIO_ROOT_USER")
 	if accessKeyID == "" {
-		accessKeyID = "admin"
+		log.Fatal("MINIO_ROOT_USER must be set")
 	}
 	secretAccessKey := os.Getenv("MINIO_ROOT_PASSWORD")
 	if secretAccessKey == "" {
-		secretAccessKey = "MudroAdmin2026"
+		log.Fatal("MINIO_ROOT_PASSWORD must be set")
 	}
 	useSSL := os.Getenv("MINIO_USE_SSL") == "true"
 	bucketName := os.Getenv("MINIO_BUCKET")
@@ -51,7 +51,8 @@ func Run() {
 		}
 	} else {
 		log.Printf("Successfully created bucket '%s'\n", bucketName)
-		policy := fmt.Sprintf(`{"Version": "2012-10-17","Statement": [{"Action": ["s3:GetObject"],"Effect": "Allow","Principal": {"AWS": ["*"]},"Resource": ["arn:aws:s3:::%s/*"],"Sid": ""}]}`, bucketName)
+		policy := fmt.Sprintf(`{"Version": "2012-10-17","Statement": [{"Action": ["s3:GetObject"],"Effect": "Allow","Principal": {"AWS": ["*"]},"Resource": ["arn:aws:s3:::%s/*"],"Sid": ""}]} `, bucketName)
+		policy = strings.TrimSpace(policy)
 		err = minioClient.SetBucketPolicy(ctx, bucketName, policy)
 		if err != nil {
 			log.Printf("Failed to set public policy for bucket: %v", err)
@@ -74,14 +75,13 @@ func Run() {
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		relPath, err := filepath.Rel(mediaRoot, path)
 		if err != nil {
 			return err
 		}
 		objectName := strings.ReplaceAll(relPath, "\\", "/")
-		
-		// Upload the file
+
 		_, putErr := minioClient.FPutObject(ctx, bucketName, objectName, path, minio.PutObjectOptions{})
 		if putErr != nil {
 			log.Printf("Failed to upload %s: %v", objectName, putErr)
