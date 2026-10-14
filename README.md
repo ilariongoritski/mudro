@@ -2,187 +2,124 @@
 
 [![CI](https://github.com/ilariongoritski/mudro/actions/workflows/ci.yml/badge.svg)](https://github.com/ilariongoritski/mudro/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-MUDRO — Go-first monorepo для пред-MVP социального продукта: лента VK/TG-контента, авторизация, чат, casino showcase, agent-worker контур, Telegram-боты, import/backfill инструменты и self-hosted/VPS runtime.
+MUDRO — экспериментальный web-first продукт для работы с контентом из VK и Telegram. Репозиторий объединяет веб-интерфейс, Go API, инструменты импорта данных и отдельные сервисы для чата, игровых сценариев и фоновых задач.
 
-Текущее состояние: `v0.1.0-mvp`, pre-MVP launch readiness. Код собирается и тестируется, но публичный запуск требует внешней ротации секретов, настройки VPS/HTTPS и применения миграций на целевых БД.
+**Статус:** pre-MVP. Проект находится в активной разработке; наличие кода и CI не означает, что production-развёртывание уже готово. Перед публичным запуском необходимы настройка окружения, проверка миграций, ротация любых ранее опубликованных секретов и smoke-тесты.
 
-## MVP Состояние
+## Возможности
 
-Готово для инженерной проверки:
+- Лента контента и инструменты импорта/backfill для VK, Telegram и локальных выгрузок.
+- Авторизация и пользовательский интерфейс на React.
+- Отдельные API для основной ленты и игровых сценариев.
+- Чат, административные поверхности и фоновые задачи.
+- Экспериментальный planner/worker-контур для автоматизации.
+- Контракты API, миграции БД и CI-проверки.
 
-- backend `feed-api` с `/healthz`, `/api/front`, auth/admin/chat/casino proxy;
-- frontend React/Vite с лентой, login/register, chat, casino, admin guard;
-- отдельный casino runtime с собственной БД и internal secret между `feed-api` и `casino-api`;
-- up-only миграционный контур с guard против случайного применения `*.down.sql`;
-- CI workflow для Go/frontend/contracts/migration safety/integration DB/release smoke;
-- production compose с обязательными секретами и non-superuser DSN;
-- nginx/HTTPS/secret rotation runbook-и для VPS.
+## Технологии
 
-Не считать готовым без ручной проверки:
+- **Backend:** Go, PostgreSQL.
+- **Frontend:** React, TypeScript, Vite, Redux Toolkit / RTK Query.
+- **Инфраструктура:** Docker Compose, Redis, Redpanda/Kafka, MinIO (для соответствующих сценариев).
+- **Качество:** Go tests, frontend lint/tests/build, проверка контрактов и миграций в GitHub Actions.
 
-- реальные секреты должны быть ротированы вне репозитория;
-- роли `mudro_app` и `mudro_casino_app` должны быть созданы/grant на VPS БД;
-- HTTPS и домен должны быть подняты по runbook;
-- локальная браузерная демка должна пройти smoke по `/`, `/login`, `/casino`, `/chat`, `/admin`.
+## Архитектура
 
-## Быстрый Локальный Запуск
+| Компонент | Назначение |
+| --- | --- |
+| `services/feed-api` | Основной HTTP API: лента и связанные пользовательские сценарии |
+| `services/casino` | Отдельный API игровых сценариев и собственный контур БД |
+| `services/agent` | Фоновые задачи и planner/worker-автоматизация |
+| `services/bot` | Telegram-бот и управляющие сценарии |
+| `services/bff-web` | Агрегация API для веб-клиента |
+| `services/movie-catalog` | Отдельный каталоговый сервис |
+| `tools/importers`, `tools/backfill` | Импорт, восстановление и перенос данных |
+| `contracts` | Контракты HTTP API и событий |
 
-Основной локальный контур:
+Часть сервисов — задел для дальнейшего разделения приложения; не все компоненты следует считать production-ready.
+
+## Локальная разработка
+
+### Требования
+
+- Go версии, указанной в `go.mod`.
+- Docker Engine с Docker Compose.
+- Node.js и npm для frontend.
+
+### Основной контур
+
+Из корня репозитория:
 
 ```bash
 make core-up
 make dbcheck-core
 make migrate-runtime
-make tables-core
 make health-runtime
 ```
 
-Отдельный локальный casino contour:
+Эти команды поднимают локальный контур, проверяют подключение к БД, применяют предусмотренные runtime-миграции и выполняют проверки здоровья. Перед запуском миграций на любой важной БД убедитесь, что используется нужное окружение и есть резервная копия.
+
+### Игровой контур (опционально)
 
 ```bash
 make casino-up
 make health-casino
 ```
 
-Frontend:
+### Frontend
 
 ```bash
 cd frontend
-npm.cmd install
-npm.cmd run dev
+npm install
+npm run dev
 ```
 
-Ожидаемые адреса:
+Обычно frontend доступен на `http://localhost:5173`, основной API — на `http://localhost:8080`, игровой API — на `http://localhost:8082`. Конкретные порты можно переопределить через переменные окружения.
 
-- Frontend: `http://127.0.0.1:5173`
-- Feed API: `http://127.0.0.1:8080/healthz`
-- Casino API: `http://127.0.0.1:8082/healthz`
-
-Проверка демо:
-
-```bash
-make demo-check
-```
-
-Если БД пустая, нужен seed/import данных. Для полноценного локального просмотра сначала убедиться, что `/api/front?limit=1` отдаёт непустую ленту.
-
-## Архитектура
-
-Активные runtime-сервисы:
-
-- `services/feed-api/cmd` — основной HTTP API для MVP: feed, auth, admin, chat, casino proxy.
-- `services/casino/cmd/casino` — отдельный casino service с собственной Postgres БД.
-- `services/agent/cmd` — planner/worker automation.
-- `services/bot/cmd` — Telegram control-plane.
-
-Additive/bootstrap сервисы:
-
-- `services/api-gateway/cmd` — будущий edge/API gateway.
-- `services/bff-web/cmd` — web aggregation layer.
-- `services/auth-api/cmd` — выделяемая auth/admin граница.
-- `services/orchestration-api/cmd` — выделяемая orchestration/status граница.
-
-Инструменты:
-
-- `tools/importers/*` — импорт VK/TG и CSV/HTML источников.
-- `tools/backfill/*` — backfill медиа/комментариев.
-- `tools/maintenance/*` — dedupe, merge, диагностика.
-- `tools/validate-contracts` — проверка HTTP contracts.
-
-## Compose Контуры
-
-- `ops/compose/docker-compose.core.yml` — canonical local runtime: db, redis, kafka, api, agent, bff/movie-catalog.
-- `ops/compose/docker-compose.casino.local.yml` — локальный casino DB/API без prod secrets.
-- `ops/compose/docker-compose.services.yml` — дополнительные сервисы для микросервисной декомпозиции.
-- `docker-compose.prod.yml` — production-style release stack для VPS/self-hosted.
-- `docker-compose.yml` — legacy/deprecated compatibility файл.
-
-Production compose намеренно fail-fast: без `MUDRO_APP_DSN`, `CASINO_APP_DSN`, `JWT_SECRET`, MinIO credentials и `CASINO_INTERNAL_SECRET` он не должен стартовать. Telegram-боты запускаются отдельным контуром, чтобы не расширять blast radius основного MVP runtime.
-
-## Миграции
-
-Основная БД:
-
-```bash
-make migrate-list
-make migrate-all-dry-run
-make migrate-all
-```
-
-Casino БД:
-
-```bash
-make migrate-casino-list
-make migrate-casino-dry-run
-make migrate-casino
-```
-
-Guard:
-
-```bash
-make check-migration-up-list
-```
-
-Обычный bootstrap/recovery не должен применять `*.down.sql`.
+Для переменных окружения используйте `.env.example` как список доступных настроек и задавайте реальные значения только локально или в менеджере секретов. Не добавляйте реальные токены, пароли, DSN или production-конфигурацию в Git.
 
 ## Проверки
 
-Базовый набор:
+Основные команды проекта:
 
 ```bash
 make selftest
 make test-active
 go build ./services/... ./tools/... ./cmd/... ./pkg/...
 go run ./tools/validate-contracts -dir contracts
-cd frontend && npm.cmd run lint
-cd frontend && npm.cmd run test
-cd frontend && npm.cmd run build
-docker compose -f ops/compose/docker-compose.core.yml config
-docker compose -f ops/compose/docker-compose.casino.local.yml config
 ```
 
-Production config проверять только с dummy env или в закрытом CI/VPS shell. Не публиковать вывод `docker compose config`, он раскрывает значения env:
+Frontend:
 
 ```bash
-docker compose -f docker-compose.prod.yml config
+cd frontend
+npm run lint
+npm run test
+npm run build
 ```
 
-## VPS / Release
+Состав тестов и их зависимости зависят от окружения; если проверка требует внешней БД или секретов, это должно быть явно настроено. Не публикуйте вывод конфигурации Compose, если он может содержать значения переменных окружения.
 
-Каноничный MVP target: self-hosted/VPS через `docker-compose.prod.yml` + nginx/HTTPS.
+## Docker Compose
 
-Документы:
+- `ops/compose/docker-compose.core.yml` — основной локальный контур.
+- `ops/compose/docker-compose.casino.local.yml` — локальный игровой контур.
+- `ops/compose/docker-compose.services.yml` — дополнительные сервисы.
+- `docker-compose.prod.yml` — production-style конфигурация для самостоятельного развёртывания.
+- Корневой `docker-compose.yml` — устаревший совместимый конфиг; для новой разработки используйте файлы из `ops/compose/`.
 
-- `ops/runbooks/ops-runbook.md`
-- `ops/runbooks/vps-https-nginx.md`
-- `ops/runbooks/secrets-rotation.md`
-- `docs/release-showcase-checklist.md`
+## Документация
 
-Перед запуском:
+- [Release showcase checklist](docs/release-showcase-checklist.md) — ручная проверка перед демонстрацией.
+- [Secrets rotation runbook](ops/runbooks/secrets-rotation.md) — порядок ротации токенов и паролей.
+- [VPS/HTTPS runbooks](ops/runbooks/) — материалы по развёртыванию и эксплуатации.
+- [CI workflow](.github/workflows/ci.yml) — проверки, выполняемые GitHub Actions.
 
-- ротировать Telegram/OpenAI/OpenRouter/JWT/MinIO secrets;
-- создать non-superuser DB roles;
-- заполнить env на VPS вне git;
-- применить up-only миграции;
-- пройти smoke: `/healthz`, `/api/front`, frontend route refresh, casino balance/action/history.
+## Безопасность
 
-## GitHub / CI Состояние
-
-В репозитории есть GitHub Actions workflow `.github/workflows/ci.yml`.
-
-CI покрывает:
-
-- Go build/test;
-- migration safety;
-- backend unit/integration с Postgres service;
-- e2e smoke с явным DSN;
-- frontend lint/test/build;
-- HTTP contracts validation;
-- release compose и Docker build smoke.
-
-## Разработка
-
-Правила контрибьюции и политика работы — в [platform/agent-control/AGENTS.core.md](platform/agent-control/AGENTS.core.md) и [platform/agent-control/policies/repo-safety.md](platform/agent-control/policies/repo-safety.md). Перед PR убедиться, что go build ./... и go test ./... зелёные, git status --short чистый, а в коммит не попали реальные секреты.
+- Не храните секреты в репозитории, включая скрипты, примеры конфигурации и тестовые данные.
+- Все ранее опубликованные действующие пароли и токены нужно считать скомпрометированными и отозвать/сменить. Удаление из текущей версии не очищает Git history.
+- Не используйте демонстрационные учётные данные на публичных или рабочих окружениях.
+- Не запускайте production Compose с локальными настройками по умолчанию.
 
 ## Лицензия
 
