@@ -13,9 +13,9 @@ chmod 700 "$openclaw_home" "$secrets_dir" || true
 
 postgres_env="$secrets_dir/postgres-readonly.env"
 if [ ! -f "$postgres_env" ]; then
-  cat > "$postgres_env" <<'EOF'
-MUDRO_MCP_VPS_DSN=postgres://postgres:postgres@91.218.113.247:5433/gallery?sslmode=disable
-EOF
+  : "${MUDRO_MCP_VPS_DSN:?Set MUDRO_MCP_VPS_DSN to a read-only DSN before running}"
+  umask 077
+  printf 'MUDRO_MCP_VPS_DSN=%s\n' "$MUDRO_MCP_VPS_DSN" > "$postgres_env"
   chmod 600 "$postgres_env"
 fi
 
